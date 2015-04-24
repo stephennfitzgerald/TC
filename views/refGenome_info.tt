@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+          <h1>Reference Genome</h1>
+          <% FOREACH ref_genome IN ref_gen %>
+           <% FOREACH field IN ref_genome %>
+            <% field %>
+           <% END %>
+          <% END %>
+        </div>
+      </div>
+</div>
+</body>
+</html>

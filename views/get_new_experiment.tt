@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<style>
+
+table, th, td {
+    border-collapse: collapse;
+}
+th,td {
+    padding: 15px;
+}
+th {
+    text-align: left;
+}
+
+</style>
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+          <h1>Add experiment</h1>
+          <table>
+           <form action="<% add_experiment_data_url %>" method=post style="display:inline;">
+           <% FOREACH table_res IN table_schema %>
+             <tr>
+              <% IF table_res.0 == "Genome_ref_name" %>
+               <td><% table_res.0 %></td><td>
+               <select name=<% table_res.0 %>>     
+                 <% FOREACH ref_name IN genRef_names %>
+                  <option value=<% ref_name.0 %>><% ref_name.0 %></option>
+                 <% END %>
+                </select></td>  
+               <% ELSIF table_res.4 != NULL %>
+                <td><% table_res.0 %></td><td><input type="text" name=<% table_res.0 %> value=<% table_res.4.replace('\s+', '_') %>></td>
+               <% ELSE %> 
+                 <td><% table_res.0 %></td><td><input type="text" name=<% table_res.0 %>></td><td>
+               <% END %>
+             </tr>
+            <% END %>
+           </table>
+           <table>
+            <tr>
+            <td><input type="submit" value="Submit"></td>
+            <td><input type="reset" value="Clear"></td>
+           </table>
+          </form>
+        </div>
+      </div>
+</div>
+</body>
+</html>

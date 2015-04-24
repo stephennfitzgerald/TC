@@ -1,0 +1,22 @@
+andle to an empty result-set will be returned
+    in this case.
+
+    If the arguments don't match any tables then you'll still get a statement ha
+ndle, it'll just return no rows.
+
+    The statement handle returned has at least the following fields in the order
+ shown below. Other fields, after these, may
+    also be present.
+
+    TABLE_CAT: The catalog identifier. This field is NULL ("undef") if not appli
+cable to the data source, which is often the
+    case. This field is empty if not applicable to the table.
+
+    TABLE_SCHEM: The schema identifier. This field is NULL ("undef") if not appl
+icable to the data source, and empty if not
+    applicable to the table.
+
+    TABLE_NAME: The table identifier. Note: A driver may provide column metadata
+ not only for base tables, but also for
+    derived objects like SYNONYMS etc.
+sf5@gen1b:/lustre/scratch109/sanger/sf5/Test>

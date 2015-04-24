@@ -1,0 +1,16 @@
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+          <h1>Experiments</h1>
+    	  <form action="<% existing_experiments_url %>" method=get> 
+          <dd><input type=submit value="All experiments"></dd>
+         </form>
+          <p>
+          <form action="<% get_new_experiment_url %>" method=get>
+          <dd><input type=submit value="Add new experiment"></dd>
+        </div>
+      </div>
+</div>
