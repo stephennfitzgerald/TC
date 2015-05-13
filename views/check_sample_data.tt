@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+
+
+
+<script>
+function goBack() {
+    window.history.back();
+}
+</script>
+
+
+<head>
+<style>
+
+  P {
+   font-size: 13px; 
+   font-family:'Courier New';
+  }
+  .tags {
+    color: red;
+  }
+  .genotype {
+    color: blue;
+  }
+  .ec_well {
+    color: green;
+  }
+  .blank {
+    color: red;
+    font-weight: bold;
+  }
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 120px;
+    height: 100px;
+}
+th,td {
+    padding: 5px;
+}
+th {
+    text-align: left;
+}
+
+</style>
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+	 <button onclick="goBack()">Back</button>
+         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+         <form action="<% add_sample_data_url %>" method=post style="display: inline;">
+          <input type="hidden" name="experiment_id" value="<% experiment_id %>" />
+          <input type="submit" value=Submit>
+           <h1>Samples for <% experiment_info.1 %> (<% experiment_info.2 %>)</h1>
+           <table>
+            <% FOREACH well IN well_order %>
+             <% IF well == '##' %>
+              </tr><tr>
+             <% ELSE %>
+              <td>
+              <% FOREACH ele IN well %>
+               <% IF well_attributes.$ele.defined %>
+                <% FOREACH attrib IN well_attributes.$ele.keys %>
+                 <% SWITCH attrib %>
+                  <% CASE 'tag_info' %>
+                   <p class="tags" ><% well_attributes.$ele.$attrib.tag_name %></p>
+                   <p class="tags" ><% well_attributes.$ele.$attrib.tag_seq %></p>
+                  <% CASE 'ec_well' %>
+                   <p class="ec_well" ><% well_attributes.$ele.$attrib %></p>
+                  <% CASE 'genotype' %>
+                   <% FOREACH geno_type IN well_attributes.$ele.$attrib.keys %>
+                    <p class="genotype"><% geno_type %></p>
+                   <% END %> 
+                 <% END %>
+                <% END %> 
+               <% ELSIF ele.match('#') %>
+                <p class="blank" > BLANK  </p>
+                <% ELSE %>
+                <% ele %>
+               <% END %>
+              <% END %>
+	     </td>
+            <% END %>
+          <% END %>
+         </form>
+          </table>
+        </div>
+      </div>
+</div>
+</body>
+</html>

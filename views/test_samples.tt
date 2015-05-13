@@ -27,8 +27,8 @@ th {
         <div id="header">
           <h1>Test_samples</h1>
           <table>
-           <% FOREACH exp IN ids %>
-            <td><% exp %></td>
+           <% FOREACH well IN samples.keys %>
+             <tr><td><% samples.$well.ec_well %></td><td><% samples.$well.sample_name %></td><td><% samples.$well.index_tag %></td>
             <% END %>
            </table>
         </div>

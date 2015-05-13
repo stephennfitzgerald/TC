@@ -4,6 +4,20 @@
 <head>
 <style>
 
+.form-wrapper input[type="submit"] {
+ color: black;
+ background: cyan;
+ display: inline;
+} 
+
+P {
+ font-size: 13px;
+ font-family:'Courier New';
+} 
+.current_exp {
+ color: red;
+}
+
 table, th, td {
     border: 1px solid black;
     border-collapse: collapse;
@@ -29,39 +43,65 @@ th {
           <table>
            <% row_index = 1 %>
            <% FOREACH exp IN experiments %>
+	    <% current_exp = 0 %>
             <% field_index = 1 %>
              <tr>
               <% FOREACH field IN exp %>
-
+               <% IF field_index == 1 && field == experiment_id %>
+                <% current_exp = 1 %>
+               <% END %>
                <% IF field_index == 4 && row_index > 1 %> <!-- Reference_genome -->
                 <td><% field %>
                  <form action="<% refGenome_info_url %>" method=get style="display:inline;">
-                   <input type="hidden" name="refGenome_info" value="<% exp.3 %>" />
-                 <input type=submit value="get info"></form>  
-               </td>
+                  <input type="hidden" name="refGenome_info" value="<% exp.3 %>" />
+                  <input type=submit value="get info">
+                 </form>  
+                </td>
 
                <% ELSIF field_index == 5 && row_index > 1 %> <!-- Alleles -->
                 <td><% field %>
                  <form action="<% alleles_info_url %>" method=get style="display:inline;">
                   <input type="hidden" name="allele_info" value="<% exp.4 %>" />
-		 <input type=submit value="get info"></form>
+		  <input type=submit value="get info">
+                 </form>
                </td>
 
                <% ELSIF field_index == 6 && row_index > 1 %> <!-- Developmental_stage -->
                 <td><% field %>
                  <form action="<% dvStage_info_pop_url %>" method=get style="display:inline;">
-                 <input type="hidden" name="devStage_info" value="<% exp.5 %>" />
-                 <input type=submit value="get info"></form>
+                  <input type="hidden" name="devStage_info" value="<% exp.5 %>" />
+                  <input type=submit value="get info">
+                 </form>
                </td>
  
                <% ELSIF field_index == exp.size && row_index > 1 %>
                  <td><% field %>
-                   <form action="<% existing_samples_url %>" method=get style="display:inline;">
-		     <input type="hidden" name="exp_id" value="<% exp.0 %>" />
-                   <input type=submit value="view"></form>
-                   <form action="<% get_sample_data_url %>" method=get style="display:inline;">
+                  <% IF field %>
+                   <form action="<% existing_samples_url %>" method=get style="display:inline;">   
+		    <input type="hidden" name="exp_id" value="<% exp.0 %>" />
+                    <% IF current_exp %>
+                     <p class="form-wrapper" style="display:inline;">
+                      <input type=submit value="view">
+                     </p>
+                     <% current_exp = 0 %>
+                    <% ELSE %>
+                     <input type=submit value="view">
+                    <% END %>
+                   </form>
+                  <% ELSE %>
+                   <form action="<% get_sample_data_url %>" method=get style="display:inline;">  
                     <input type="hidden" name="exp_id" value="<% exp.0 %>" />
-                   <input type=submit value="add"></form>
+                    <% IF current_exp %>
+                     <p class="form-wrapper" style="display:inline;">
+                      <input type=submit value="add">
+                     </p>
+                     <% current_exp = 0 %>
+                    <% ELSE %>
+                     <input type=submit value="add">
+                    <% END %> 
+                    </form>
+                    
+                  <% END %>
                  </td>
                <% ELSE %>
                  <td><% field %>
