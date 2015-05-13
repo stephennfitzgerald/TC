@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS array_express_data (
+CREAT TABLE IF NOT EXISTS array_express_data (
  id			INT(10) DEFAULT 1 NOT NULL,
  age			VARCHAR(255) DEFAULT "N/A" NOT NULL,
  cell_type		VARCHAR(255) DEFAULT "N/A" NOT NULL,
@@ -20,12 +20,23 @@ CREATE TABLE IF NOT EXISTS array_express_data (
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 
 
+CREATE TABLE IF NOT EXISTS allele (
+
+ id				INT(10) NOT NULL AUTO_INCREMENT,
+ name				VARCHAR(255) NOT NULL,
+ gene_name			VARCHAR(255) NOT NULL,
+
+ PRIMARY 			KEY(id),
+ UNIQUE				KEY(name,gene_name)
+
+) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS study (
 
  id			int(10) NOT NULL AUTO_INCREMENT,
  name			VARCHAR(255) NOT NULL,
 
  PRIMARY 		KEY(id),
+ 
  UNIQUE			KEY name(name) 
 
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
@@ -99,7 +110,7 @@ CREATE TABLE IF NOT EXISTS experiment (
  founder				VARCHAR(255) NULL,
  strain_name                            VARCHAR(255) DEFAULT "mixed" NULL,
  developmental_stage_id    		INT(10) NOT NULL,
- phenotype				VARCHAR(255) NULL,
+ phenotype_description			VARCHAR(255) NULL,
  dna_source                             VARCHAR(255) DEFAULT 'Whole Genome' NOT NULL,
  image					ENUM("Yes", "No") DEFAULT "No" NOT NULL,
  spike_dilution				VARCHAR(255) DEFAULT "No spike" NOT NULL,
@@ -116,13 +127,26 @@ CREATE TABLE IF NOT EXISTS experiment (
  array_express_data_id			INT(10) DEFAULT 1 NOT NULL,
 
  PRIMARY				KEY(id),
- UNIQUE					KEY(name),
+ UNIQUE					KEY(name,study_id),
  FOREIGN				KEY(developmental_stage_id) REFERENCES developmental_stage(id),
  FOREIGN				KEY(genome_reference_id) REFERENCES genome_reference(id), 
  FOREIGN				KEY(study_id) REFERENCES study(id),
  FOREIGN				KEY(array_express_data_id) REFERENCES array_express_data(id),
  FOREIGN				KEY(rna_extraction_id) REFERENCES rna_extraction(id)
  
+) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS allele_experiment_link (
+
+ id					INT(10) AUTO_INCREMENT,
+ allele_id				INT(10) NOT NULL,
+ experiment_id				INT(10) NOT NULL,
+
+ PRIMARY 				KEY(id),
+ UNIQUE					KEY(allele_id,experiment_id),
+ FOREIGN				KEY(allele_id) REFERENCES allele(id),
+ FOREIGN				KEY(experiment_id) REFERENCES experiment(id)
+
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
  
 
@@ -134,7 +158,6 @@ CREATE TABLE IF NOT EXISTS sample (
  embryo_collection_well_number		VARCHAR(255) NOT NULL,
  rna_dilution_well_number		VARCHAR(255) NOT NULL,
  experiment_id				INT(10) NOT NULL,
- genotype               		ENUM('Wild Type', 'Het', 'Mutant') NOT NULL,
  gender					VARCHAR(255) DEFAULT 'Unknown' NOT NULL,
  index_tag_id                           INT(10) NOT NULL,
  
@@ -146,6 +169,7 @@ CREATE TABLE IF NOT EXISTS sample (
  FOREIGN				KEY(experiment_id) REFERENCES experiment(id)
 
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
+
 
 
 CREATE TABLE IF NOT EXISTS rna_dilution_plate ( /** one to one relationship with sample table **/
@@ -168,22 +192,40 @@ CREATE TABLE IF NOT EXISTS rna_dilution_plate ( /** one to one relationship with
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 
 
-CREATE TABLE IF NOT EXISTS allele (
+CREATE TABLE IF NOT EXISTS genotype (
+ 
+ id					INT(10) NOT NULL AUTO_INCREMENT,
+ allele_experiment_id			INT(10) NOT NULL,
+ sample_id				INT(10) NOT NULL,
+ genotype				ENUM('Het','Hom','Wildtype','Failed'),
+ description				VARCHAR(255) NULL,
 
- id				INT(10) NOT NULL AUTO_INCREMENT,
- name				VARCHAR(255) NOT NULL,
- gene_name			VARCHAR(255) NOT NULL,
- experiment_id			INT(10) NOT NULL,
-
- PRIMARY 			KEY(id),
- UNIQUE				KEY(name,gene_name,experiment_id),
- FOREIGN			KEY(experiment_id) REFERENCES experiment(id) /** can be multiple alleles per experiment **/
+ PRIMARY				KEY(id),
+ FOREIGN				KEY(allele_experiment_id) REFERENCES allele_experiment_link(id),
+ FOREIGN				KEY(sample_id) REFERENCES sample(id),
+ UNIQUE					KEY(allele_experiment_id,sample_id)
 
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 
-
 /** views **/
 
+CREATE OR REPLACE VIEW alleExp AS
+ SELECT allexp.id id,
+        alle.name allele_name,
+        allexp.experiment_id exp_id
+ FROM allele_experiment_link allexp INNER JOIN allele alle
+        ON alle.id = allexp.allele_id
+ ORDER BY id;
+
+
+CREATE OR REPLACE VIEW tagSeq AS
+ SELECT id, 
+        name,
+        SUBSTRING_INDEX(name,'.', 1) name_prefix, 
+        SUBSTRING_INDEX(name,'.', -1) name_postfix, 
+        tag_index_sequence index_sequence 
+ FROM index_tag
+ ORDER BY id;
 
 CREATE OR REPLACE VIEW tagSet AS
  SELECT DISTINCT(SUBSTRING_INDEX(name, '.', 1)) Tag_set_name 
@@ -195,8 +237,8 @@ CREATE OR REPLACE VIEW expView AS
         exp.name Experiment, 
         std.name Study, 
         sp.name Species_name, 
-        GROUP_CONCAT(ale.name SEPARATOR " : ") Alleles,
         dvs.name Developmental_stage,
+        GROUP_CONCAT(DISTINCT(ale.name) SEPARATOR " : ") Alleles,
         exp.spike_dilution Spike_dilution, 
         exp.image Image, 
         exp.submitted_for_sequencing,
@@ -204,11 +246,12 @@ CREATE OR REPLACE VIEW expView AS
   FROM experiment exp INNER JOIN study std 
         ON std.id = exp.study_id INNER JOIN genome_reference gr
         ON exp.genome_reference_id = gr.id LEFT OUTER JOIN developmental_stage dvs
-        ON dvs.id = exp.developmental_stage_id INNER JOIN allele ale 
-        ON ale.experiment_id = exp.id INNER JOIN species sp 
+        ON dvs.id = exp.developmental_stage_id INNER JOIN species sp
         ON sp.id = gr.species_id LEFT OUTER JOIN sample smp
-        ON smp.experiment_id = exp.id
-  GROUP BY exp.name
+        ON smp.experiment_id = exp.id INNER JOIN allele_experiment_link ael 
+        ON ael.experiment_id = exp.id INNER JOIN allele ale
+        ON ale.id = ael.allele_id
+  GROUP BY exp.id
   ORDER BY exp.id;
 
 CREATE OR REPLACE VIEW smpView AS
@@ -217,15 +260,13 @@ CREATE OR REPLACE VIEW smpView AS
         smp.name Sample_name, 
         smp.public_name Sample_public_name, 
         exp.sample_visability Sample_visability, 
-        smp.genotype Genotype, 
         indt.name Tag_name, 
         indt.tag_index_sequence Tag_index_sequence, 
         smp.embryo_collection_well_number Embryo_collection_well_number, 
         smp.rna_dilution_well_number RNA_dilution_well_number,
         exp.submitted_for_sequencing Submitted_for_sequencing
  FROM sample smp INNER JOIN experiment exp 
-        ON exp.id = smp.experiment_id INNER JOIN rna_dilution_plate rnas
-        ON rnas.sample_id = smp.id INNER JOIN index_tag indt 
+        ON exp.id = smp.experiment_id INNER JOIN index_tag indt
         ON smp.index_tag_id = indt.id
  GROUP BY smp.id
  ORDER BY exp.id;
@@ -249,6 +290,7 @@ SELECT  exp.id Experiment_id,
 CREATE OR REPLACE VIEW showExpView AS
  SELECT std.name Study_name, 
         exp.name Experiment_name, 
+        GROUP_CONCAT(ale.name SEPARATOR " : ") Alleles,
         exp.lines_crossed Lines_crossed, 
         exp.founder Founder, 
         devs.name Developmental_stage, 
@@ -257,21 +299,21 @@ CREATE OR REPLACE VIEW showExpView AS
         exp.spike_volume Spike_volume, 
         exp.embryo_collection_method Embryo_collection_method,
         exp.image Image, 
-        exp.phenotype Phenotype,
+        exp.phenotype_description Phenotype_description,
         exp.embryo_collected_by Embryos_collected_by, 
         exp.embryo_collection_date Embryo_collection_date, 
         exp.number_embryos_collected Number_of_embryos_collected,
         exp.submitted_for_sequencing Submitted_for_sequencing,
         exp.sample_visability Sample_visability,
         exp.asset_group Asset_group,
-        ale.name Alleles, 
-        ale.gene_name Gene_name,
         grf.name Genome_ref_name 
  FROM experiment exp INNER JOIN study std
-        ON exp.study_id = std.id INNER JOIN allele ale
-        ON ale.experiment_id = exp.id INNER JOIN genome_reference grf 
+        ON exp.study_id = std.id INNER JOIN genome_reference grf
         ON grf.id = exp.genome_reference_id LEFT OUTER JOIN developmental_stage devs
-        ON exp.developmental_stage_id = devs.id
+        ON exp.developmental_stage_id = devs.id INNER JOIN allele_experiment_link ael
+        ON ael.experiment_id = exp.id INNER JOIN allele ale
+        ON ael.allele_id = ale.id
+ GROUP BY exp.name
  ORDER BY std.name, exp.name;
 
 CREATE OR REPLACE VIEW speciesView AS
@@ -308,29 +350,27 @@ SET study_id = LAST_INSERT_ID();
 END$$
 DELIMITER ;
 
-
-/** allele **/
+/** allele_experiment_link **/
 DELIMITER $$
-DROP PROCEDURE IF EXISTS add_allele$$
-CREATE PROCEDURE add_allele(
- IN allele_name_param VARCHAR(255),
- IN gene_name_param VARCHAR(255),
- IN experiment_id_param INT(10)
+DROP PROCEDURE IF EXISTS add_allele_exp_link$$
+
+CREATE PROCEDURE add_allele_exp_link(
+ IN allele_id_param int(10),
+ IN experiment_id_param int(10)
 )
 BEGIN
 
-INSERT IGNORE INTO allele (
- name,
- gene_name,
+INSERT IGNORE INTO allele_experiment_link(
+ allele_id, 
  experiment_id
 )
 VALUES (
- allele_name_param,
- gene_name_param,
+ allele_id_param,
  experiment_id_param
 );
 END$$
 DELIMITER ;
+
 
 
 /** developmental_stage **/ 
@@ -360,14 +400,48 @@ END$$
 DELIMITER ;
 
 
+/** sample **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS add_sample_data$$
+
+CREATE PROCEDURE add_sample_data(
+ IN name_param VARCHAR(255),
+ IN public_name_param VARCHAR(255),
+ IN embryo_collection_well_number_param VARCHAR(255),
+ IN rna_dilution_well_number_param VARCHAR(255),
+ IN experiment_id_param INT(10),
+ IN index_tag_id_param INT(10)
+)
+BEGIN
+
+INSERT IGNORE INTO sample (
+ name,
+ public_name,
+ embryo_collection_well_number,
+ rna_dilution_well_number,
+ experiment_id,
+ index_tag_id
+)
+VALUES (
+ name_param,
+ public_name_param,
+ embryo_collection_well_number_param,
+ rna_dilution_well_number_param,
+ experiment_id_param,
+ index_tag_id_param
+);
+END$$
+DELIMITER ;
+
+
 /** experiment **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS add_experiment_data$$
  
 CREATE PROCEDURE add_experiment_data(
- IN study_id_param VARCHAR(255),
- IN developmental_stage_id_param VARCHAR(255),
- IN genome_reference_id_param VARCHAR(255),
+ IN study_id_param INT(10),
+ IN developmental_stage_id_param INT(10),
+ IN genome_reference_id_param INT(10),
  IN experiment_name_param VARCHAR(255),
  IN lines_crossed_param VARCHAR(255),
  IN founder_param VARCHAR(255),
@@ -378,7 +452,7 @@ CREATE PROCEDURE add_experiment_data(
  IN embryo_collection_date_param DATE,
  IN number_of_embryos_collected_param INT(10),
  IN image_param enum('Yes','No'),
- IN phenotype_param VARCHAR(255),
+ IN phenotype_description_param VARCHAR(255),
  OUT exp_id int(10)
 )
 BEGIN 
@@ -397,7 +471,7 @@ INSERT INTO experiment (
  embryo_collection_date,
  number_embryos_collected,
  image,
- phenotype
+ phenotype_description
 ) 
 VALUES ( 
  study_id_param,
@@ -413,7 +487,7 @@ VALUES (
  embryo_collection_date_param,
  number_of_embryos_collected_param,
  image_param,
- phenotype_param
+ phenotype_description_param
 );
 SET exp_id = LAST_INSERT_ID();
 END$$
