@@ -25,7 +25,7 @@ th {
 
       <div id="content">
         <div id="header">
-          <h1>Samples for Experiment <% experiment_id %></h1>
+          <h1>Samples for <% experiment_info.1 %> (<% experiment_info.2 %>)</h1>
           <table>
           <% row_index = 1 %>
           <% FOREACH smp IN samples %>
@@ -35,13 +35,7 @@ th {
             <% field_index = field_index + 1 %>
             <% NEXT IF field_index == 2 %> <!-- skip writing the experiment_id -->
 
-            <% IF field_index == 9 && row_index > 1 %> <!-- Embryo_collection_well_number -->
-             <td><% field %>
-              <form action="<% embryo_collection_info_url %>" method=get style="display:inline;">
-                <input type="hidden" name="embryo_collection_info" value="<% smp.8 %>" />
-              <input type=submit value="get info"></form>
-
-             <% ELSIF field_index == 10 && row_index > 1 %> <!-- RNA_dilution_well_number -->
+             <% IF field_index == 10 && row_index > 1 %> <!-- RNA_dilution_well_number -->
               <td><% field %>
               <form action="<% rna_dilution_info_url %>" method=get style="display:inline;">
                <input type="hidden" name="rna_dilution_info" value="<% smp.9 %>" />

@@ -18,6 +18,19 @@ P {
  color: red;
 }
 
+.seq_report input[type="submit"] {
+ color: black;
+ background: #FF99FF;
+ display: inline;
+}
+.no_seq_report input[type="submit"] {
+ color: black;
+ background: #BDECB6;
+ display: inline;
+}
+
+ 
+
 table, th, td {
     border: 1px solid black;
     border-collapse: collapse;
@@ -73,7 +86,26 @@ th {
                   <input type=submit value="get info">
                  </form>
                </td>
- 
+  
+               <% ELSIF field_index == 11 && row_index == 1 %> <!-- submitted_for_sequencing -->
+               <td>Sequencing_report 
+               </td> 
+               <% ELSIF field_index == 11 && row_index > 1 %>
+               <td><% field %>
+                <form action="<% get_sequence_report_url %>" method=get style="display:inline;">
+                <% IF field == "0000-00-00" %>
+                 <input type="hidden" name="exp_id" value="<% exp.0 %>" /> 
+                 <p class="no_seq_report" style="display:inline;">
+                  <input type=submit value="get">
+                 </p>
+                <% ELSE %>
+                 <input type="hidden" name="exp_id" value="<% exp.0 %>" />
+                 <p class="no_seq_report" style="display:inline;">
+                  <input type=submit value="view">
+                 </p>
+                <% END %> 
+               </form> 
+               </td>
                <% ELSIF field_index == exp.size && row_index > 1 %>
                  <td><% field %>
                   <% IF field %>

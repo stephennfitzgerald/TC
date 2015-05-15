@@ -4,7 +4,7 @@ use Dancer2;
 use DBI;
 
 our $VERSION = '0.1';
-our $db_name = "zfish_sf5_tc4_test";
+our $db_name = "zfish_sf5_tc3_test";
 our @allele_types = ();
 our %check_hash = ();
 
@@ -51,9 +51,25 @@ get '/existing_experiments' => sub {
    existing_samples_url => uri_for('/existing_samples'),
    refGenome_info_url => uri_for('/refGenome_info'),
    get_sample_data_url  => uri_for('/get_sample_data'),
+   get_sequence_report_url => uri_for('/get_sequence_report'), 
  };
 
 };
+
+get '/get_sequence_report' => sub {
+
+ my $dbh = get_schema();
+ 
+ my $exp_id = param('exp_id');
+ 
+ my $seq_sth = $dbh->prepare("SELECT * FROM seqView where Experiment_id = ?");
+ 
+ template 'test_samples', {
+
+ };
+
+};
+
 
 post '/add_experiment_data' => sub {
  
@@ -264,6 +280,27 @@ post '/check_sample_data' => sub {
   }
  }
 
+
+ ## get the observed phenotype well order (used to form the sample public name)
+ my $exp_info = get_exp_name( $dbh, param('exp_id') );
+ my $exp_name = $exp_info->[1];
+ my @opwo = split",", param('observed_phenotype_well_order');
+ if((split":",$opwo[0]) > 1) { # not just unobserved
+  foreach my $phenotype_well_pos( @{ well_order(\@opwo) } ) {
+   my $index_start = $mhash{ $phenotype_well_pos->[0] };
+   my $index_end = $mhash{ $phenotype_well_pos->[1] };
+   for(my$i=$index_start;$i <= $index_end;$i++) {
+    $check_hash{ '#' .$marr[$i] }{ 'public_name' } = $exp_name . "_" . $phenotype_well_pos->[2] . "_" . ($i + 1); 
+   }
+  }
+ }
+ else {
+  my $i;
+  foreach my $well(keys %check_hash) {
+   $check_hash{ $well }{ 'public_name' } = $exp_name . "_" . $opwo[0] . "_" . ++$i;
+  } 
+ }
+
  push @new_arr, "", "A".."H", "##";
  for(my$i=0;$i<12;$i++){
   push @new_arr, $i+1;
@@ -276,7 +313,7 @@ post '/check_sample_data' => sub {
 
   template 'check_sample_data', { 
     experiment_id => param('exp_id'),
-    experiment_info => get_exp_name( $dbh, param('exp_id') ),
+    experiment_info => $exp_info,
     well_order => \@new_arr,
     well_attributes => \%check_hash,
     tag_set_name => $tag_set_name,
@@ -293,34 +330,56 @@ post '/add_sample_data' => sub {
   
   my $exp_id = param('experiment_id'); 
   my $experiment_name = get_exp_name( $dbh, $exp_id )->[1];
+
+my @test;
   
   foreach my $sample_well(keys %check_hash) { # use the global
    if( exists( $check_hash{ $sample_well }{ 'ec_well' } ) ) {
     my $ec_well = $check_hash{ $sample_well }{ 'ec_well' };
     $ec_well=~s/ec_well://;
     my $sample_name = $experiment_name . "_" . $ec_well;
-    my @genotypes;
+    my %genotypes;
     foreach my$genotype(keys %{ $check_hash{ $sample_well }{ 'genotype' } }){
-     push(@genotypes, [$exp_id,$sample_well, $genotype]);
+     my $sample_well_id = $sample_well;
+     $sample_well_id=~s/#//;
+     push(@{ $samples{ $sample_well_id }{ 'genotype' } }, $genotype);
     }
     my $index_tag_id = $check_hash{ $sample_well }{ 'tag_info' }{ 'tag_id' }; 
-    $sample_well=~s/#//;
-    $samples{ $sample_well }{ 'ec_well' } = $ec_well;
-    $samples{ $sample_well }{ 'sample_name' } = $sample_name;
-    $samples{ $sample_well }{ 'public_name' } = $sample_name;
-    $samples{ $sample_well }{ 'index_tag_id' } = $index_tag_id; 
+    my $public_name = $check_hash{ $sample_well }{ 'public_name' };
+    my $sample_well_id = $sample_well;
+    $sample_well_id=~s/#//;
+    $samples{ $sample_well_id }{ 'ec_well' } = $ec_well;
+    $samples{ $sample_well_id }{ 'sample_name' } = $sample_name;
+    $samples{ $sample_well_id }{ 'public_name' } = $public_name;
+    $samples{ $sample_well_id }{ 'index_tag_id' } = $index_tag_id; 
    }
   } 
-  
+
   my $sample_sth = $dbh->prepare("CALL add_sample_data(?,?,?,?,?,?)");
-  foreach my $sample_well(sort {$a cmp $b} keys %samples){
-   $sample_sth->execute( $samples{ $sample_well }{ 'sample_name' },
-                         $samples{ $sample_well }{ 'public_name' },
-                         $samples{ $sample_well }{ 'ec_well' },
-                         $sample_well,
+  foreach my $sample_well_id(sort {$a cmp $b} keys %samples){
+   $sample_sth->execute( $samples{ $sample_well_id }{ 'sample_name' },
+                         $samples{ $sample_well_id }{ 'public_name' },
+                         $samples{ $sample_well_id }{ 'ec_well' },
+                         $sample_well_id,
                          $exp_id,
-                         $samples{ $sample_well }{ 'index_tag_id' }
+                         $samples{ $sample_well_id }{ 'index_tag_id' }
                        );
+   my $sample_id_sth = $dbh->prepare("SELECT id FROM sample WHERE experiment_id = ? AND rna_dilution_well_number = ?");
+   $sample_id_sth->execute($exp_id, $sample_well_id);
+   my $sample_id = $sample_id_sth->fetchrow_arrayref();
+ 
+   my $allele_sth = $dbh->prepare("SELECT id FROM allele WHERE name = ?");
+
+   my $genotype_sth = $dbh->prepare("CALL add_genotype_data(?,?,?)");
+
+   foreach my $al_genotype(@{ $samples{ $sample_well_id }{ 'genotype' } }) {
+    my($allele, $genotype) = split"-",$al_genotype;
+    $allele_sth->execute($allele);
+    my $allele_id = $allele_sth->fetchrow_arrayref();
+    $genotype_sth->execute($allele_id->[0], $sample_id->[0], $genotype);
+   }
+   
+                                        
   }
 
   my $exp_info = exp_info($dbh); 
@@ -329,6 +388,7 @@ post '/add_sample_data' => sub {
    experiment_id => $exp_id,
    experiments => $exp_info,   
    existing_samples_url => uri_for('/existing_samples'),
+   get_sample_data_url => uri_for('/get_sample_data'), 
   };
 
 };
@@ -341,12 +401,14 @@ get '/existing_samples' => sub {
   my $sth = $dbh->prepare("SELECT * FROM smpView WHERE Experiment_id = ?");
   my $exp_id = param('exp_id');
   $sth->execute($exp_id);
+  my $exp_info = get_exp_name( $dbh, $exp_id );
 
   my $col_names = $sth->{NAME};
   my $res = $sth->fetchall_arrayref();
   unshift @$res, $col_names;
 
   template 'existing_samples', { 
+            experiment_info => $exp_info,
             samples => $res, 
             experiment_id => $exp_id, 
   };

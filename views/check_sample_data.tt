@@ -17,6 +17,9 @@ function goBack() {
    font-size: 13px; 
    font-family:'Courier New';
   }
+  .public_name {
+    color: black;
+  }
   .tags {
     color: red;
   }
@@ -35,7 +38,7 @@ table, th, td {
     border: 1px solid black;
     border-collapse: collapse;
     table-layout: fixed;
-    width: 120px;
+    width: 220px;
     height: 100px;
 }
 th,td {
@@ -71,6 +74,8 @@ th {
                <% IF well_attributes.$ele.defined %>
                 <% FOREACH attrib IN well_attributes.$ele.keys %>
                  <% SWITCH attrib %>
+                  <% CASE 'public_name' %>
+                   <p class="public_name" ><% well_attributes.$ele.$attrib %></p>
                   <% CASE 'tag_info' %>
                    <p class="tags" ><% well_attributes.$ele.$attrib.tag_name %></p>
                    <p class="tags" ><% well_attributes.$ele.$attrib.tag_seq %></p>

@@ -40,6 +40,8 @@ th {
             <tr>
             <td>Embryo_collection_well_order</td><td><input type="text" name="embryo_collection_well_order" style="width: 500px;"></td>
             </tr>
+            <td>Observed_phenotype_well_order</td><td><input type="text" value="unobserved" name="observed_phenotype_well_order" style="width: 500px;"></td>
+            </tr>
             <td>Genotype_well_order</td><tr>
               <% FOREACH allele IN allele_types %> 
                <td></td>
