@@ -26,10 +26,14 @@ th {
       <div id="content">
         <div id="header">
           <h1>Test_samples</h1>
-          <table>
-           <% FOREACH ele IN test %>
-             <tr><td><% ele %></td>
+          <table><tr>
+           <% FOREACH ele IN samples %>
+            <% IF ele == "###" %>
+             </tr>
+            <% ELSE %>
+             <td><% ele %></td>
             <% END %>
+          <% END %>
            </table>
         </div>
       </div>

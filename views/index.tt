@@ -9,7 +9,7 @@
           <dd><input type=submit value="All experiments"></dd>
          </form>
           <p>
-          <form action="<% get_new_experiment_url %>" method=get>
+          <form action="<% get_new_experiment_url %>" method=get enctype="multipart/form-data">
           <dd><input type=submit value="Add new experiment"></dd>
         </div>
       </div>

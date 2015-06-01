@@ -66,12 +66,13 @@ CREATE TABLE IF NOT EXISTS index_tag (
 
 CREATE TABLE IF NOT EXISTS developmental_stage (
  id				INT(10) AUTO_INCREMENT,
- zfs_id				VARCHAR(255) NULL,	
- name				VARCHAR(255) NULL, 
- description			VARCHAR(255) NULL,
+ period				VARCHAR(255) NOT NULL,
+ stage				VARCHAR(255) NOT NULL,
+ begins				VARCHAR(255) NOT NULL,
+ developmental_landmarks	VARCHAR(255) NOT NULL,
 
  PRIMARY			KEY(id),
- UNIQUE				KEY(zfs_id, name, description)
+ UNIQUE				KEY(stage)
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
  
 
@@ -112,16 +113,17 @@ CREATE TABLE IF NOT EXISTS experiment (
  developmental_stage_id    		INT(10) NOT NULL,
  phenotype_description			VARCHAR(255) NULL,
  dna_source                             VARCHAR(255) DEFAULT 'Whole Genome' NOT NULL,
- image					ENUM("Yes", "No") DEFAULT "No" NOT NULL,
- spike_mix				ENUM('1', '2') DEFAULT '1' NOT NULL,
- spike_dilution				VARCHAR(255) NULL,
- spike_volume				INT(10) NULL,
+ image					VARCHAR(255) DEFAULT 'No image' NOT NULL,
+ spike_mix				ENUM('0', '1', '2') DEFAULT '0' NOT NULL,
+ spike_dilution				VARCHAR(255) NOT NULL DEFAULT 0,
+ spike_volume				INT(10) NOT NULL DEFAULT 0,
  study_id				INT(10) NOT NULL, 
  embryo_collection_method		VARCHAR(255) DEFAULT "2ml assay block" NOT NULL,
  embryo_collected_by			VARCHAR(255) DEFAULT "Neha" NOT NULL,
  embryo_collection_date			DATE DEFAULT '0000-00-00' NOT NULL, 
  number_embryos_collected		INT(10) NULL,
  submitted_for_sequencing               DATE DEFAULT '0000-00-00' NOT NULL,
+ excel_file_location			VARCHAR(255) NULL,
  sample_visability			ENUM('Hold', 'Public') DEFAULT 'Public' NOT NULL,	 
  asset_group                            VARCHAR(255) NULL,
  rna_extraction_id			INT(10) NULL,
@@ -197,7 +199,7 @@ CREATE TABLE IF NOT EXISTS genotype (
  id					INT(10) NOT NULL AUTO_INCREMENT,
  allele_id				INT(10) NOT NULL,
  sample_id				INT(10) NOT NULL,
- genotype				ENUM('Het','Hom','Wildtype','Failed'),
+ name					ENUM('Het','Hom','Wildtype','Failed','Missing','Blank'),
  description				VARCHAR(255) NULL,
 
  PRIMARY				KEY(id),
@@ -237,27 +239,25 @@ CREATE OR REPLACE VIEW expView AS
         exp.name Experiment, 
         std.name Study, 
         sp.name Species_name, 
-        dvs.name Developmental_stage,
-        GROUP_CONCAT(DISTINCT(ale.name) SEPARATOR " : ") Alleles,
+        GROUP_CONCAT(DISTINCT(dev.begins), ":", dev.stage) Developmental_stage,
+        GROUP_CONCAT(DISTINCT(ale.name) SEPARATOR ":") Alleles,
         exp.spike_mix Spike_mix,
-        exp.spike_dilution Spike_dilution, 
-        exp.spike_volume Spike_volume,
         exp.image Image, 
         exp.submitted_for_sequencing,
         COUNT(DISTINCT(smp.id)) Sample_count 
   FROM experiment exp INNER JOIN study std 
         ON std.id = exp.study_id INNER JOIN genome_reference gr
-        ON exp.genome_reference_id = gr.id LEFT OUTER JOIN developmental_stage dvs
-        ON dvs.id = exp.developmental_stage_id INNER JOIN species sp
+        ON exp.genome_reference_id = gr.id LEFT OUTER JOIN developmental_stage dev
+        ON dev.id = exp.developmental_stage_id INNER JOIN species sp
         ON sp.id = gr.species_id LEFT OUTER JOIN sample smp
         ON smp.experiment_id = exp.id INNER JOIN allele_experiment_link ael 
         ON ael.experiment_id = exp.id INNER JOIN allele ale
         ON ale.id = ael.allele_id
   GROUP BY std.id, exp.id
-  ORDER BY exp.id;
+  ORDER BY exp.id DESC;
 
 CREATE OR REPLACE VIEW gcGenoView AS
- SELECT gt.sample_id, GROUP_CONCAT(al.name, ":", gt.genotype SEPARATOR " ") genot 
+ SELECT gt.sample_id, GROUP_CONCAT(al.name, ":", gt.name SEPARATOR " ") genot 
  FROM allele al INNER JOIN genotype gt 
       ON gt.allele_id = al.id 
  GROUP BY gt.sample_id;
@@ -280,7 +280,7 @@ CREATE OR REPLACE VIEW smpView AS
         ON smp.id = gcv.sample_id INNER JOIN genotype gt 
         ON gt.sample_id = smp.id
  GROUP BY smp.id 
- ORDER BY exp.id, smp.id, gt.genotype;
+ ORDER BY exp.id, smp.id, gt.name;
 
 
 CREATE OR REPLACE VIEW get_smpView AS
@@ -304,18 +304,16 @@ CREATE OR REPLACE VIEW showExpView AS
         GROUP_CONCAT(ale.name SEPARATOR " : ") Alleles,
         exp.lines_crossed Lines_crossed, 
         exp.founder Founder, 
-        devs.name Developmental_stage, 
-        devs.description Developmental_description,
+        devs.stage Developmental_stage, 
         exp.spike_mix Spike_mix,
-        exp.spike_dilution Spike_dilution, 
-        exp.spike_volume Spike_volume, 
+        exp.spike_dilution Spike_dilution,
+        exp.spike_volume Spike_volume,
         exp.embryo_collection_method Embryo_collection_method,
         exp.image Image, 
         exp.phenotype_description Phenotype_description,
         exp.embryo_collected_by Embryos_collected_by, 
         exp.embryo_collection_date Embryo_collection_date, 
         exp.number_embryos_collected Number_of_embryos_collected,
-        exp.submitted_for_sequencing Submitted_for_sequencing,
         exp.sample_visability Sample_visability,
         exp.asset_group Asset_group,
         grf.name Genome_ref_name 
@@ -339,39 +337,40 @@ CREATE OR REPLACE VIEW speciesView AS
  ORDER BY sp.name; 
 
 CREATE OR REPLACE VIEW seqView AS
- SELECT rna_ext.library_tube_id "Library Tube ID",
+ SELECT rna_ext.library_tube_id "Library_Tube_ID",
         exp.id "Experiment_id",
-        ind_tag.name "Tag ID",
-        exp.asset_group "Asset Group",
-        smp.name "Sample Name",
-        smp.public_name "Public Name",
+        ind_tag.name "Tag_ID",
+        exp.asset_group "Asset_Group",
+        smp.name "Sample_Name",
+        smp.public_name "Public_Name",
         sp.name "Organism",
-        sp.binomial_name "Common Name",
-        exp.sample_visability "Sample Visability",
-        gr.gc_content "GC Content",
-        sp.taxon_id "Taxon ID",
+        sp.binomial_name "Common_Name",
+        exp.sample_visability "Sample_Visability",
+        gr.gc_content "GC_Content",
+        sp.taxon_id "Taxon_ID",
         exp.strain_name "Strain",
         gcv.genot "desc_allele:genotype",
+        ale.gene_name "ensembl_gene_id",
         exp.spike_mix "desc_spike_mix",
         ind_tag.tag_index_sequence "desc_tag_index_sequence",
         smp.gender "Gender",
-        exp.dna_source "DNA Source",
-        gr.name "Reference Genome",
+        exp.dna_source "DNA_Source",
+        gr.name "Reference_Genome",
         array_exp.age "Age",
         array_exp.cell_type "Cell_type",
         array_exp.compound "Compound",
-        dev.name "Deve;opmental Stage",
+        dev.stage "Developmental_Stage",
         array_exp.disease "Disease",
-        array_exp.disease_state "Disease State",
+        array_exp.disease_state "Disease_State",
         array_exp.dose "Dose",
         array_exp.genotype "Genotype",
-        array_exp.growth_condition "Growth Condition",
+        array_exp.growth_condition "Growth_Condition",
         array_exp.immunoprecipitate "Immunoprecipitate",
-        array_exp.organism_part "Organism Part",
+        array_exp.organism_part "Organism_Part",
         array_exp.phenotype "Phenotype",
-        array_exp.time_point "Time Point",
+        array_exp.time_point "Time_Point",
         array_exp.treatment "Treatment",
-        array_exp.donor_id "Donor ID"
+        array_exp.donor_id "Donor_ID"
  FROM experiment exp INNER JOIN array_express_data array_exp 
         ON exp.array_express_data_id = array_exp.id INNER JOIN sample smp
         ON smp.experiment_id = exp.id INNER JOIN genome_reference gr
@@ -380,8 +379,10 @@ CREATE OR REPLACE VIEW seqView AS
         ON smp.index_tag_id = ind_tag.id INNER JOIN developmental_stage dev
         ON dev.id = exp.developmental_stage_id INNER JOIN gcGenoView gcv
         ON gcv.sample_id = smp.id LEFT OUTER JOIN rna_extraction rna_ext
-        ON exp.rna_extraction_id = rna_ext.id
- ORDER BY smp.name;
+        ON exp.rna_extraction_id = rna_ext.id INNER JOIN genotype gt 
+        ON gt.sample_id = smp.id INNER JOIN allele ale
+        ON gt.allele_id = ale.id
+ ORDER BY smp.name, smp.name;
     
          
         
@@ -430,33 +431,6 @@ VALUES (
 END$$
 DELIMITER ;
 
-
-/** developmental_stage **/ 
-DELIMITER $$
-DROP PROCEDURE IF EXISTS add_developmental_stage$$
-
-CREATE PROCEDURE add_developmental_stage (
- IN zfs_id_param VARCHAR(255),
- IN name_param VARCHAR(255),
- IN description_param VARCHAR(255),
- OUT dev_id int(10)
-)
-BEGIN
-
-INSERT IGNORE INTO developmental_stage (
- zfs_id,
- name,
- description
-)
-VALUES (
- zfs_id_param,
- name_param,
- description_param
-);
-SET dev_id = LAST_INSERT_ID();
-END$$
-DELIMITER ;
-
 /** genotype **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS add_genotype_data$$
@@ -464,19 +438,19 @@ DROP PROCEDURE IF EXISTS add_genotype_data$$
 CREATE PROCEDURE add_genotype_data (
  IN allele_id_param INT(10),
  IN sample_id_param INT(10),
- IN genotype_param ENUM('Het','Hom','Wildtype','Failed')
+ IN name_param ENUM('Het','Hom','Wildtype','Failed','Missing','Blank')
 )
 BEGIN
 
 INSERT IGNORE INTO genotype (
  allele_id,
  sample_id,
- genotype
+ name
 )
 VALUES (
  allele_id_param,
  sample_id_param,
- genotype_param
+ name_param
 );
 END$$
 DELIMITER ;
@@ -486,7 +460,7 @@ DELIMITER ;
 DELIMITER $$
 DROP PROCEDURE IF EXISTS add_sample_data$$
 
-CREATE PROCEDURE add_sample_data(
+CREATE PROCEDURE add_sample_data (
  IN name_param VARCHAR(255),
  IN public_name_param VARCHAR(255),
  IN embryo_collection_well_number_param VARCHAR(255),
@@ -515,61 +489,83 @@ VALUES (
 END$$
 DELIMITER ;
 
+/** adding sequence submission time and exel file location **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS update_seq_sub_date$$
+
+CREATE PROCEDURE update_seq_sub_date (
+ IN submitted_for_sequencing_param DATE,
+ IN excel_file_location_param VARCHAR(255),
+ IN id_param INT(10)
+)
+BEGIN
+
+ UPDATE experiment SET 
+  submitted_for_sequencing = submitted_for_sequencing_param,
+  excel_file_location = excel_file_location_param
+ WHERE id = id_param;
+
+END$$
+DELIMITER ;
+
 
 /** experiment **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS add_experiment_data$$
  
 CREATE PROCEDURE add_experiment_data(
+ IN image_param VARCHAR(255),
  IN study_id_param INT(10),
- IN developmental_stage_id_param INT(10),
  IN genome_reference_id_param INT(10),
  IN experiment_name_param VARCHAR(255),
  IN lines_crossed_param VARCHAR(255),
  IN founder_param VARCHAR(255),
+ IN spike_mix_param ENUM('0', '1', '2'), 
  IN spike_dilution_param VARCHAR(255),
  IN spike_volume_param INT(10),
  IN embryo_collection_method_param VARCHAR(255),
  IN embryos_collected_by_param VARCHAR(255),
  IN embryo_collection_date_param DATE,
  IN number_of_embryos_collected_param INT(10),
- IN image_param enum('Yes','No'),
  IN phenotype_description_param VARCHAR(255),
+ IN developmental_stage_id_param INT(10),
  OUT exp_id int(10)
 )
 BEGIN 
 
 INSERT INTO experiment (
+ image,
  study_id,
- developmental_stage_id,
  genome_reference_id,
  name,
  lines_crossed,
  founder,
+ spike_mix,
  spike_dilution,
  spike_volume,
  embryo_collection_method,
  embryo_collected_by,
  embryo_collection_date,
  number_embryos_collected,
- image,
- phenotype_description
+ phenotype_description,
+ developmental_stage_id
 ) 
 VALUES ( 
+ image_param,
  study_id_param,
- developmental_stage_id_param,
  genome_reference_id_param,
  experiment_name_param,
  lines_crossed_param,
  founder_param,
+ spike_mix_param,
  spike_dilution_param,
  spike_volume_param,
  embryo_collection_method_param,
  embryos_collected_by_param,
  embryo_collection_date_param,
  number_of_embryos_collected_param,
- image_param,
- phenotype_description_param
+ phenotype_description_param,
+ developmental_stage_id_param
 );
 SET exp_id = LAST_INSERT_ID();
 END$$
