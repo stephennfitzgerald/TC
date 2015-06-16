@@ -122,8 +122,6 @@ CREATE TABLE IF NOT EXISTS experiment (
  embryo_collected_by			VARCHAR(255) DEFAULT "Neha" NOT NULL,
  embryo_collection_date			DATE DEFAULT '0000-00-00' NOT NULL, 
  number_embryos_collected		INT(10) NULL,
- submitted_for_sequencing               DATE DEFAULT '0000-00-00' NOT NULL,
- excel_file_location			VARCHAR(255) NULL,
  sample_visability			ENUM('Hold', 'Public') DEFAULT 'Public' NOT NULL,	 
  asset_group                            VARCHAR(255) NULL,
  rna_extraction_id			INT(10) NULL,
@@ -139,57 +137,43 @@ CREATE TABLE IF NOT EXISTS experiment (
  
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS allele_experiment_link (
 
- id					INT(10) AUTO_INCREMENT,
- allele_id				INT(10) NOT NULL,
+CREATE TABLE IF NOT EXISTS rna_dilution_plate (
+
+ id					INT(10) NOT NULL AUTO_INCREMENT,
  experiment_id				INT(10) NOT NULL,
+ rna_amount				FLOAT NOT NULL,
+ rna_volume				FLOAT NOT NULL,
+ well_name				VARCHAR(255) NOT NULL,
+ cut_off_amount				FLOAT NOT NULL,
+ qc_pass				TINYINT(1) DEFAULT 1 NOT NULL,
+ selected_for_sequencing		TINYINT(1) DEFAULT 0 NOT NULL,
+ gender				        ENUM('Male', 'Female', 'Unknown') DEFAULT 'Unknown' NOT NULL,
 
- PRIMARY 				KEY(id),
- UNIQUE					KEY(allele_id,experiment_id),
- FOREIGN				KEY(allele_id) REFERENCES allele(id),
+ PRIMARY    	    			KEY(id),
+ UNIQUE					KEY(experiment_id, well_name),
  FOREIGN				KEY(experiment_id) REFERENCES experiment(id)
 
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
- 
 
-CREATE TABLE IF NOT EXISTS sample (
+
+CREATE TABLE IF NOT EXISTS sequence_plate (
  
  id					INT(10) NOT NULL AUTO_INCREMENT,
- name					VARCHAR(255) NOT NULL,
- public_name				VARCHAR(255) NOT NULL,
- embryo_collection_well_number		VARCHAR(255) NOT NULL,
- rna_dilution_well_number		VARCHAR(255) NOT NULL,
- experiment_id				INT(10) NOT NULL,
- gender					VARCHAR(255) DEFAULT 'Unknown' NOT NULL,
+ plate_name				VARCHAR(255) NOT NULL,
+ excel_report_created_date		DATE NULL,
+ excel_report_file_location             VARCHAR(255) NULL,
+ well_name				VARCHAR(255) NOT NULL,
+ sample_name				VARCHAR(255) NOT NULL,
+ sample_public_name			VARCHAR(255) NOT NULL,
+ rna_dilution_plate_id			INT(10) NOT NULL,
  index_tag_id                           INT(10) NOT NULL,
  
 
  PRIMARY 				KEY(id),
- UNIQUE 				KEY(name, experiment_id),
+ UNIQUE 				KEY(plate_name, well_name),
  FOREIGN				KEY(index_tag_id) REFERENCES index_tag(id),
- FOREIGN				KEY(experiment_id) REFERENCES experiment(id)
-
-) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
-
-
-
-CREATE TABLE IF NOT EXISTS rna_dilution_plate ( /** one to one relationship with sample table **/
-
- rna_sample_id				INT(10) NOT NULL AUTO_INCREMENT,
- sample_id				INT(10) NOT NULL,
- rna_volume				INT(10) NOT NULL,
- water_volume				INT(10) NOT NULL,
- index_tag_conc				INT(10) NOT NULL,
- ratio_260_280				FLOAT NOT NULL,
- ratio_260_230				FLOAT NOT NULL,
- volume_needed_for_250ngs		INT(10) NOT NULL,
- dilution_library_made_date		DATE NOT NULL,
- pcr_cycles				VARCHAR(255) DEFAULT "KOD6020" NOT NULL,
-
- PRIMARY    	    			KEY(rna_sample_id),
- UNIQUE					KEY(sample_id),
- FOREIGN				KEY(sample_id) REFERENCES sample(id)
+ FOREIGN				KEY(rna_dilution_plate_id) REFERENCES rna_dilution_plate(id)
 
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 
@@ -198,168 +182,109 @@ CREATE TABLE IF NOT EXISTS genotype (
  
  id					INT(10) NOT NULL AUTO_INCREMENT,
  allele_id				INT(10) NOT NULL,
- sample_id				INT(10) NOT NULL,
+ rna_dilution_plate_id			INT(10) NOT NULL,
  name					ENUM('Het','Hom','Wildtype','Failed','Missing','Blank'),
- description				VARCHAR(255) NULL,
 
  PRIMARY				KEY(id),
  FOREIGN				KEY(allele_id) REFERENCES allele(id),
- FOREIGN				KEY(sample_id) REFERENCES sample(id),
- UNIQUE					KEY(allele_id,sample_id)
+ FOREIGN				KEY(rna_dilution_plate_id) REFERENCES rna_dilution_plate(id),
+ UNIQUE					KEY(allele_id,rna_dilution_plate_id)
 
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 
 /** views **/
 
-CREATE OR REPLACE VIEW alleExp AS
- SELECT allexp.id id,
-        alle.name allele_name,
-        allexp.experiment_id exp_id
- FROM allele_experiment_link allexp INNER JOIN allele alle
-        ON alle.id = allexp.allele_id
- ORDER BY id;
+CREATE OR REPLACE VIEW genotAlleleView AS
+ SELECT genot.rna_dilution_plate_id rna_well_id, 
+        group_concat(alle.name,":", alle.gene_name, ":", genot.name) AlleleGenotype 
+ FROM allele alle INNER JOIN genotype genot
+        ON genot.allele_id = alle.id 
+ GROUP BY genot.rna_dilution_plate_id;
 
 
-CREATE OR REPLACE VIEW tagSeq AS
- SELECT id, 
+CREATE OR REPLACE VIEW tagSetView AS        
+ SELECT DISTINCT(SUBSTRING_INDEX(name, '.', 1)) tag_set_name
+ FROM index_tag
+ ORDER BY tag_set_name;
+
+
+CREATE OR REPLACE VIEW tagSeqView AS
+ SELECT id,
         name,
-        SUBSTRING_INDEX(name,'.', 1) name_prefix, 
-        SUBSTRING_INDEX(name,'.', -1) name_postfix, 
-        tag_index_sequence index_sequence 
+        SUBSTRING_INDEX(name,'.', 1) name_prefix,
+        SUBSTRING_INDEX(name,'.', -1) name_postfix,
+        tag_index_sequence index_sequence
  FROM index_tag
  ORDER BY id;
 
-CREATE OR REPLACE VIEW tagSet AS
- SELECT DISTINCT(SUBSTRING_INDEX(name, '.', 1)) Tag_set_name 
- FROM index_tag
- ORDER BY Tag_set_name;
 
-CREATE OR REPLACE VIEW expView AS
- SELECT exp.id ID, 
-        exp.name Experiment, 
-        std.name Study, 
-        sp.name Species_name, 
-        GROUP_CONCAT(DISTINCT(dev.begins), ":", dev.stage) Developmental_stage,
-        GROUP_CONCAT(DISTINCT(ale.name) SEPARATOR ":") Alleles,
-        exp.spike_mix Spike_mix,
-        exp.image Image, 
-        exp.submitted_for_sequencing,
-        COUNT(DISTINCT(smp.id)) Sample_count 
-  FROM experiment exp INNER JOIN study std 
-        ON std.id = exp.study_id INNER JOIN genome_reference gr
-        ON exp.genome_reference_id = gr.id LEFT OUTER JOIN developmental_stage dev
-        ON dev.id = exp.developmental_stage_id INNER JOIN species sp
-        ON sp.id = gr.species_id LEFT OUTER JOIN sample smp
-        ON smp.experiment_id = exp.id INNER JOIN allele_experiment_link ael 
-        ON ael.experiment_id = exp.id INNER JOIN allele ale
-        ON ale.id = ael.allele_id
-  GROUP BY std.id, exp.id
-  ORDER BY exp.id DESC;
-
-CREATE OR REPLACE VIEW gcGenoView AS
- SELECT gt.sample_id, GROUP_CONCAT(al.name, ":", gt.name SEPARATOR " ") genot 
- FROM allele al INNER JOIN genotype gt 
-      ON gt.allele_id = al.id 
- GROUP BY gt.sample_id;
+CREATE OR REPLACE VIEW DevView AS
+ SELECT id, 
+        GROUP_CONCAT(begins, '  ', stage) time_stage
+ FROM developmental_stage 
+ GROUP BY id 
+ ORDER BY id;
 
 
-CREATE OR REPLACE VIEW smpView AS
- SELECT smp.id ID, 
-        exp.id Experiment_id, 
-        smp.name Sample_name, 
-        smp.public_name Sample_public_name, 
-        gcv.genot "Allele:Genotype",
-        exp.sample_visability Sample_visability, 
-        indt.name Tag_name, 
-        indt.tag_index_sequence Tag_index_sequence, 
-        smp.embryo_collection_well_number Embryo_collection_well_number, 
-        smp.rna_dilution_well_number RNA_dilution_well_number
- FROM sample smp INNER JOIN experiment exp 
-        ON exp.id = smp.experiment_id INNER JOIN index_tag indt
-        ON smp.index_tag_id = indt.id INNER JOIN gcGenoView gcv
-        ON smp.id = gcv.sample_id INNER JOIN genotype gt 
-        ON gt.sample_id = smp.id
- GROUP BY smp.id 
- ORDER BY exp.id, smp.id, gt.name;
+CREATE OR REPLACE VIEW StdView AS
+ SELECT name, id
+ FROM study
+ ORDER BY id DESC;
 
 
-CREATE OR REPLACE VIEW get_smpView AS
-SELECT  exp.id Experiment_id,
-        GROUP_CONCAT(smp.rna_dilution_well_number SEPARATOR " : ") RNA_dilution_well_order,
-        GROUP_CONCAT(ind_tag.name SEPARATOR " : ") Tag_name_order,
-        exp.name Experiment_name,
-        exp.sample_visability Sample_visability, 
-        GROUP_CONCAT(smp.embryo_collection_well_number SEPARATOR " : ") Embryo_collection_well_order, 
-        exp.submitted_for_sequencing Submitted_for_sequencing
- FROM experiment exp LEFT OUTER JOIN sample smp 
-        ON exp.id = smp.experiment_id LEFT OUTER JOIN rna_dilution_plate rna_dlip
-        ON smp.id = rna_dlip.sample_id LEFT OUTER JOIN index_tag ind_tag 
-        ON smp.index_tag_id = ind_tag.id
- GROUP BY smp.rna_dilution_well_number
- ORDER BY exp.id;
+CREATE OR REPLACE VIEW ExpStdNameView AS
+ SELECT std.name study_name, 
+        exp.name exp_name, 
+        exp.id exp_id
+ FROM study std INNER JOIN experiment exp 
+   ON std.id = exp.study_id;
 
-CREATE OR REPLACE VIEW showExpView AS
- SELECT std.name Study_name, 
-        exp.name Experiment_name, 
-        GROUP_CONCAT(ale.name SEPARATOR " : ") Alleles,
-        exp.lines_crossed Lines_crossed, 
-        exp.founder Founder, 
-        devs.stage Developmental_stage, 
-        exp.spike_mix Spike_mix,
-        exp.spike_dilution Spike_dilution,
-        exp.spike_volume Spike_volume,
-        exp.embryo_collection_method Embryo_collection_method,
-        exp.image Image, 
-        exp.phenotype_description Phenotype_description,
-        exp.embryo_collected_by Embryos_collected_by, 
-        exp.embryo_collection_date Embryo_collection_date, 
-        exp.number_embryos_collected Number_of_embryos_collected,
-        exp.sample_visability Sample_visability,
-        exp.asset_group Asset_group,
-        grf.name Genome_ref_name 
- FROM experiment exp INNER JOIN study std
-        ON exp.study_id = std.id INNER JOIN genome_reference grf
-        ON grf.id = exp.genome_reference_id LEFT OUTER JOIN developmental_stage devs
-        ON exp.developmental_stage_id = devs.id INNER JOIN allele_experiment_link ael
-        ON ael.experiment_id = exp.id INNER JOIN allele ale
-        ON ael.allele_id = ale.id
- GROUP BY exp.name
- ORDER BY std.name, exp.name;
 
-CREATE OR REPLACE VIEW speciesView AS
- SELECT sp.name Species_name, 
-        sp.binomial_name Binomial_name, 
-        sp.taxon_id Taxon_id, 
-        gr.name Genome_ref_name, 
-        gr.gc_content GC_content
- FROM species sp INNER JOIN genome_reference gr 
-        ON gr.species_id = sp.id
- ORDER BY sp.name; 
+CREATE OR REPLACE VIEW groupAlleleView AS
+ SELECT exp.id experiment_id,
+        GROUP_CONCAT(DISTINCT(ale.name) SEPARATOR " : ") Alleles
+ FROM experiment exp INNER JOIN rna_dilution_plate rdp
+   ON exp.id = rdp.experiment_id INNER JOIN genotype gt
+   ON gt.rna_dilution_plate_id = rdp.id INNER JOIN allele ale
+   ON ale.id = gt.allele_id
+ GROUP BY exp.id;
 
-CREATE OR REPLACE VIEW seqView AS
- SELECT rna_ext.library_tube_id "Library_Tube_ID",
+
+CREATE OR REPLACE VIEW groupDevStageView AS
+ SELECT exp.id experiment_id,
+        GROUP_CONCAT(dev.begins, " : ", dev.stage) dev_stage
+ FROM experiment exp INNER JOIN developmental_stage dev 
+   ON exp.developmental_stage_id = dev.id
+ GROUP BY exp.id;
+
+
+CREATE OR REPLACE VIEW SeqReportView AS
+ SELECT ind_tag.id "index_tag_id",
+        seq.id "seq_plate_id",
+        seq.plate_name "seq_plate_name",
+        exp.name "zmp_name",
+        rna_ext.library_tube_id "Library_Tube_ID",
         exp.id "Experiment_id",
         ind_tag.name "Tag_ID",
         exp.asset_group "Asset_Group",
-        smp.name "Sample_Name",
-        smp.public_name "Public_Name",
+        seq.sample_name "Sample_Name",
+        seq.sample_public_name "Public_Name",
         sp.name "Organism",
         sp.binomial_name "Common_Name",
         exp.sample_visability "Sample_Visability",
         gr.gc_content "GC_Content",
         sp.taxon_id "Taxon_ID",
         exp.strain_name "Strain",
-        gcv.genot "desc_allele:genotype",
-        ale.gene_name "ensembl_gene_id",
+        gav.AlleleGenotype "AlleleGenotype",
         exp.spike_mix "desc_spike_mix",
         ind_tag.tag_index_sequence "desc_tag_index_sequence",
-        smp.gender "Gender",
+        rdp.gender "Gender",
         exp.dna_source "DNA_Source",
         gr.name "Reference_Genome",
         array_exp.age "Age",
         array_exp.cell_type "Cell_type",
         array_exp.compound "Compound",
-        dev.stage "Developmental_Stage",
+        dev.dev_stage "Developmental_Stage",
         array_exp.disease "Disease",
         array_exp.disease_state "Disease_State",
         array_exp.dose "Dose",
@@ -372,64 +297,114 @@ CREATE OR REPLACE VIEW seqView AS
         array_exp.treatment "Treatment",
         array_exp.donor_id "Donor_ID"
  FROM experiment exp INNER JOIN array_express_data array_exp 
-        ON exp.array_express_data_id = array_exp.id INNER JOIN sample smp
-        ON smp.experiment_id = exp.id INNER JOIN genome_reference gr
+        ON exp.array_express_data_id = array_exp.id INNER JOIN rna_dilution_plate rdp 
+        ON rdp.experiment_id = exp.id INNER JOIN sequence_plate seq 
+        ON seq.rna_dilution_plate_id = rdp.id INNER JOIN genome_reference gr
         ON exp.genome_reference_id = gr.id INNER JOIN species sp
         ON gr.species_id = sp.id INNER JOIN index_tag ind_tag
-        ON smp.index_tag_id = ind_tag.id INNER JOIN developmental_stage dev
-        ON dev.id = exp.developmental_stage_id INNER JOIN gcGenoView gcv
-        ON gcv.sample_id = smp.id LEFT OUTER JOIN rna_extraction rna_ext
-        ON exp.rna_extraction_id = rna_ext.id INNER JOIN genotype gt 
-        ON gt.sample_id = smp.id INNER JOIN allele ale
-        ON gt.allele_id = ale.id
- ORDER BY smp.name, smp.name;
-    
-         
+        ON seq.index_tag_id = ind_tag.id INNER JOIN groupDevStageView dev 
+        ON dev.experiment_id = exp.id INNER JOIN genotAlleleView gav
+        ON gav.rna_well_id = rdp.id LEFT OUTER JOIN rna_extraction rna_ext
+        ON exp.rna_extraction_id = rna_ext.id 
+ ORDER BY seq.plate_name, exp.id, ind_tag.id;
+
+
+CREATE OR REPLACE VIEW ExpView AS
+ SELECT std.name Study_name, 
+        exp.name Experiment_name, 
+        ale.Alleles Alleles,
+        exp.lines_crossed Lines_crossed, 
+        exp.founder Founder, 
+        dev.dev_stage Developmental_stage,
+        exp.spike_mix Spike_mix,
+        exp.spike_dilution Spike_dilution,
+        exp.spike_volume Spike_volume,
+        exp.image Image, 
+        exp.phenotype_description Phenotype_description,
+        exp.embryo_collection_method Embryo_collection_method,
+        exp.embryo_collected_by Embryos_collected_by, 
+        exp.embryo_collection_date Embryo_collection_date, 
+        exp.number_embryos_collected Number_of_embryos_collected,
+        exp.sample_visability Sample_visability,
+        exp.asset_group Asset_group,
+        grf.name Genome_ref_name,
+        exp.id Experiment_id
+ FROM experiment exp INNER JOIN study std
+        ON exp.study_id = std.id INNER JOIN genome_reference grf
+        ON grf.id = exp.genome_reference_id INNER JOIN groupDevStageView dev
+        ON exp.id = dev.experiment_id INNER JOIN groupAlleleView ale
+        ON ale.experiment_id = exp.id
+ GROUP BY std.name, exp.name
+ ORDER BY std.name, exp.name;
+
+
+CREATE OR REPLACE VIEW SeqExpView AS
+ SELECT exp.id exp_id,
+        exp.name exp_name,
+        std.name std_name,
+        ale.Alleles alleles,
+        seq_plate.plate_name seq_plate_name,
+        count(DISTINCT(rdp.id)) sample_count
+ FROM experiment exp INNER JOIN study std 
+        ON exp.study_id = std.id INNER JOIN groupAlleleView ale
+        ON ale.experiment_id = exp.id INNER JOIN rna_dilution_plate rdp
+        ON rdp.experiment_id = exp.id LEFT OUTER JOIN sequence_plate seq_plate
+        ON seq_plate.rna_dilution_plate_id = rdp.id
+ WHERE rdp.selected_for_sequencing
+ GROUP BY exp.id
+ ORDER BY exp.id DESC;
+
+
+CREATE OR REPLACE VIEW RnaDilPlateView AS
+ SELECT rdp.id rna_plate_id,
+        rdp.well_name,
+        rdp.experiment_id,
+        exp.name experiment_name,
+        std.name study_name
+ FROM rna_dilution_plate rdp INNER JOIN experiment exp
+        ON exp.id = rdp.experiment_id INNER JOIN study std
+        ON std.id = exp.study_id
+ WHERE rdp.selected_for_sequencing
+ ORDER BY experiment_id, substr(well_name,1,1), length(substr(well_name,2)), substr(well_name,2);
+
+CREATE OR REPLACE VIEW SelectedExpNumView AS
+ SELECT exp.id exp_id, 
+        count(*) numb
+ FROM experiment exp INNER JOIN rna_dilution_plate rdp 
+        ON exp.id = rdp.experiment_id 
+ WHERE rdp.selected_for_sequencing 
+ GROUP BY exp.id 
+ ORDER BY exp.id;
         
+CREATE OR REPLACE VIEW MaxExpId AS
+ SELECT MAX(id) max_id 
+ FROM experiment;
+
+
+CREATE OR REPLACE VIEW SpView AS
+ SELECT sp.name Species_name, 
+        sp.binomial_name Binomial_name, 
+        sp.taxon_id Taxon_id, 
+        gr.id Genome_ref_id,
+        gr.name Genome_ref_name, 
+        gr.gc_content GC_content
+ FROM species sp INNER JOIN genome_reference gr  
+        ON gr.species_id = sp.id
+ ORDER BY sp.name;
+
+
+CREATE OR REPLACE VIEW LstExpView AS
+ SELECT *
+ FROM ExpView ev INNER JOIN MaxExpId mei
+  ON ev.Experiment_id = mei.max_id;
+
+
+CREATE OR REPLACE VIEW AlleleView AS
+ SELECT * 
+ FROM allele;
+
 
 /** procedures **/
-
-
-/** study **/
-DELIMITER $$
-DROP PROCEDURE IF EXISTS add_study_data$$
-
-CREATE PROCEDURE add_study_data(
- IN study_name_param VARCHAR(255),
- OUT study_id int(10)
-)
-BEGIN
-
-INSERT IGNORE INTO study (
- name
-)
-VALUES (
-study_name_param
-);
-SET study_id = LAST_INSERT_ID();
-END$$
-DELIMITER ;
-
-/** allele_experiment_link **/
-DELIMITER $$
-DROP PROCEDURE IF EXISTS add_allele_exp_link$$
-
-CREATE PROCEDURE add_allele_exp_link(
- IN allele_id_param int(10),
- IN experiment_id_param int(10)
-)
-BEGIN
-
-INSERT IGNORE INTO allele_experiment_link(
- allele_id, 
- experiment_id
-)
-VALUES (
- allele_id_param,
- experiment_id_param
-);
-END$$
-DELIMITER ;
 
 /** genotype **/
 DELIMITER $$
@@ -437,77 +412,95 @@ DROP PROCEDURE IF EXISTS add_genotype_data$$
 
 CREATE PROCEDURE add_genotype_data (
  IN allele_id_param INT(10),
- IN sample_id_param INT(10),
+ IN rna_dilution_plate_id_param INT(10),
  IN name_param ENUM('Het','Hom','Wildtype','Failed','Missing','Blank')
 )
 BEGIN
 
 INSERT IGNORE INTO genotype (
  allele_id,
- sample_id,
+ rna_dilution_plate_id,
  name
 )
 VALUES (
  allele_id_param,
- sample_id_param,
+ rna_dilution_plate_id_param,
  name_param
 );
 END$$
 DELIMITER ;
 
-
-/** sample **/
+/** sequence_plate **/
 DELIMITER $$
-DROP PROCEDURE IF EXISTS add_sample_data$$
+DROP PROCEDURE IF EXISTS add_sequence_plate_data$$
 
-CREATE PROCEDURE add_sample_data (
- IN name_param VARCHAR(255),
- IN public_name_param VARCHAR(255),
- IN embryo_collection_well_number_param VARCHAR(255),
- IN rna_dilution_well_number_param VARCHAR(255),
- IN experiment_id_param INT(10),
+CREATE PROCEDURE add_sequence_plate_data (
+ IN plate_name_param VARCHAR(255),
+ IN well_name_param VARCHAR(255),
+ IN sample_name_param VARCHAR(255),
+ IN sample_public_name_param VARCHAR(255),
+ IN rna_dilution_plate_id_param INT(10),
  IN index_tag_id_param INT(10)
 )
 BEGIN
 
-INSERT IGNORE INTO sample (
- name,
- public_name,
- embryo_collection_well_number,
- rna_dilution_well_number,
- experiment_id,
+INSERT IGNORE INTO sequence_plate (
+ plate_name,
+ well_name,
+ sample_name,
+ sample_public_name,
+ rna_dilution_plate_id,
  index_tag_id
 )
 VALUES (
- name_param,
- public_name_param,
- embryo_collection_well_number_param,
- rna_dilution_well_number_param,
- experiment_id_param,
+ plate_name_param,
+ well_name_param,
+ sample_name_param,
+ sample_public_name_param,
+ rna_dilution_plate_id_param,
  index_tag_id_param
 );
 END$$
 DELIMITER ;
 
-/** adding sequence submission time and exel file location **/
-DELIMITER $$
-DROP PROCEDURE IF EXISTS update_seq_sub_date$$
 
-CREATE PROCEDURE update_seq_sub_date (
- IN submitted_for_sequencing_param DATE,
- IN excel_file_location_param VARCHAR(255),
- IN id_param INT(10)
+/** rna_dilution_plate **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS add_rna_dilution_data$$
+
+CREATE PROCEDURE add_rna_dilution_data (
+ IN experiment_id_param INT(10),
+ IN rna_amount_param FLOAT,
+ IN rna_volume_param FLOAT,
+ IN well_name_param VARCHAR(255),
+ IN cut_off_amount_param FLOAT,
+ IN qc_pass_param TINYINT(1),
+ IN selected_for_sequencing_param TINYINT(1),
+ OUT rna_dilution_plate_id int(10)
 )
 BEGIN
 
- UPDATE experiment SET 
-  submitted_for_sequencing = submitted_for_sequencing_param,
-  excel_file_location = excel_file_location_param
- WHERE id = id_param;
-
+INSERT INTO rna_dilution_plate (
+ experiment_id,
+ rna_amount,
+ rna_volume,
+ well_name,
+ cut_off_amount,
+ qc_pass,
+ selected_for_sequencing
+)
+VALUES (
+ experiment_id_param,
+ rna_amount_param,
+ rna_volume_param,
+ well_name_param,
+ cut_off_amount_param,
+ qc_pass_param,
+ selected_for_sequencing_param
+);
+SET rna_dilution_plate_id = LAST_INSERT_ID();
 END$$
 DELIMITER ;
-
 
 /** experiment **/
 DELIMITER $$
@@ -570,6 +563,26 @@ VALUES (
 SET exp_id = LAST_INSERT_ID();
 END$$
 DELIMITER ;
+
+/** adding excel file location and creation date to sequence_plate **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS update_excel_file_location_and_date$$
+
+CREATE PROCEDURE update_excel_file_location_and_date (
+ IN excel_report_file_location_param VARCHAR(255),
+ IN excel_report_created_date_param DATE,
+ IN plate_name_param VARCHAR(255)
+)
+BEGIN
+
+ UPDATE sequence_plate  SET 
+  excel_report_file_location  = excel_report_file_location_param,
+  excel_report_created_date = excel_report_created_date_param
+ WHERE plate_name = plate_name_param;
+
+END$$
+DELIMITER ;
+
 
 /** Auto add data to array_express_data **/
 
