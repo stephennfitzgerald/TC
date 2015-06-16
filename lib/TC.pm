@@ -64,6 +64,7 @@ get '/' => sub {
 
 get '/get_sequencing_report' => sub {
 
+ my $excel_file_loc;
  if($seq_plate_name) {
 
   my @samples_for_excel = ( ## column names for the excel sheet
@@ -157,8 +158,17 @@ get '/get_sequencing_report' => sub {
   if($date && $file_loc) {
    my $seq_time_sth = $dbh->prepare("Call update_excel_file_location_and_date(?,?,?)");
    $seq_time_sth->execute($file_loc, $date, $seq_plate_name);
+   ($excel_file_loc) = $file_loc=~/\.\/public\/(.*)/xms;
   }
  }
+
+ template 'index', { 
+  'get_new_experiment_url'     => uri_for('/get_new_experiment'),
+  'make_sequencing_plate_url'  => uri_for('/get_sequencing_info'),
+  'make_sequencing_report_url' => uri_for('/get_sequencing_report'),
+ 
+  'excel_file_loc'             => $excel_file_loc,
+ };
 
 };
 
@@ -199,15 +209,49 @@ post '/combine_plate_data' => sub {
   my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
   $exp_sth->execute;
   my $all_exps = $exp_sth->fetchall_hashref('exp_id');
-  my $dec = 55280; ## hex=00FF00
+  my $dec = 45280; ## hex=00FF00
   my $tag_set_prefix = param('tag_set_name');
-  my $tag_seqs_sth =  $dbh->prepare("SELECT * FROM tagSeqView WHERE name_prefix = ?");
+  my $tag_seqs_sth = $dbh->prepare("SELECT * FROM tagSeqView WHERE name_prefix = ?");
   $tag_seqs_sth->execute("$tag_set_prefix");
   my $tag_seqs = $tag_seqs_sth->fetchall_arrayref;
   
+  ## try and get the spacing between experiment correct
+  my $wells_per_exp_sth = $dbh->prepare("SELECT * FROM SelectedExpNumView");
+  $wells_per_exp_sth->execute;
+  my %plate_samples = %{ $wells_per_exp_sth->fetchall_hashref('exp_id') };
+  my (@numbers, $sum, %filler);
+  foreach my $exp_id(sort {$b<=>$a} keys %plate_samples) {
+   if( ! param("$exp_id") ) {
+     delete( $plate_samples{ $exp_id } );
+   }
+   else {
+    my $well_no = $plate_samples{ $exp_id }{ 'numb' };
+    $sum += $well_no;
+    my $filler_size = 12 - ($well_no % 12);
+    $filler_size = $filler_size == 12 ? 0 : $filler_size;
+    push @numbers, [ $exp_id, $filler_size, 0];
+   }
+  }
+  my $free_wells = 96 - $sum;
+  pop @numbers;
+  my $all_not_done = 1;
+  while ($free_wells && $all_not_done) {
+   $all_not_done = 0;
+   foreach my $exp(@numbers){
+    if($free_wells && $exp->[1] != $exp->[2]) {
+     $exp->[2]++;
+     $free_wells--;
+     $all_not_done = 1;
+    }
+   }
+  }
+  foreach my $exp_id(@numbers){
+   $filler{ $exp_id->[0] } = $exp_id->[2];
+  }
+  
   my $ct = 0; ## array index corresponds to the index positions in $index_hash below
   my $index_hash = make_grid()->[1]; ## for merging the experiment(s) onto a single plate
-  foreach my $exp_id(keys %{ $all_exps }) {
+  foreach my $exp_id(sort {$b <=> $a} keys %{ $all_exps }) { ## most recent exp at top of plate
    if(my $exp_name = param("$exp_id")) {
     if($exp_name eq $all_exps->{"$exp_id"}->{'exp_name'}) { ## this should always be true
      my $rdp_sth = $dbh->prepare("SELECT * FROM RnaDilPlateView WHERE experiment_id = ?");
@@ -229,6 +273,7 @@ post '/combine_plate_data' => sub {
       $cell_mapping{ $index_hash->{ $ct } } = $sample->[1]; ## mapping betweem rna plate(s) and seq plate
       $ct++;
      }
+     $ct += $filler{ $exp_id };
      $dec += $inc;
     }
    }
@@ -261,7 +306,7 @@ post '/combine_plate_data' => sub {
     $cell = [ '#FFFFFF', $cell ];
    }
   }
-
+  
   template 'display_sequence_plate', {
    
    sequence_plate         => $seq_array,
