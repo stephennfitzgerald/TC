@@ -1,16 +1,92 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+function openWin(img){
+   var path = "images/";
+   window.open(path+img,"mywin","menubar=0,resizable=0,width=200,height=200");
+}
+
+function goBack() 
+  {
+    window.history.back();
+  }
+function goHome()
+  {
+    window.location = '/';   
+  }
+</script>
+
+
+<head>
+<style>
+
+.txt {
+ color: black;
+}
+.border {
+ color: #CCCCCC;
+ height: 150px;
+ width: 400px;
+ border: dashed;
+ padding: 10px;
+ text-align: left;
+}
+
+
+</style>
+</head>
+
+<body>
+
+
 <div id="page">
       <div id="sidebar">
       </div>
 
-      <div id="content">
-        <div id="header">
-          <h1>Experiments</h1>
-    	  <form action="<% existing_experiments_url %>" method=get> 
-          <dd><input type=submit value="All experiments"></dd>
-         </form>
-          <p>
-          <form action="<% get_new_experiment_url %>" method=get enctype="multipart/form-data">
-          <dd><input type=submit value="Add new experiment"></dd>
-        </div>
-      </div>
-</div>
+        <p><p>
+        <div id="section">
+         <div class="border">
+          <div class="txt">
+           <h1>Make a sequencing plate</h1>
+           <table><tr>
+            <td>Add a new experiment</td> 
+             <td>
+              <form action="<% get_new_experiment_url %>" method=get">
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+               <input type=submit value="&#8594;">
+              </form>
+             </td>
+            </tr><tr><tr>
+             <td>Make a sequencing plate</td>
+              <td>
+               <form action="<% make_sequencing_plate_url %>" method=get">
+               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <input type=submit value="&#8594;"> 
+               </form>
+               </td>
+              </tr>
+            </tr><tr><tr>
+               <% IF excel_file_loc %>
+               <td>Get the sequencing report</td>
+                <td>
+                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                 <a href="<% excel_file_loc %>" download><button type="button">&#8595;</button></a>
+               <% ELSE %>
+                <td> Make a sequencing report</td>
+                 <td>
+                  <form action="<% make_sequencing_report_url %>" method=get">
+                   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                  <input type=submit value="&#8594;">
+                </form>
+               <% END %>
+              </td>
+             </tr>
+          </div>
+         </div>
+        <p>
+       </div>
+
+     </div>
+

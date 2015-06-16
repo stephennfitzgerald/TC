@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+function goBack() 
+  {
+    window.history.back();
+  }
+
+function goHome()
+  {
+    window.location = '/';   
+  }
+</script>
+
+<head>
+<style>
+
+table, th, td {
+    border-collapse: collapse;
+}
+th,td {
+    width: 390px;
+    padding: 15px;
+}
+th {
+    text-align: right;
+}
+
+.txt_box {
+   border: 3px solid #33CCFF;
+} 
+.button {
+  color: #33CCFF;
+}
+
+</style>
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+          <h1><% names_info.1 %>(<% names_info.0 %>)</h1>
+          <table>
+
+           <form action="<% get_genotypes_and_rna_url %>" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="exp_id" value="<% names_info.2 %>">
+            <input type="hidden" name="exp_name" value="<% names_info.1 %>">
+            <input type="hidden" name="std_name" value="<% names_info.0 %>">
+
+             <td>RNA_dilution_file</td><td>
+              <input type="file" class="button" name="rna_dilution_file"></td></tr><tr> 
+             <td>RNA_volume</td><td>
+              <input type="text" class="txt_box" name="rna_volume" value="50"</td></tr><tr>
+             <td>Minimum_RNA_amount</td><td>
+              <input type="text" class="txt_box" name="minimum_rna_amount" value="300"</td><tr>
+              <td>KlusterCaller_plate_files</td></tr>
+
+               <% FOREACH allele IN alleles %>
+                <tr>
+                 <td><p align="right"><% allele.1 %></p></td>
+                  <td><input type="file" class="button" name="<% allele.1 %>" size="40">
+                 </td>
+                </tr>
+               <% END %>
+
+              </tr>
+         </table>
+           <p>
+            <input type="submit" value="Submit">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <input type="reset" value="Clear">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+          </form>
+            <button onclick="goHome()">Home</button>
+           </p>
+        </div>
+      </div>
+</div>
+</body>
+</html>

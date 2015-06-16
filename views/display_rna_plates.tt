@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+function goBack() 
+  {
+    window.history.back();
+  }
+
+function goHome()
+  {
+    window.location = '/';   
+  }
+</script>
+
+<head>
+<style>
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 50px;
+    height: 50px;
+    text-align: center;
+}
+.txt_box {
+   border: 3px solid #33CCFF;
+} 
+.button {
+  color: #33CCFF;
+}
+
+</style>
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+          <p></p>
+          <h1><% names_info.1 %> (<% names_info.0 %>)
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+          <button onclick="goHome()">Home</button></h1>
+           <table>
+            <% FOREACH well IN template_array %>
+             <% IF well == '##' %>
+              </tr><tr>
+             <% ELSIF well.search('^#') %>
+              <td bgcolor="<% well %>">
+              </td>
+             <% ELSE %>
+              <td><% well %>
+              </td>
+             <% END %>
+            <% END %>
+           </table>
+          </p>
+        </div>
+      </div>
+</div>
+</body>
+</html>

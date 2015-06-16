@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+function goBack() 
+  {
+    window.history.back();
+  }
+
+function goHome()
+  {
+    window.location = '/';   
+  }
+</script>
+
+<head>
+<style>
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 50px;
+    height: 50px;
+    text-align: center;
+}
+.txt_box {
+   border: 3px solid #33CCFF;
+} 
+.button {
+  color: #33CCFF;
+}
+
+</style>
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+          <p></p>
+          <h1>Sequencing plate 
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <button onclick="goHome()">Home</button></h1>
+           <table>
+            <% FOREACH well IN sequence_plate %>
+             <% IF well == '##' %>
+              </tr><tr>
+             <% ELSIF well.0.search('^#') %>
+              <td bgcolor="<% well.0 %>">
+              <% well.1 %>
+              </td>
+             <% ELSE %>
+              <td bgcolor="<% well.0 %>">
+              </td>
+             <% END %>
+            <% END %>
+           </table>
+           <p>
+            <% FOREACH col IN legend.keys.sort %>
+             <table style="display: inline;"><tr><td bgcolor="<% col %>"></td></tr></table>
+             <% legend.$col.exp_name %> (<% legend.$col.std_name %>)
+	    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <% END %>
+        </div>
+      </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+function goBack() 
+  {
+    window.history.back();
+  }
+
+function goHome()
+  {
+    window.location = '/';   
+  }
+</script>
+
+<head>
+<style>
+
+table, th, td {
+    table-layout: fixed;
+    border-collapse: collapse;
+    width: 400px;
+    height: 50px;
+    padding: 5px;
+    text-align: left;
+}
+
+.unseq_box {
+   color: #00FF00;
+} 
+.seq_box {
+   color: #FF0000;
+}
+
+</style>
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+      <div id="content">
+        <div id="header">
+          <h1>Choose experiments to combine on one sequencing plate</h1>
+          <form action="<% combine_plate_data_url %>" method="post" enctype="multipart/form-data">
+           <table>
+            <tr><td>Sequence_tag_set</td><td>
+             <select name="tag_set_name">
+              <% FOREACH tag_set_name IN tag_set_names %>
+               <option value="<% tag_set_name.0 %>"><% tag_set_name.0 %></option>
+	      <% END %>
+             </select></td>
+            <% FOREACH exp_id IN unseq.keys.nsort.reverse %>
+             <tr>
+              <td>
+               <% unseq.$exp_id.0 %> ( <% unseq.$exp_id.1 %> ) <% unseq.$exp_id.2 %> 
+              </td>
+              <td class="unseq_box">
+               <input type="radio" name="<% exp_id %>" value="<% unseq.$exp_id.0 %>">
+                &nbsp;&nbsp;&nbsp;&nbsp;
+               <% unseq.$exp_id.3 %>
+                &nbsp;&nbsp;&nbsp;&nbsp; Not sequenced
+              </td>
+             </tr>
+            <% END %>
+            <% FOREACH exp_id IN seq.keys.nsort.reverse %>
+             <tr>
+              <td>
+               <% seq.$exp_id.0 %> ( <% seq.$exp_id.1 %> ) <% seq.$exp_id.2 %> 
+              </td>
+              <td class="seq_box">
+               <input type="radio" name="<% exp_id %>" value="<% seq.$exp_id.0 %>">
+                &nbsp;&nbsp;&nbsp;&nbsp;
+               <% seq.$exp_id.3 %>
+               &nbsp;&nbsp;&nbsp;&nbsp; Sequenced
+              </td>
+             </tr>
+            <% END %>
+           </table>
+            <input type="submit" value="Submit">
+             &nbsp;&nbsp;&nbsp;&nbsp;
+             <input type="reset" value="Clear">
+           </form>
+        </div>
+      </div>
+</div>
+</body>
+</html>
