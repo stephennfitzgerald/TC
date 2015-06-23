@@ -168,10 +168,12 @@ CREATE TABLE IF NOT EXISTS sequence_plate (
  sample_public_name			VARCHAR(255) NOT NULL,
  rna_dilution_plate_id			INT(10) NOT NULL,
  index_tag_id                           INT(10) NOT NULL,
+ color					VARCHAR(255) NULL,
  
 
  PRIMARY 				KEY(id),
  UNIQUE 				KEY(plate_name, well_name),
+ UNIQUE					KEY(rna_dilution_plate_id), /** allow an experiment to be on ONE sequence plate at most **/ 
  FOREIGN				KEY(index_tag_id) REFERENCES index_tag(id),
  FOREIGN				KEY(rna_dilution_plate_id) REFERENCES rna_dilution_plate(id)
 
@@ -201,12 +203,26 @@ CREATE OR REPLACE VIEW genotAlleleView AS
         ON genot.allele_id = alle.id 
  GROUP BY genot.rna_dilution_plate_id;
 
+CREATE OR REPLACE VIEW alleleGeneView AS 
+ SELECT rdp.experiment_id exp_id, 
+        GROUP_CONCAT(DISTINCT(ale.name), ":",ale.gene_name) allele_gene 
+ FROM allele ale INNER JOIN genotype geno
+      ON geno.allele_id = ale.id INNER JOIN rna_dilution_plate rdp 
+      ON rdp.id = geno.rna_dilution_plate_id
+ GROUP BY rdp.experiment_id, ale.name;
 
 CREATE OR REPLACE VIEW tagSetView AS        
  SELECT DISTINCT(SUBSTRING_INDEX(name, '.', 1)) tag_set_name
  FROM index_tag
  ORDER BY tag_set_name;
 
+CREATE OR REPLACE VIEW spikeView AS 
+ SELECT id exp_id, 
+        spike_mix, 
+        spike_dilution, 
+        spike_volume 
+ FROM experiment 
+ WHERE spike_mix <> '0';
 
 CREATE OR REPLACE VIEW tagSeqView AS
  SELECT id,
@@ -217,6 +233,23 @@ CREATE OR REPLACE VIEW tagSeqView AS
  FROM index_tag
  ORDER BY id;
 
+CREATE OR REPLACE VIEW seqSampleView AS
+ SELECT seq.sample_name Sample_name,
+        seq.sample_public_name Sample_public_name,
+        seq.well_name Sequence_plate_well,
+        rdp.well_name Collection_plate_well, 
+        ind.name Index_tag_name,
+        ind.tag_index_sequence Index_tag_sequence,
+        rdp.rna_amount RNA_amount,
+        rdp.rna_volume RNA_volume,
+        rdp.cut_off_amount RNA_amount_threshold,
+        rdp.experiment_id Experiment_id
+ FROM rna_dilution_plate rdp INNER JOIN sequence_plate seq 
+        ON seq.rna_dilution_plate_id = rdp.id INNER JOIN index_tag ind
+        ON ind.id = seq.index_tag_id
+ ORDER BY SUBSTR(Sequence_plate_well,1,1),
+        LENGTH(SUBSTR(Sequence_plate_well,2)),
+        SUBSTR(Sequence_plate_well,2); 
 
 CREATE OR REPLACE VIEW DevView AS
  SELECT id, 
@@ -225,6 +258,14 @@ CREATE OR REPLACE VIEW DevView AS
  GROUP BY id 
  ORDER BY id;
 
+CREATE OR REPLACE VIEW DevInfoView AS
+ SELECT exp.id exp_id,
+        dev.period,
+        dev.stage,
+        dev.begins,
+        dev.developmental_landmarks
+ FROM developmental_stage dev INNER JOIN experiment exp
+        ON dev.id = exp.developmental_stage_id;
 
 CREATE OR REPLACE VIEW StdView AS
  SELECT name, id
@@ -313,21 +354,21 @@ CREATE OR REPLACE VIEW ExpView AS
  SELECT std.name Study_name, 
         exp.name Experiment_name, 
         ale.Alleles Alleles,
-        exp.lines_crossed Lines_crossed, 
-        exp.founder Founder, 
         dev.dev_stage Developmental_stage,
+        exp.number_embryos_collected Number_of_embryos_collected,
+        exp.embryo_collection_method Embryo_collection_method,
+        exp.embryo_collection_date Embryo_collection_date, 
+        exp.embryo_collected_by Embryos_collected_by, 
         exp.spike_mix Spike_mix,
         exp.spike_dilution Spike_dilution,
         exp.spike_volume Spike_volume,
-        exp.image Image, 
-        exp.phenotype_description Phenotype_description,
-        exp.embryo_collection_method Embryo_collection_method,
-        exp.embryo_collected_by Embryos_collected_by, 
-        exp.embryo_collection_date Embryo_collection_date, 
-        exp.number_embryos_collected Number_of_embryos_collected,
         exp.sample_visability Sample_visability,
-        exp.asset_group Asset_group,
         grf.name Genome_ref_name,
+        exp.image Image, 
+        exp.lines_crossed Lines_crossed, 
+        exp.founder Founder, 
+        exp.phenotype_description Phenotype_description,
+        exp.asset_group Asset_group,
         exp.id Experiment_id
  FROM experiment exp INNER JOIN study std
         ON exp.study_id = std.id INNER JOIN genome_reference grf
@@ -337,6 +378,30 @@ CREATE OR REPLACE VIEW ExpView AS
  GROUP BY std.name, exp.name
  ORDER BY std.name, exp.name;
 
+CREATE OR REPLACE VIEW ExpDisplayView AS
+ SELECT std.name Study_name, 
+        exp.name Experiment_name, 
+        ale.Alleles Alleles,
+        dev.dev_stage Developmental_stage,
+        exp.number_embryos_collected Number_of_embryos_collected,
+        exp.spike_mix Spike_mix,
+        exp.sample_visability Sample_visability,
+        grf.name Genome_ref_name,
+        exp.image Image, 
+        exp.phenotype_description Phenotype_description,
+        count(rdp.id) Sequenced_samples,
+        seqp.excel_report_file_location Excel_file,
+        exp.id Experiment_id
+ FROM experiment exp INNER JOIN study std
+        ON exp.study_id = std.id INNER JOIN genome_reference grf
+        ON grf.id = exp.genome_reference_id INNER JOIN groupDevStageView dev
+        ON exp.id = dev.experiment_id INNER JOIN groupAlleleView ale
+        ON ale.experiment_id = exp.id INNER JOIN rna_dilution_plate rdp
+        ON rdp.experiment_id = exp.id INNER JOIN sequence_plate seqp
+        ON seqp.rna_dilution_plate_id = rdp.id
+ WHERE rdp.selected_for_sequencing = 1
+ GROUP BY std.name, exp.name
+ ORDER BY exp.id DESC;
 
 CREATE OR REPLACE VIEW SeqExpView AS
  SELECT exp.id exp_id,
@@ -354,6 +419,24 @@ CREATE OR REPLACE VIEW SeqExpView AS
  GROUP BY exp.id
  ORDER BY exp.id DESC;
 
+CREATE OR REPLACE VIEW SeqWellOrderView AS
+ SELECT seqp.plate_name, 
+        seqp.well_name seq_well_name, 
+        rdp.well_name rna_well_name, 
+        exp.name exp_name, 
+        std.name std_name,
+        seqp.color,
+        gav.AlleleGenotype,
+        SUBSTRING_INDEX(tag.name, ':', -2) tag_name,
+        tag.tag_index_sequence tag_seq,
+        SUBSTRING_INDEX(tag.name, '.', 1) tag_set
+ FROM sequence_plate seqp INNER JOIN rna_dilution_plate rdp
+        ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN experiment exp
+        ON rdp.experiment_id = exp.id INNER JOIN study std 
+        ON exp.study_id = std.id INNER JOIN genotAlleleView gav
+        ON gav.rna_well_id = rdp.id INNER JOIN index_tag tag
+        ON seqp.index_tag_id = tag.id
+ ORDER BY plate_name; 
 
 CREATE OR REPLACE VIEW RnaDilPlateView AS
  SELECT rdp.id rna_plate_id,
@@ -365,7 +448,10 @@ CREATE OR REPLACE VIEW RnaDilPlateView AS
         ON exp.id = rdp.experiment_id INNER JOIN study std
         ON std.id = exp.study_id
  WHERE rdp.selected_for_sequencing
- ORDER BY experiment_id, substr(well_name,1,1), length(substr(well_name,2)), substr(well_name,2);
+ ORDER BY experiment_id, 
+        SUBSTR(well_name,1,1), 
+        LENGTH(SUBSTR(well_name,2)), 
+        SUBSTR(well_name,2);
 
 CREATE OR REPLACE VIEW SelectedExpNumView AS
  SELECT exp.id exp_id, 
@@ -380,6 +466,17 @@ CREATE OR REPLACE VIEW MaxExpId AS
  SELECT MAX(id) max_id 
  FROM experiment;
 
+CREATE OR REPLACE VIEW SeqPlateView AS
+ SELECT sp.plate_name, 
+        sp.excel_report_file_location excel_file_loc, 
+        GROUP_CONCAT(DISTINCT(exp.name)) exp_names, 
+        GROUP_CONCAT(DISTINCT(std.name)) std_names
+ FROM sequence_plate sp INNER JOIN rna_dilution_plate rdp
+        ON rdp.id = sp.rna_dilution_plate_id INNER JOIN experiment exp
+        ON rdp.experiment_id = exp.id INNER JOIN study std
+        ON std.id = exp.study_id 
+ GROUP BY sp.plate_name 
+ ORDER BY sp.id DESC;
 
 CREATE OR REPLACE VIEW SpView AS
  SELECT sp.name Species_name, 
@@ -440,7 +537,8 @@ CREATE PROCEDURE add_sequence_plate_data (
  IN sample_name_param VARCHAR(255),
  IN sample_public_name_param VARCHAR(255),
  IN rna_dilution_plate_id_param INT(10),
- IN index_tag_id_param INT(10)
+ IN index_tag_id_param INT(10),
+ IN color_param VARCHAR(255)
 )
 BEGIN
 
@@ -450,7 +548,8 @@ INSERT IGNORE INTO sequence_plate (
  sample_name,
  sample_public_name,
  rna_dilution_plate_id,
- index_tag_id
+ index_tag_id,
+ color
 )
 VALUES (
  plate_name_param,
@@ -458,7 +557,8 @@ VALUES (
  sample_name_param,
  sample_public_name_param,
  rna_dilution_plate_id_param,
- index_tag_id_param
+ index_tag_id_param,
+ color_param
 );
 END$$
 DELIMITER ;

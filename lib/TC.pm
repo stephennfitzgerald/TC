@@ -11,14 +11,13 @@ use DBI;
 
 our $VERSION = '0.1';
 my $db_name = "zfish_sf5_tc2_test";
-my $dbh = get_schema();
 my $exel_file_dir = "./public/zmp_exel_files"; # need to change
 my $rna_dilution_dir = "./public/RNA_dilution_files";
 my $image_dir = "./public/images"; 
 my (@alleles, %rna_plate, %allele_combos);
-my $dec = 55280; ## hex=00FF00
 my $inc = 3500; ## increase the color $dec 
 my $seq_plate_name;
+my $schema_location = "images/schema_tables_zmp.png";
 
 my %genotypes_c = (
  'Blank'    => 0,
@@ -50,22 +49,163 @@ my %KlusterCallerCodes = (
 );
 
 
-
 get '/' => sub {
     
  template 'index', { 
-  'get_new_experiment_url'     => uri_for('/get_new_experiment'),
-  'make_sequencing_plate_url'  => uri_for('/get_sequencing_info'),
-  'make_sequencing_report_url' => uri_for('/get_sequencing_report'),
+  'schema_location' 	          => $schema_location,
+
+  'add_a_new_study_url'           => uri_for('/add_a_new_study'),
+  'add_a_new_species_url'         => uri_for('/add_a_new_species'),
+  'get_new_experiment_url'        => uri_for('/get_new_experiment'),
+  'make_sequencing_plate_url'     => uri_for('/get_sequencing_info'),
+  'make_sequencing_report_url'    => uri_for('/get_sequencing_report'),
+  'get_all_sequencing_plates_url' => uri_for('/get_all_sequencing_plates'),
+  'get_all_experiments_url'       => uri_for('/get_all_experiments'),
  };
        
 };
 
 
+post '/add_a_new_study' => sub {
+};
+
+
+post '/add_a_new_species' => sub {
+
+};
+
+get '/get_all_experiments' => sub {
+ 
+ my $dbh = get_schema(); 
+ my $exp_disp_sth = $dbh->prepare('SELECT * FROM ExpDisplayView');
+ $exp_disp_sth->execute;
+ my $col_names = $exp_disp_sth->{'NAME'};
+ my $all_experiments = $exp_disp_sth->fetchall_arrayref();
+ unshift @$all_experiments, $col_names;
+ 
+ my $gen_sth = $dbh->prepare("SELECT * FROM SpView");
+ $gen_sth->execute;
+
+ my %allele_info;
+ my $gene_sth = $dbh->prepare("SELECT * FROM alleleGeneView");
+ $gene_sth->execute;
+ foreach my $alle_gen(@{ $gene_sth->fetchall_arrayref }) {
+  push @{ $allele_info{ $alle_gen->[0] } }, $alle_gen->[1];
+ }
+
+ my $spikes_sth = $dbh->prepare("SELECT * FROM spikeView");
+ $spikes_sth->execute;
+
+ my $dev_sth = $dbh->prepare("SELECT * FROM DevInfoView");
+ $dev_sth->execute;
+ 
+ template 'all_experiments', {
+  'all_experiments'              => $all_experiments,
+  'species_info'		 => $gen_sth->fetchall_hashref('Genome_ref_name'),
+  'spike_info'			 => $spikes_sth->fetchall_hashref('exp_id'),
+  'dev_info'			 => $dev_sth->fetchall_hashref('exp_id'),
+  'allele_info'                  => \%allele_info,
+  
+  'get_sequenced_samples_url'    => uri_for('/get_sequenced_samples'),
+ };
+
+};
+
+get '/get_sequenced_samples' => sub {
+
+ my $dbh = get_schema();
+ my $exp_info = get_study_and_exp_names(param('exp_id'));
+ 
+ my $sequenced_samples_sth = $dbh->prepare("SELECT * FROM seqSampleView WHERE Experiment_id = ?");
+ $sequenced_samples_sth->execute(param('exp_id'));
+ my $col_names = $sequenced_samples_sth->{'NAME'};
+ my $sequenced_samples = $sequenced_samples_sth->fetchall_arrayref();
+ unshift @$sequenced_samples, $col_names;
+
+ template 'display_sequenced_samples', {
+ 
+  'sequenced_samples'            => $sequenced_samples,         
+  'exp_info'                     => $exp_info,
+ };
+
+};
+
+get '/get_all_sequencing_plates' => sub {
+
+ my $dbh = get_schema();
+ my $seq_plates_sth = $dbh->prepare('SELECT * FROM SeqPlateView');
+ $seq_plates_sth->execute;
+ my $all_seq_plates = $seq_plates_sth->fetchall_arrayref;
+
+ template 'all_sequencing_plates', { 
+  'all_seq_plates'                => $all_seq_plates,
+  
+  'display_well_order_url'        => uri_for('/display_well_order'),
+  'display_genot_order_url'       => uri_for('/display_genot_order'),
+  'display_tag_order_url'         => uri_for('/display_tag_order'),
+ };
+
+};
+
+get '/display_well_order' => sub {
+
+ my $color_plate = color_plate( 'well_names' );
+
+ template 'display_sequence_plate', {
+  
+  display_plate_name     => param('display_plate_name'),
+  sequence_plate         => $color_plate->[0],
+  legend                 => $color_plate->[1],
+  plate_name		 => param('plate_name'),
+ 
+  'display_genot_order_url'       => uri_for('/display_genot_order'),
+  'display_tag_order_url'         => uri_for('/display_tag_order'),
+  'display_well_order_url'        => uri_for('/display_well_order'),
+ };
+
+};
+
+get '/display_tag_order' => sub {
+
+ my $color_plate = color_plate( 'index_tags' );
+
+ template 'display_sequence_plate', {
+  
+  display_plate_name     => param('display_plate_name'),
+  sequence_plate         => $color_plate->[0],
+  plate_name             => param('plate_name'),
+
+  'display_genot_order_url'       => uri_for('/display_genot_order'),
+  'display_tag_order_url'         => uri_for('/display_tag_order'),
+  'display_well_order_url'        => uri_for('/display_well_order'),
+ };
+
+}; 
+
+get '/display_genot_order' => sub {
+
+ my $color_plate = color_plate( 'genotypes' );
+
+ template 'display_sequence_plate', {
+  
+  display_plate_name     => param('display_plate_name'),
+  sequence_plate         => $color_plate->[0],
+  legend                 => $color_plate->[1],
+  geno_legend	         => $color_plate->[2],
+  plate_name             => param('plate_name'),
+
+  'display_well_order_url'        => uri_for('/display_well_order'),
+  'display_tag_order_url'         => uri_for('/display_tag_order'),
+  'display_genot_order_url'       => uri_for('/display_genot_order'),
+ };
+
+}; 
+
 get '/get_sequencing_report' => sub {
 
  my $excel_file_loc;
  if($seq_plate_name) {
+  my $dbh = get_schema();
 
   my @samples_for_excel = ( ## column names for the excel sheet
   'Library_Tube_ID',
@@ -157,23 +297,29 @@ get '/get_sequencing_report' => sub {
 
   if($date && $file_loc) {
    my $seq_time_sth = $dbh->prepare("Call update_excel_file_location_and_date(?,?,?)");
-   $seq_time_sth->execute($file_loc, $date, $seq_plate_name);
    ($excel_file_loc) = $file_loc=~/\.\/public\/(.*)/xms;
+   $seq_time_sth->execute($excel_file_loc, $date, $seq_plate_name);
   }
  }
 
  template 'index', { 
+  'schema_location'            => $schema_location,   
+  'excel_file_loc'             => $excel_file_loc,
+
+  'add_a_new_study_url'           => uri_for('/add_a_new_study'),
+  'add_a_new_species_url'         => uri_for('/add_a_new_species'),
   'get_new_experiment_url'     => uri_for('/get_new_experiment'),
   'make_sequencing_plate_url'  => uri_for('/get_sequencing_info'),
   'make_sequencing_report_url' => uri_for('/get_sequencing_report'),
- 
-  'excel_file_loc'             => $excel_file_loc,
+  'get_all_sequencing_plates_url' => uri_for('/get_all_sequencing_plates'),
+  'get_all_experiments_url'       => uri_for('/get_all_experiments'),
  };
 
 };
 
 get '/get_sequencing_info' => sub {
 
+ my $dbh = get_schema();
  my (%seq, %unseq);
  my $exp_seq_sth = $dbh->prepare("SELECT * FROM SeqExpView");
  $exp_seq_sth->execute;
@@ -205,119 +351,128 @@ get '/get_sequencing_info' => sub {
 
 post '/combine_plate_data' => sub {
 
-  my (%combined_plate, %exp_ids, %cell_color, %exp_color, %cell_mapping, %index_tag_set);
-  my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
-  $exp_sth->execute;
-  my $all_exps = $exp_sth->fetchall_hashref('exp_id');
-  my $dec = 45280; ## hex=00FF00
-  my $tag_set_prefix = param('tag_set_name');
-  my $tag_seqs_sth = $dbh->prepare("SELECT * FROM tagSeqView WHERE name_prefix = ?");
-  $tag_seqs_sth->execute("$tag_set_prefix");
-  my $tag_seqs = $tag_seqs_sth->fetchall_arrayref;
-  
-  ## try and get the spacing between experiment correct
-  my $wells_per_exp_sth = $dbh->prepare("SELECT * FROM SelectedExpNumView");
-  $wells_per_exp_sth->execute;
-  my %plate_samples = %{ $wells_per_exp_sth->fetchall_hashref('exp_id') };
-  my (@numbers, $sum, %filler);
-  foreach my $exp_id(sort {$b<=>$a} keys %plate_samples) {
-   if( ! param("$exp_id") ) {
-     delete( $plate_samples{ $exp_id } );
-   }
-   else {
-    my $well_no = $plate_samples{ $exp_id }{ 'numb' };
-    $sum += $well_no;
-    my $filler_size = 12 - ($well_no % 12);
-    $filler_size = $filler_size == 12 ? 0 : $filler_size;
-    push @numbers, [ $exp_id, $filler_size, 0];
+ my $dbh = get_schema();
+ my (%combined_plate, %exp_ids, %cell_color, %exp_color, %cell_mapping, %index_tag_set);
+ my $dec = 45280; 
+ my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
+ $exp_sth->execute;
+ my $all_exps = $exp_sth->fetchall_hashref('exp_id');
+ my $tag_set_prefix = param('tag_set_name');
+ my $tag_seqs_sth = $dbh->prepare("SELECT * FROM tagSeqView WHERE name_prefix = ?");
+ $tag_seqs_sth->execute("$tag_set_prefix");
+ my $tag_seqs = $tag_seqs_sth->fetchall_arrayref;
+ 
+ ## try and get the spacing between experiments correct
+ my $wells_per_exp_sth = $dbh->prepare("SELECT * FROM SelectedExpNumView");
+ $wells_per_exp_sth->execute;
+ my %plate_samples = %{ $wells_per_exp_sth->fetchall_hashref('exp_id') };
+ my (@numbers, $sum, %filler);
+ foreach my $exp_id(sort {$b<=>$a} keys %plate_samples) {
+  if( ! param("$exp_id") ) {
+    delete( $plate_samples{ $exp_id } );
+  }
+  else {
+   my $well_no = $plate_samples{ $exp_id }{ 'numb' };
+   $sum += $well_no;
+   my $filler_size = 12 - ($well_no % 12);
+   $filler_size = $filler_size == 12 ? 0 : $filler_size;
+   push @numbers, [ $exp_id, $filler_size, 0];
+  }
+ }
+ my $free_wells = 96 - $sum;
+ pop @numbers;
+ my $all_not_done = 1;
+ while ($free_wells && $all_not_done) {
+  $all_not_done = 0;
+  foreach my $exp(@numbers){
+   if($free_wells && $exp->[1] != $exp->[2]) {
+    $exp->[2]++;
+    $free_wells--;
+    $all_not_done = 1;
    }
   }
-  my $free_wells = 96 - $sum;
-  pop @numbers;
-  my $all_not_done = 1;
-  while ($free_wells && $all_not_done) {
-   $all_not_done = 0;
-   foreach my $exp(@numbers){
-    if($free_wells && $exp->[1] != $exp->[2]) {
-     $exp->[2]++;
-     $free_wells--;
-     $all_not_done = 1;
+ }
+ foreach my $exp_id(@numbers){
+  $filler{ $exp_id->[0] } = $exp_id->[2];
+ }
+ 
+ my $display_plate_name;
+ my $ct = 0; ## array index corresponds to the index positions in $index_hash below
+ my $index_hash = make_grid()->[1]; ## for merging the experiment(s) onto a single plate
+ foreach my $exp_id(sort {$b <=> $a} keys %{ $all_exps }) { ## most recent exp at top of plate
+  if(my $exp_name = param("$exp_id")) {
+   if($exp_name eq $all_exps->{"$exp_id"}->{'exp_name'}) { ## this should always be true
+    $display_plate_name .= $exp_name . q{::};
+    my $rdp_sth = $dbh->prepare("SELECT * FROM RnaDilPlateView WHERE experiment_id = ?");
+    $rdp_sth->execute("$exp_id");
+    my $hex = sprintf "0x%x", $dec;
+    $hex=~s/0x/#/;
+    $exp_color{ $hex }{ 'exp_name' } = $exp_name; ## legend colors for exps
+    foreach my $sample(@{ $rdp_sth->fetchall_arrayref }) {
+     $exp_color{ $hex }{ 'std_name' } = $sample->[4];
+     $exp_ids{ $sample->[2] }++; ## experiment_ids
+     my $tag_seq = shift @$tag_seqs;
+     $index_tag_set{ $tag_seq->[0] } = $tag_seq->[1];
+     $combined_plate{ $sample->[0] }{ 'rna_plate_well_name' }  = $sample->[1];
+     $combined_plate{ $sample->[0] }{ 'exp_name' }             = $sample->[3];
+     $combined_plate{ $sample->[0] }{ 'std_name' }             = $sample->[4];
+     $combined_plate{ $sample->[0] }{ 'index_tag_id' }         = $tag_seq->[0];
+     $combined_plate{ $sample->[0] }{ 'seq_plate_well_name' }  = $index_hash->{ $ct };
+     $combined_plate{ $sample->[0] }{ 'color' }                = $hex;
+     $cell_color{ $index_hash->{ $ct } } = $hex; ## cell colors
+     $cell_mapping{ $index_hash->{ $ct } } = $sample->[1]; ## mapping betweem rna plate(s) and seq plate
+     $ct++;
     }
+    $ct += $filler{ $exp_id };
+    $dec += $inc;
    }
   }
-  foreach my $exp_id(@numbers){
-   $filler{ $exp_id->[0] } = $exp_id->[2];
+ }
+ $seq_plate_name = join "_", keys %exp_ids;
+ my $spd_sth = $dbh->prepare("CALL add_sequence_plate_data(?,?,?,?,?,?,?)");
+ my $seq_array = make_grid()->[0];
+ foreach my $rna_plate_id(sort {$a <=> $b} keys %combined_plate) {
+  my $seq_plate_well_name = $combined_plate{ $rna_plate_id }{ 'seq_plate_well_name' };
+  my $rna_plate_well_name = $combined_plate{ $rna_plate_id }{ 'rna_plate_well_name' };
+  my $index_tag_id = $combined_plate{ $rna_plate_id }{ 'index_tag_id' };
+  my $sample_name = join "_", $combined_plate{ $rna_plate_id }{ 'exp_name' }, $rna_plate_well_name;
+  my ($tag_num) = $index_tag_set{ $index_tag_id }=~m/\.([[:digit:]]+)/xms;
+  my $sample_public_name = join "_", $sample_name, $seq_plate_well_name, $tag_num;
+  my $hex_color = $combined_plate{ $rna_plate_id }{ 'color' };
+  $spd_sth->execute( $seq_plate_name, 
+                     $seq_plate_well_name,
+                     $sample_name,
+                     $sample_public_name,
+                     $rna_plate_id,
+                     $index_tag_id,
+                     $hex_color );                   
+ }
+ foreach my $cell( @{ $seq_array } ) {
+  if(exists($cell_color{ $cell })) {
+   $cell = [ $cell_color{ $cell }, $cell_mapping{ $cell } ];
   }
-  
-  my $ct = 0; ## array index corresponds to the index positions in $index_hash below
-  my $index_hash = make_grid()->[1]; ## for merging the experiment(s) onto a single plate
-  foreach my $exp_id(sort {$b <=> $a} keys %{ $all_exps }) { ## most recent exp at top of plate
-   if(my $exp_name = param("$exp_id")) {
-    if($exp_name eq $all_exps->{"$exp_id"}->{'exp_name'}) { ## this should always be true
-     my $rdp_sth = $dbh->prepare("SELECT * FROM RnaDilPlateView WHERE experiment_id = ?");
-     $rdp_sth->execute("$exp_id");
-     my $hex = sprintf "0x%x", $dec;
-     $hex=~s/0x/#/;
-     $exp_color{ $hex }{ 'exp_name' } = $exp_name; ## legend colors for exps
-     foreach my $sample(@{ $rdp_sth->fetchall_arrayref }) {
-      $exp_color{ $hex }{ 'std_name' } = $sample->[4];
-      $exp_ids{ $sample->[2] }++; ## experiment_ids
-      my $tag_seq = shift @$tag_seqs;
-      $index_tag_set{ $tag_seq->[0] } = $tag_seq->[1];
-      $combined_plate{ $sample->[0] }{ 'rna_plate_well_name' }  = $sample->[1];
-      $combined_plate{ $sample->[0] }{ 'exp_name' }             = $sample->[3];
-      $combined_plate{ $sample->[0] }{ 'std_name' }             = $sample->[4];
-      $combined_plate{ $sample->[0] }{ 'index_tag_id' }         = $tag_seq->[0];
-      $combined_plate{ $sample->[0] }{ 'seq_plate_well_name' }  = $index_hash->{ $ct };
-      $cell_color{ $index_hash->{ $ct } } = $hex; ## cell colors
-      $cell_mapping{ $index_hash->{ $ct } } = $sample->[1]; ## mapping betweem rna plate(s) and seq plate
-      $ct++;
-     }
-     $ct += $filler{ $exp_id };
-     $dec += $inc;
-    }
-   }
+  elsif( $cell=~/[[:alpha:]][[:digit:]]+/xms ){
+   $cell = [ '#D8D8D8', undef ];
   }
-  $seq_plate_name = join "_", keys %exp_ids;
-  my $spd_sth = $dbh->prepare("CALL add_sequence_plate_data(?,?,?,?,?,?)");
-  my $seq_array = make_grid()->[0];
-  foreach my $rna_plate_id(sort {$a <=> $b} keys %combined_plate) {
-   my $seq_plate_well_name = $combined_plate{ $rna_plate_id }{ 'seq_plate_well_name' };
-   my $rna_plate_well_name = $combined_plate{ $rna_plate_id }{ 'rna_plate_well_name' };
-   my $index_tag_id = $combined_plate{ $rna_plate_id }{ 'index_tag_id' };
-   my $sample_name = join "_", $combined_plate{ $rna_plate_id }{ 'exp_name' }, $rna_plate_well_name;
-   my ($tag_num) = $index_tag_set{ $index_tag_id }=~m/\.([[:digit:]]+)/xms;
-   my $sample_public_name = join "_", $sample_name, $seq_plate_well_name, $tag_num;
-   $spd_sth->execute( $seq_plate_name, 
-                      $seq_plate_well_name,
-                      $sample_name,
-                      $sample_public_name,
-                      $rna_plate_id,
-                      $index_tag_id );                   
+  elsif( $cell ne "##" ) {
+   $cell = [ '#FFFFFF', $cell ];
   }
-  foreach my $cell( @{ $seq_array } ) {
-   if(exists($cell_color{ $cell })) {
-    $cell = [ $cell_color{ $cell }, $cell_mapping{ $cell } ];
-   }
-   elsif( $cell=~/[[:alpha:]][[:digit:]]+/xms ){
-    $cell = [ '#D8D8D8', undef ];
-   }
-   elsif( $cell ne "##" ) {
-    $cell = [ '#FFFFFF', $cell ];
-   }
-  }
-  
-  template 'display_sequence_plate', {
-   
-   sequence_plate         => $seq_array,
-   legend		  => \%exp_color,
-  };
+ }
+ $display_plate_name=~s/::$//msx;
+ 
+ template 'display_sequence_plate', {
+
+  display_plate_name     => $display_plate_name,
+  sequence_plate         => $seq_array,
+  legend		  => \%exp_color,
+ };
   
 
 };
 
 get '/get_new_experiment' => sub {
 
+ my $dbh = get_schema();
  my $exp_sth = $dbh->prepare("DESC ExpView");
  my $gen_sth = $dbh->prepare("SELECT Genome_ref_name, Genome_ref_id FROM SpView"); 
  my $dev_sth = $dbh->prepare("SELECT * FROM DevView"); 
@@ -371,7 +526,8 @@ get '/get_new_experiment' => sub {
 
 post '/add_experiment_data' => sub {
 
-  my $vals =  [
+ my $dbh = get_schema();
+ my $vals = [
    param('Study_name'),
    param('Genome_ref_name'),
    param('Experiment_name'),
@@ -515,76 +671,76 @@ post '/get_genotypes_and_rna' => sub {
 
 post '/populate_rna_dilution_plate' => sub {
 
-  my $exp_id = param('exp_id');
+ my $dbh = get_schema();
+ my $exp_id = param('exp_id');
 
-  my (%selected_wells, $selected_for_seq, $new_arr);
-  foreach my $allele_geno(keys %allele_combos) {
-   if(my $selected_number = param("$allele_geno")) {
-    for(my$i=0;$i<$selected_number;$i++) {
-     $selected_wells{ $allele_combos{$allele_geno}->[$i]->[0] } = $allele_geno;
-    }
+ my (%selected_wells, $selected_for_seq, $new_arr);
+ foreach my $allele_geno(keys %allele_combos) {
+  if(my $selected_number = param("$allele_geno")) {
+   for(my$i=0;$i<$selected_number;$i++) {
+    $selected_wells{ $allele_combos{$allele_geno}->[$i]->[0] } = $allele_geno;
    }
   }
-  
-  my $rna_sth    = $dbh->prepare("CALL add_rna_dilution_data(?,?,?,?,?,?,?, \@rna_dil_id)");
-  my $geno_sth   = $dbh->prepare("CALL add_genotype_data(?,?,?)");
+ }
+ 
+ my $rna_sth    = $dbh->prepare("CALL add_rna_dilution_data(?,?,?,?,?,?,?, \@rna_dil_id)");
+ my $geno_sth   = $dbh->prepare("CALL add_genotype_data(?,?,?)");
 
-  foreach my $well_id( keys %rna_plate ) {
-   my $rna_amount = $rna_plate{ $well_id }{ 'rna' };
-   my $qc_pass    = $rna_plate{ $well_id }{ 'qc_ok' };
+ foreach my $well_id( keys %rna_plate ) {
+  my $rna_amount = $rna_plate{ $well_id }{ 'rna' };
+  my $qc_pass    = $rna_plate{ $well_id }{ 'qc_ok' };
 
-   if(exists( $selected_wells{ $well_id } )) {
-    $selected_for_seq = 1;
-    $rna_plate{ $well_id }{ 'sfs' } = 1;
+  if(exists( $selected_wells{ $well_id } )) {
+   $selected_for_seq = 1;
+   $rna_plate{ $well_id }{ 'sfs' } = 1;
+  }
+  else {
+   $selected_for_seq = 0;
+   $rna_plate{ $well_id }{ 'sfs' } = 0;
+  }
+
+  ## add one well 
+  $rna_sth->execute($exp_id, 
+                    $rna_amount, 
+                    param('rna_volume'), 
+                    $well_id, 
+                    param('min_rna_amount'), 
+                    $qc_pass,
+                    $selected_for_seq);
+  my ($rna_dil_id) = $dbh->selectrow_array("SELECT \@rna_dil_id");
+  my $alle_sth = $dbh->prepare("SELECT id FROM AlleleView WHERE name = ?");
+
+  ## add one or more genotypes
+  foreach my $allele_genotype( keys %{ $rna_plate{ $well_id }{ 'genotype' } } ) {
+   my($allele_name, $genotype) = split":", $allele_genotype;
+   $alle_sth->execute("$allele_name");
+   my $allele_id = $alle_sth->fetchrow_arrayref;
+   $geno_sth->execute($allele_id->[0], $rna_dil_id, $genotype);
+  }
+ }
+ $new_arr = make_grid()->[0];
+ 
+ foreach my $cell( @{ $new_arr } ) {
+  if( exists( $rna_plate{ $cell } ) ) {
+   if( $rna_plate{ $cell }{ 'sfs' } ) {
+    $cell = '#00FF00'; ## selected for sequencing - green
+   }
+   elsif( ! $rna_plate{ $cell }{ 'qc_ok' } ) {
+    $cell = '#FF0000'; ## RNA conc too low - red
+   }
+   elsif( $rna_plate{ $cell }{ 'all_failed' } ) {
+    $cell = '#FFA500'; ## all the allele genotyping failed - orange
    }
    else {
-    $selected_for_seq = 0;
-    $rna_plate{ $well_id }{ 'sfs' } = 0;
-   }
-
-   ## add one well 
-   $rna_sth->execute($exp_id, 
-                     $rna_amount, 
-                     param('rna_volume'), 
-                     $well_id, 
-                     param('min_rna_amount'), 
-                     $qc_pass,
-                     $selected_for_seq);
-   my ($rna_dil_id) = $dbh->selectrow_array("SELECT \@rna_dil_id");
-   my $alle_sth = $dbh->prepare("SELECT id FROM AlleleView WHERE name = ?");
-
-   ## add one or more genotypes
-   foreach my $allele_genotype( keys %{ $rna_plate{ $well_id }{ 'genotype' } } ) {
-    my($allele_name, $genotype) = split":", $allele_genotype;
-    $alle_sth->execute("$allele_name");
-    my $allele_id = $alle_sth->fetchrow_arrayref;
-    $geno_sth->execute($allele_id->[0], $rna_dil_id, $genotype);
+    $cell = '#FFFFFF';
    }
   }
-  $new_arr = make_grid()->[0];
-  
-  foreach my $cell( @{ $new_arr } ) {
-   if( exists( $rna_plate{ $cell } ) ) {
-    if( $rna_plate{ $cell }{ 'sfs' } ) {
-     $cell = '#00FF00'; ## selected for sequencing - green
-    }
-    elsif( ! $rna_plate{ $cell }{ 'qc_ok' } ) {
-     $cell = '#FF0000'; ## RNA conc too low - red
-    }
-    elsif( $rna_plate{ $cell }{ 'all_failed' } ) {
-     $cell = '#FFA500'; ## all the allele genotyping failed - orange
-    }
-    else {
-     $cell = '#FFFFFF';
-    }
-   }
-  }
- 
-  template 'display_rna_plates', {
-   names_info                        => get_study_and_exp_names($exp_id),
-   template_array 		     => $new_arr,
-  };
-  
+ }
+
+ template 'display_rna_plates', {
+  names_info                        => get_study_and_exp_names($exp_id),
+  template_array 	            => $new_arr,
+ };
 
 };
 
@@ -673,9 +829,58 @@ sub make_file_path {
 
 sub get_study_and_exp_names {
  my ($exp_id) = @_;
+ my $dbh = get_schema();
  my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView WHERE exp_id = ?");
  $exp_sth->execute($exp_id);
  return $exp_sth->fetchrow_arrayref || undef;
+}
+
+sub color_plate {
+ my $attrib = shift;
+ my $dbh = get_schema();
+ my $seq_plate_sth = $dbh->prepare("SELECT * FROM SeqWellOrderView WHERE plate_name = ?");
+ $seq_plate_sth->execute(param('plate_name'));
+ my $seq_plate = $seq_plate_sth->fetchall_hashref('seq_well_name');
+ my $template = make_grid()->[0];
+ my (%exp_legend, %genot_legend, %num2geno);
+ foreach my $well_id( @{ $template } ) {
+  if(exists( $seq_plate->{$well_id} )) {
+   $exp_legend{ $seq_plate->{$well_id}->{'color'} }{ 'exp_name' } = $seq_plate->{$well_id}->{'exp_name'};
+   $exp_legend{ $seq_plate->{$well_id}->{'color'} }{ 'std_name' } = $seq_plate->{$well_id}->{'std_name'};
+   if($attrib eq 'well_names') {
+    $well_id = [ $seq_plate->{$well_id}->{'color'}, $seq_plate->{$well_id}->{'rna_well_name'} ];
+   }
+   elsif($attrib eq 'genotypes') {
+    foreach my $genotype_str( split ",", $seq_plate->{$well_id}->{'AlleleGenotype'} ) {
+     my $well_genot = join ":", ( split ":", $genotype_str )[0,2];
+     $genot_legend{ $well_id }{ $well_genot }++;
+     $num2geno{ $well_genot } = undef;
+    }
+   }
+   elsif($attrib eq 'index_tags') {
+    $well_id = [ $seq_plate->{$well_id}->{'color'}, $seq_plate->{$well_id}->{'tag_name'}, $seq_plate->{$well_id}->{'tag_seq'} ];
+   } 
+  }
+  elsif( $well_id=~/[[:alpha:]][[:digit:]]+/xms ) {
+   $well_id = [ '#D8D8D8', undef ]; ## grey for blank well
+  }
+  elsif( $well_id ne "##" ) { 
+   $well_id = [ '#FFFFFF', $well_id ]; ## white
+  }
+ }
+ if( keys %num2geno ) {
+  my $ct = 1;
+  foreach my $well_genot( sort keys %num2geno ) {
+   $num2geno{ $well_genot } = $ct;
+   $ct++;
+  }
+  foreach my $well_id( @{ $template } ) { ## set the wells for the genotypes
+   if(exists($genot_legend{ $well_id })) {
+    $well_id = [ $seq_plate->{$well_id}->{'color'}, join ":", sort map { $num2geno{$_} } keys %{ $genot_legend{ $well_id } } ];
+   }
+  }
+ }
+ return [ $template, \%exp_legend, \%num2geno, param('plate_name')];
 }
 
 sub get_schema {

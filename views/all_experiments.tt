@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+function dispGen(sp_name, sp_bin_name, genome_ref_name, taxon_id, gc_content) {
+  var dispWin = window.open(sp_name, "","width=200,height=140");
+  dispWin.document.write("Name:       ", sp_name, " (", sp_bin_name, ") <p>",
+                         "Assembly:   ", genome_ref_name, "<p>",
+                         "Taxon id:   ", taxon_id, "<p>",
+                         "GC_content: ", gc_content, "<p>"
+                        );
+}
+
+function dispGeno(alleles) {
+ var dispWin = window.open(alleles, "","width=300,height=200");
+ dispWin.document.write("Allele:Gene<p>", alleles);
+}
+
+function openWin(img) {
+  var path = "images/";
+  window.open(path+img, "mywin", "width=200,height=200");
+}
+
+function dispSpike(mix, dilution, volume) {
+ var dispWin = window.open(mix, "", "width=200,height=140");
+ dispWin.document.write("Mix id: ", mix, "<p>",
+                        "Dilution: ", dilution, "<p>",
+                        "Volume: ", volume, "<p>"
+                       );
+}
+
+function dispDev(period, stage, begins, dev_landmarks) {
+ var dispWin = window.open(period, "", "width=450,height=200");
+ dispWin.document.write("Period: ", period, "<p>",
+                        "Stage: ", stage, "<p>",
+                        "Begins: ", begins, "<p>",
+                        "Landmarks: ", dev_landmarks, "<p>"
+                       );
+}
+
+function goBack() 
+ {
+   window.history.back();
+ }
+
+function goHome()
+ {
+   window.location = '/';   
+ }
+</script>
+
+
+<head>
+<style>
+
+P {
+ font-size: 13px;
+ font-family:'Courier New';
+} 
+
+.view_info input[type="submit"] {
+ color: black;
+ background: #BDECB6;
+ display: inline;
+}
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+th,td {
+    padding: 15px;
+    text-align: center;
+}
+
+</style>
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+         <p>
+          <button onclick="goBack()">Back</button>
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          <button onclick="goHome()">Home</button>
+         </p>
+          <h1>Experiments</h1>
+          <table>
+           <% row_index = 1 %>
+           <% FOREACH exp IN all_experiments %>
+            <% field_index = 1 %>
+             <% IF row_index % 2 %>
+              <tr bgcolor='#CEECF5'>
+             <% ELSE %>
+              <tr>
+	     <% END %>
+              <% FOREACH field IN exp %>
+               <% IF row_index > 1 %> <!-- not the field names -->
+                <% SWITCH field_index %>
+                 <% CASE 1 %> <!-- Study_name -->
+                  <td><% field %> 
+                  </td>
+
+                 <% CASE 2 %> <!-- Experiment_name -->
+                  <td><% field %>
+                  </td>
+
+                 <% CASE 3 %> <!-- Alleles -->
+                  <% FOREACH exp_id IN allele_info.keys %>
+                   <% IF exp_id == exp.last %>
+                   <% genolist = allele_info.$exp_id.join('<p>') %>
+                    <td><button onclick="dispGeno('<% genolist %>')"><% field.replace(" : ","::") %></button>           
+                    </td>
+                   <% END %>
+                  <% END %>
+
+                 <% CASE 4 %> <!-- Developmental_stage  -->
+                  <td>
+                   <% FOREACH exp_id IN dev_info.keys %>
+                    <% IF exp_id == exp.last %>
+                     <% period = dev_info.$exp_id.period %>
+                     <% stage  = dev_info.$exp_id.stage %>
+                     <% begins = dev_info.$exp_id.begins %>
+                     <% landmarks = dev_info.$exp_id.developmental_landmarks %>
+                     <button onclick="dispDev('<% period %>', 
+                                              '<% stage %>', 
+                                              '<% begins %>', 
+                                              '<% landmarks %>'
+                                             )"><% field.replace(" : ","::") %></button>
+                    <% END %>
+                   <% END %>
+                  </td>
+
+                 <% CASE 5 %> <!-- Number_of_embryos_collected -->
+                  <td><% field %>
+                  </td>
+
+                 <% CASE 6 %> <!-- Spike_mix -->
+                  <td>
+                  <% IF field %>
+                   <% FOREACH exp_id IN spike_info.keys %>
+                    <% IF exp_id == exp.last %>
+                     <% mix = spike_info.$exp_id.spike_mix %>
+                     <% dilution = spike_info.$exp_id.spike_dilution %>
+                     <% volume = spike_info.$exp_id.spike_volume %>
+                     <button onclick="dispSpike('<% mix %>', '<% dilution %>', '<% volume %>')"><% field %></button>
+                     </td>
+                    <% END %>
+                   <% END %>
+                  <% ELSE %>
+                   No spike mix
+                  <% END %>
+                  </td>
+
+	         <% CASE 7 %> <!-- Sample_visability -->
+                  <td><% field %>
+                  </td> 
+
+	         <% CASE 8 %> <!-- Genome_ref_name  -->
+                 
+                  <% FOREACH assembly_name IN species_info.keys %>
+                   <% IF assembly_name == field %>
+                    <td><button onclick="dispGen('<% species_info.$field.Species_name %>', 
+                                                 '<% species_info.$field.Binomial_name %>',
+                                                 '<% species_info.$field.Genome_ref_name %>',
+                                                 '<% species_info.$field.Taxon_id %>',
+                                                 '<% species_info.$field.GC_content %>'
+                                                  )"><% field %></button>
+                   <% END %>
+                  <% END %> 
+                  
+
+                  </td> 
+  
+                 <% CASE 9 %> <!-- Image -->
+                  <td style="text-align: center;">
+
+                  <% IF field != 'No image' %>
+                    <a href="javascript:openWin('<% field %>')"><button type="button" style="background-color:#BDECB6;text-align: center;">view</button></a>
+                  <% ELSE %>
+                   <% field %>
+                  <% END %>
+
+                </td>
+               <% CASE 10 %> <!-- Phenotype_description -->
+                 <td><% field %>
+                 </td>
+               
+               <% CASE 11 %> <!-- Sequenced_samples -->
+                <td>
+                <form action="<% get_sequenced_samples_url %>" method="get">
+                 <input type="hidden" name="exp_id" value="<% exp.last %>">
+                 <input type="submit" value="<% field %>">
+                </form>
+                </td>
+
+               <% CASE 12 %> <!-- Excel_file -->
+                 <td style="text-align: center;"><a href="<% field %>" download><button type="button" style="background-color:#BDECB6;">view</button></a>
+                 </td>
+
+              <% END %> <!-- end of switch -->
+
+             <% ELSE %> <!-- field headers -->
+              <% IF field != "Experiment_id" %>
+               <td><% field %>
+               </td>
+              <% END %>
+             <% END %>
+              <% field_index = field_index + 1 %>
+            <% END %>
+            </tr>
+            <% row_index = row_index + 1 %>
+           <% END %>
+           </table>
+        </div>
+      </div>
+</div>
+</body>
+</html>

@@ -28,10 +28,15 @@ th {
 }
 
 .txt_box {
-   border: 3px solid #33CCFF;
+   border: 2px solid #FF3300;
+   width: 150px;
 } 
+.dropdown {
+   border: 2px solid #FF3300;
+   width: 154px;
+}
 .button {
-  color: #33CCFF;
+  color: #FF3300;
 }
 
 </style>
@@ -44,7 +49,7 @@ th {
 
       <div id="content">
         <div id="header">
-          <h1>New experiment</h1>
+          <h1>Add a new experiment</h1>
           <table>
            <form action="<% add_experiment_data_url %>" method="post" enctype="multipart/form-data">
             <% FOREACH table_res IN table_schema %>
@@ -56,7 +61,7 @@ th {
 
               <% CASE 'Developmental_stage' %>
                <td><% table_res.0 %></td><td>
-                <select class="txt_box" name=<% table_res.0 %>>
+                <select class="dropdown" name=<% table_res.0 %>>
                  <% FOREACH id_stage IN dev_stages.keys.sort %>
                   <option value=<% dev_stages.$id_stage.id %>><% dev_stages.$id_stage.time_stage %></option>
                  <% END %>
@@ -65,7 +70,7 @@ th {
 
               <%  CASE 'Genome_ref_name' %>
                <td><% table_res.0 %></td><td>
-                <select class="txt_box" name=<% table_res.0 %>>     
+                <select class="dropdown" name=<% table_res.0 %>>     
                  <% FOREACH ref_name IN genref_names %>
                   <option value=<% ref_name.1 %>><% ref_name.0 %></option>
                  <% END %>
@@ -74,7 +79,7 @@ th {
 
               <% CASE 'Spike_mix' %>
                <td><% table_res.0 %></td><td>
-                <select class="txt_box" name=<% table_res.0 %>>
+                <select class="dropdown" name=<% table_res.0 %>>
                  <% FOREACH spike_id in spike_ids.keys.sort %> 
                   <option value=<% spike_id %>><% spike_ids.$spike_id %></option>
                  <% END %>
@@ -83,7 +88,7 @@ th {
               
               <% CASE 'Sample_visability' %>
                <td><% table_res.0 %></td><td>
-                <select class="txt_box"  name=<% table_res.0 %>>
+                <select class="dropdown"  name=<% table_res.0 %>>
                  <% FOREACH vis in visibility.keys.sort %>  
                   <option value=<% vis %>><% visibility.$vis %></option>
                  <% END %>
@@ -102,7 +107,7 @@ th {
 
               <% CASE 'Study_name' %>
 	       <td><% table_res.0 %></td><td>
-                <select class="txt_box"  name=<% table_res.0 %>>
+                <select class="dropdown"  name=<% table_res.0 %>>
                  <% FOREACH std in study_names %>
                   <option value=<% std.1 %>><% std.0 %></option>
                  <% END %>

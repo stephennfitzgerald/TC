@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+function goBack() 
+  {
+    window.history.back();
+  }
+
+function goHome()
+  {
+    window.location = '/';   
+  }
+</script>
+
+<head>
+<style>
+
+table, th, td {
+    border-collapse: collapse;
+    width: 490px;
+    padding: 15px;
+    text-align: left;
+}
+
+.txt_box {
+   border: 3px solid #33CCFF;
+} 
+.button {
+  color: #33CCFF;
+}
+
+</style>
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+          <h1>All sequencing plates</h1>
+           <table>
+            <% FOREACH row IN all_seq_plates %>
+             <tr><td>
+              <% FOREACH exp_names IN row.2.split(',').join('::') %>
+               <% exp_names %>
+                </td><td>
+                 <form action="<% display_well_order_url %>" method="get">
+                  <input type="hidden" name="plate_name" value="<% row.0 %>">
+                  <input type="hidden" name="display_plate_name" value="<% exp_names %>">
+                  <input type="submit" value="well order"></td> 
+                 </form>
+                </td><td>
+                 <form action="<% display_genot_order_url %>" method="get">
+                  <input type="hidden" name="plate_name" value="<% row.0 %>">
+                  <input type="hidden" name="display_plate_name" value="<% exp_names %>">
+                  <input type="submit" value="genotype order"></td>
+                 </form>
+                </td><td>
+                 <form action="<% display_tag_order_url %>" method="get">
+                  <input type="hidden" name="plate_name" value="<% row.0 %>">
+                  <input type="hidden" name="display_plate_name" value="<% exp_names %>">
+                  <input type="submit" value="tag order"></td>
+                 </form>
+                </td><td> 
+                <% IF row.1 %>
+                 <a href="<% row.1 %>" download><button type="button">excel &#8595;</button></a>
+                <% END %>
+              <% END %>
+             </td></tr>
+            <% END %>
+        </div>
+      </div>
+</div>
+</body>
+</html>

@@ -22,6 +22,9 @@ function goHome()
 <head>
 <style>
 
+table, th, td {
+ table-layout: fixed;
+}
 .txt {
  color: black;
 }
@@ -42,51 +45,109 @@ function goHome()
 
 
 <div id="page">
-      <div id="sidebar">
-      </div>
-
-        <p><p>
-        <div id="section">
-         <div class="border">
-          <div class="txt">
-           <h1>Make a sequencing plate</h1>
-           <table><tr>
-            <td>Add a new experiment</td> 
-             <td>
-              <form action="<% get_new_experiment_url %>" method=get">
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-               <input type=submit value="&#8594;">
-              </form>
-             </td>
-            </tr><tr><tr>
-             <td>Make a sequencing plate</td>
-              <td>
-               <form action="<% make_sequencing_plate_url %>" method=get">
-               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                <input type=submit value="&#8594;"> 
-               </form>
-               </td>
-              </tr>
-            </tr><tr><tr>
-               <% IF excel_file_loc %>
-               <td>Get the sequencing report</td>
+ <div id="sidebar">
+  </div>
+    <p><p>
+    <div id="section">
+     <div class="border">
+       <div class="txt">
+        <h1>Make a sequencing plate</h1>
+         <table><tr>
+          <td>Add a new experiment</td> 
+           <td>
+            <form action="<% get_new_experiment_url %>" method=get">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <input type=submit value="&#8594;">
+            </form>
+           </td>
+          </tr><tr><tr>
+           <td>Make a sequencing plate</td>
+            <td>
+             <form action="<% make_sequencing_plate_url %>" method=get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr>
+          </tr><tr><tr>
+           <% IF excel_file_loc %>
+            <td>Get the sequencing report</td>
+            <td>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <a href="<% excel_file_loc %>" download><button type="button">&#8595;</button></a>
+              <% ELSE %>
+               <td> Make a sequencing report</td>
                 <td>
-                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                 <a href="<% excel_file_loc %>" download><button type="button">&#8595;</button></a>
-               <% ELSE %>
-                <td> Make a sequencing report</td>
-                 <td>
-                  <form action="<% make_sequencing_report_url %>" method=get">
-                   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                  <input type=submit value="&#8594;">
-                </form>
-               <% END %>
-              </td>
-             </tr>
-          </div>
+                 <form action="<% make_sequencing_report_url %>" method=get">
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                 <input type=submit value="&#8594;">
+               </form>
+              <% END %>
+             </td>
+            </tr>
+          </table>
          </div>
-        <p>
        </div>
-
      </div>
+    <p><p> 
+    <div id="section">
+     <div class="border">
+       <div class="txt">
+        <h1>Data views</h1>
+         <table><tr>
+          <td>View experiments</td> 
+           <td>
+            <form action="<% get_all_experiments_url %>" method=get">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <input type=submit value="&#8594;">
+            </form>
+           </td>
+          </tr><tr><tr>
+           <td>View sequencing plates</td>
+            <td>
+             <form action="<% get_all_sequencing_plates_url %>" method=get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr>
+          </tr><tr><tr>
+            <td>View the schema</td>
+            <td>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <a href="<% schema_location %>" download><button type="button">&#8595;</button></a>
+            </td>
+           </tr>
+          </table>
+         </div>
+       </div>
+     </div>
+   </div>
+    <p><p> 
+    <div id="section">
+     <div class="border">
+       <div class="txt">
+        <h1>Update tables</h1>
+         <table><tr>
+          <td>Add a new study</td> 
+           <td>
+            <form action="<% add_a_new_study_url %>" method=get">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <input type=submit value="&#8594;">
+            </form>
+           </td>
+          </tr><tr><tr>
+           <td>Add a new species</td>
+            <td>
+             <form action="<% add_a_new_species_url %>" method=get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr>
+          </table>
+         </div>
+       </div>
+     </div>
+   </div>
 

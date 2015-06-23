@@ -11,6 +11,9 @@ function goHome()
   {
     window.location = '/';   
   }
+function printWindow() {
+    window.print();
+}
 </script>
 
 <head>
@@ -20,12 +23,12 @@ table, th, td {
     border: 1px solid black;
     border-collapse: collapse;
     table-layout: fixed;
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     text-align: center;
 }
 .txt_box {
-   border: 3px solid #33CCFF;
+   solid #33CCFF;
 } 
 .button {
   color: #33CCFF;
@@ -42,9 +45,38 @@ table, th, td {
       <div id="content">
         <div id="header">
           <p></p>
-          <h1>Sequencing plate 
+          <h1>Sequencing plate</h1> <h3> (<% display_plate_name %>)
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          <button onclick="goHome()">Home</button></h1>
+	   <% IF display_well_order_url %>
+            <form action="<% display_well_order_url %>" method="get" style="display: inline;">
+             <input type="hidden" name="plate_name" value="<% plate_name %>">
+             <input type="hidden" name="display_plate_name" value="<% display_plate_name %>">
+             <input type="submit" value="well order"></td>
+           </form> 
+	   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	  <% END %>
+          <% IF display_tag_order_url %>
+            <form action="<% display_tag_order_url %>" method="get" style="display: inline;">
+             <input type="hidden" name="plate_name" value="<% plate_name %>">
+             <input type="hidden" name="display_plate_name" value="<% display_plate_name %>">
+             <input type="submit" value="tag order"></td>
+           </form> 
+	   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	  <% END %>
+          <% IF display_genot_order_url %>
+            <form action="<% display_genot_order_url %>" method="get" style="display: inline;">
+             <input type="hidden" name="plate_name" value="<% plate_name %>">
+             <input type="hidden" name="display_plate_name" value="<% display_plate_name %>">
+             <input type="submit" value="genotype order"></td>
+           </form> 
+	   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	  <% END %>
+          <button onclick="goHome()">Home</button>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <button onclick="printWindow()">Print</button>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+</h3>
            <table>
             <% FOREACH well IN sequence_plate %>
              <% IF well == '##' %>
@@ -61,10 +93,16 @@ table, th, td {
            </table>
            <p>
             <% FOREACH col IN legend.keys.sort %>
-             <table style="display: inline;"><tr><td bgcolor="<% col %>"></td></tr></table>
+             <table style="display: inline;border: 1px;"><tr><td style="width: 5px;height: 5px;" bgcolor="<% col %>"></td></tr></table>
              <% legend.$col.exp_name %> (<% legend.$col.std_name %>)
 	    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <% END %>
+          <p>
+           <% IF geno_legend %>
+            <% FOREACH geno IN geno_legend.keys.sort %>
+             <table style="display: inline;border: 1px solid white;"><tr><td><% geno %> <% geno_legend.$geno %></td></tr></table>
+            <% END %>
+           <% END %>
         </div>
       </div>
 </div>
