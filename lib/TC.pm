@@ -55,7 +55,8 @@ get '/' => sub {
   'schema_location' 	          => $schema_location,
 
   'add_a_new_study_url'           => uri_for('/add_a_new_study'),
-  'add_a_new_species_url'         => uri_for('/add_a_new_species'),
+  'add_a_new_assembly_url'         => uri_for('/add_a_new_assembly'),
+  'add_a_new_dev_stage_url'       => uri_for('/add_a_new_devstage'),
   'get_new_experiment_url'        => uri_for('/get_new_experiment'),
   'make_sequencing_plate_url'     => uri_for('/get_sequencing_info'),
   'make_sequencing_report_url'    => uri_for('/get_sequencing_report'),
@@ -66,11 +67,86 @@ get '/' => sub {
 };
 
 
-post '/add_a_new_study' => sub {
+get '/add_a_new_study' => sub {
+ 
+ my $dbh = get_schema();
+ my $std_id;
+ if(my $new_study_name = param('new_study')) {
+  my $new_std_sth = $dbh->prepare("CALL add_new_study(?, \@std_id)");
+  $new_std_sth->execute($new_study_name);
+  ($std_id) = $dbh->selectrow_array("SELECT \@std_id");
+ }
+
+ my $std_sth = $dbh->prepare("SELECT * FROM stdView");
+ $std_sth->execute;
+ my $col_names = $std_sth->{'NAME'};
+ my $all_studies = $std_sth->fetchall_arrayref();
+ unshift @$all_studies, $col_names;
+
+ template 'new_study', {
+ 'studies'                      => $all_studies,
+ 'new_std_id'                   => $std_id, 
+
+ 'add_a_new_study_url'          => uri_for('/add_a_new_study'),
+ };
+
 };
 
+get '/add_a_new_devstage' => sub {
+ 
+ my $dbh = get_schema();
+ my $dev_id;
+ my ($period, $stage, $begins, $landmarks) = (param('period'), param('stage'), param('begins'), param('landmarks'));
+ 
+ if($stage and $stage and $begins and $landmarks) {
+  my $new_devstage_sth = $dbh->prepare("CALL add_new_devstage(?,?,?,?, \@dev_id)");
+  $new_devstage_sth->execute($period, $stage, $begins, $landmarks);
+  ($dev_id) = $dbh->selectrow_array("SELECT \@dev_id");
+ }
 
-post '/add_a_new_species' => sub {
+ my $dev_sth = $dbh->prepare("SELECT * FROM devView");
+ $dev_sth->execute;
+ my $col_names = $dev_sth->{'NAME'};
+ my $all_dev_stages = $dev_sth->fetchall_arrayref();
+ unshift @$all_dev_stages, $col_names;
+
+ template 'new_dev_stage', {
+  'dev_stages'                    => $all_dev_stages,
+  'new_dev_id'                    => $dev_id,
+
+  'add_a_new_dev_stage_url'       => uri_for('/add_a_new_devstage'),
+ };
+
+};
+
+get '/add_a_new_assembly' => sub {
+ 
+ my $dbh = get_schema();
+ my $assembly_id;
+ my($species_id, $assembly_name, $gc_content) = (param('species_id'), param('assembly_name'), param('gc_content'));
+
+ if($species_id and $assembly_name and $gc_content) {
+  my $new_assembly_sth = $dbh->prepare("CALL add_new_assembly(?,?,?, \@ass_id)");
+  $new_assembly_sth->execute($assembly_name, $species_id, $gc_content);
+  ($assembly_id) = $dbh->selectrow_array("SELECT \@ass_id");
+ }
+
+ my $assembly_sth = $dbh->prepare("SELECT * FROM SpView");
+ $assembly_sth->execute;
+ my $col_names = $assembly_sth->{'NAME'};
+ my $assemblies = $assembly_sth->fetchall_arrayref();
+ unshift @$assemblies, $col_names;
+
+ my $species_sth = $dbh->prepare("SELECT * FROM SpeciesView");
+ $species_sth->execute;
+
+ template 'new_assembly', {
+  'assemblies'                   => $assemblies,
+  'new_assembly_id'              => $assembly_id,
+  'species'                      => $species_sth->fetchall_arrayref,
+
+  'add_a_new_assembly_url'       => uri_for('/add_a_new_assembly'),
+ };
 
 };
 
@@ -307,10 +383,11 @@ get '/get_sequencing_report' => sub {
   'excel_file_loc'             => $excel_file_loc,
 
   'add_a_new_study_url'           => uri_for('/add_a_new_study'),
-  'add_a_new_species_url'         => uri_for('/add_a_new_species'),
-  'get_new_experiment_url'     => uri_for('/get_new_experiment'),
-  'make_sequencing_plate_url'  => uri_for('/get_sequencing_info'),
-  'make_sequencing_report_url' => uri_for('/get_sequencing_report'),
+  'add_a_new_assembly_url'         => uri_for('/add_a_new_assembly'),
+  'add_a_new_dev_stage_url'       => uri_for('/add_a_new_devstage'),
+  'get_new_experiment_url'        => uri_for('/get_new_experiment'),
+  'make_sequencing_plate_url'     => uri_for('/get_sequencing_info'),
+  'make_sequencing_report_url'    => uri_for('/get_sequencing_report'),
   'get_all_sequencing_plates_url' => uri_for('/get_all_sequencing_plates'),
   'get_all_experiments_url'       => uri_for('/get_all_experiments'),
  };

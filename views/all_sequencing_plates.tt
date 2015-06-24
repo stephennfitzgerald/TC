@@ -40,6 +40,9 @@ table, th, td {
 
       <div id="content">
         <div id="header">
+         <p> 
+          <button onclick="goHome()">Home</button>
+         <p>  
           <h1>All sequencing plates</h1>
            <table>
             <% FOREACH row IN all_seq_plates %>

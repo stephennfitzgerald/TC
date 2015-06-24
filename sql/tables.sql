@@ -216,6 +216,21 @@ CREATE OR REPLACE VIEW tagSetView AS
  FROM index_tag
  ORDER BY tag_set_name;
 
+CREATE OR REPLACE VIEW stdView AS
+ SELECT name, 
+        id
+ FROM study
+ ORDER BY id DESC;
+
+CREATE OR REPLACE VIEW devView AS
+ SELECT period,
+        stage,
+        begins,
+        developmental_landmarks,
+        id
+ FROM developmental_stage
+ ORDER BY id DESC;
+
 CREATE OR REPLACE VIEW spikeView AS 
  SELECT id exp_id, 
         spike_mix, 
@@ -479,7 +494,8 @@ CREATE OR REPLACE VIEW SeqPlateView AS
  ORDER BY sp.id DESC;
 
 CREATE OR REPLACE VIEW SpView AS
- SELECT sp.name Species_name, 
+ SELECT sp.id Species_id,
+        sp.name Species_name, 
         sp.binomial_name Binomial_name, 
         sp.taxon_id Taxon_id, 
         gr.id Genome_ref_id,
@@ -487,7 +503,13 @@ CREATE OR REPLACE VIEW SpView AS
         gr.gc_content GC_content
  FROM species sp INNER JOIN genome_reference gr  
         ON gr.species_id = sp.id
- ORDER BY sp.name;
+ ORDER BY Genome_ref_id DESC;
+
+CREATE OR REPLACE VIEW SpeciesView AS
+ SELECT sp.id,
+        sp.name
+ FROM species sp
+ ORDER BY id DESC;
 
 
 CREATE OR REPLACE VIEW LstExpView AS
@@ -599,6 +621,81 @@ VALUES (
  selected_for_sequencing_param
 );
 SET rna_dilution_plate_id = LAST_INSERT_ID();
+END$$
+DELIMITER ;
+
+/** new study **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS add_new_study$$
+
+CREATE PROCEDURE add_new_study (
+ IN name_param VARCHAR(255),
+ OUT study_id INT(10)
+)
+BEGIN
+
+INSERT INTO study (
+ name
+)
+VALUES (
+ name_param
+);
+SET study_id = LAST_INSERT_ID();
+END$$
+DELIMITER ;
+
+/** new assembly **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS add_new_assembly$$
+
+CREATE PROCEDURE add_new_assembly (
+ IN name_param VARCHAR(255),
+ IN species_id_param INT(10),
+ IN gc_content_param VARCHAR(255),
+ OUT assembly_id INT(10)
+)
+BEGIN
+
+INSERT INTO genome_reference (
+ name,
+ species_id,
+ gc_content
+)
+VALUES (
+ name_param,
+ species_id_param,
+ gc_content_param
+);
+SET assembly_id = LAST_INSERT_ID();
+END$$
+DELIMITER ;
+
+/** new developmental_stage **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS add_new_devstage$$
+
+CREATE PROCEDURE add_new_devstage (
+ IN period_param VARCHAR(255),
+ IN stage_param VARCHAR(255),
+ IN begins_param VARCHAR(255),
+ IN landmarks_param VARCHAR(255),
+ OUT dev_id INT(10)
+)
+BEGIN
+
+INSERT INTO developmental_stage (
+ period,
+ stage,
+ begins,
+ developmental_landmarks
+)
+VALUES (
+ period_param,
+ stage_param,
+ begins_param,
+ landmarks_param
+);
+SET dev_id =  LAST_INSERT_ID();
 END$$
 DELIMITER ;
 

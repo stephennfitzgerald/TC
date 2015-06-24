@@ -53,7 +53,7 @@ table, th, td {
        <div class="txt">
         <h1>Make a sequencing plate</h1>
          <table><tr>
-          <td>Add a new experiment</td> 
+          <td width=250px>Add a new experiment</td> 
            <td>
             <form action="<% get_new_experiment_url %>" method=get">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -61,7 +61,7 @@ table, th, td {
             </form>
            </td>
           </tr><tr><tr>
-           <td>Make a sequencing plate</td>
+           <td width=250px>Make a sequencing plate</td>
             <td>
              <form action="<% make_sequencing_plate_url %>" method=get">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -71,12 +71,12 @@ table, th, td {
            </tr>
           </tr><tr><tr>
            <% IF excel_file_loc %>
-            <td>Get the sequencing report</td>
+            <td width=250px>Get the sequencing report</td>
             <td>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
              <a href="<% excel_file_loc %>" download><button type="button">&#8595;</button></a>
               <% ELSE %>
-               <td> Make a sequencing report</td>
+               <td width=250px> Make a sequencing report</td>
                 <td>
                  <form action="<% make_sequencing_report_url %>" method=get">
                   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -95,7 +95,7 @@ table, th, td {
        <div class="txt">
         <h1>Data views</h1>
          <table><tr>
-          <td>View experiments</td> 
+          <td width=250px>View experiments</td> 
            <td>
             <form action="<% get_all_experiments_url %>" method=get">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -103,7 +103,7 @@ table, th, td {
             </form>
            </td>
           </tr><tr><tr>
-           <td>View sequencing plates</td>
+           <td width=250px>View sequencing plates</td>
             <td>
              <form action="<% get_all_sequencing_plates_url %>" method=get">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -112,7 +112,7 @@ table, th, td {
             </td>
            </tr>
           </tr><tr><tr>
-            <td>View the schema</td>
+            <td width=250px>View the schema</td>
             <td>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
              <a href="<% schema_location %>" download><button type="button">&#8595;</button></a>
@@ -129,7 +129,7 @@ table, th, td {
        <div class="txt">
         <h1>Update tables</h1>
          <table><tr>
-          <td>Add a new study</td> 
+          <td width=250px>Add a new study</td> 
            <td>
             <form action="<% add_a_new_study_url %>" method=get">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -137,9 +137,17 @@ table, th, td {
             </form>
            </td>
           </tr><tr><tr>
-           <td>Add a new species</td>
+           <td width=250px>Add a new assembly</td>
             <td>
-             <form action="<% add_a_new_species_url %>" method=get">
+             <form action="<% add_a_new_assembly_url %>" method=get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr><tr><tr>
+           <td width=250px>Add a new developmental stage</td>
+            <td>
+             <form action="<% add_a_new_dev_stage_url %>" method=get">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <input type=submit value="&#8594;"> 
              </form>

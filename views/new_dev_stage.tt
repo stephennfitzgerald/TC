@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+function goBack() 
+ {
+   window.history.back();
+ }
+
+function goHome()
+ {
+   window.location = '/';   
+ }
+</script>
+
+
+<head>
+<style>
+
+P {
+ font-size: 13px;
+ font-family:'Courier New';
+} 
+
+.view_info input[type="submit"] {
+ color: black;
+ background: #BDECB6;
+ display: inline;
+}
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+th,td {
+    padding: 15px;
+    text-align: center;
+}
+
+.table2, th, td {
+    border: 1px solid white;
+}
+
+</style>
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+         <p>
+          <button onclick="goHome()">Home</button>
+         <p>
+         <h1>Add a new developmental stage</h1>
+          <form action="<% add_a_new_dev_stage_url %>" method="get">
+           <p>
+           <table style="table2"><tr><td>
+           Add a period </td><td> 
+           <input type="text" name="period">
+           </td></tr>
+           <tr><td>
+           Add a stage </td><td>
+           <input type="text" name="stage">
+           </td></tr>
+           <tr><td>
+           Add a begins </td><td>
+           <input type="text" name="begins">
+           </td></tr>
+           <tr><td>
+           Add landmarks </td><td>
+           <input type="text" name="landmarks">
+           </td></tr>
+          </table>
+           <input type="submit" value="Submit">
+          </form>
+          <br></br>
+          <table>
+           <% row_index = 1 %>
+           <% FOREACH dev IN dev_stages %>
+            <% IF row_index % 2 %>
+             <tr bgcolor='#CEECF5'>
+            <% ELSE %>
+             <tr>
+            <%END %>
+            <% field_index = 1 %>
+             <% IF dev.last == new_dev_id %>
+              <% FOREACH attrib IN dev %>
+               <% IF field_index != dev.size %>
+                <td bgcolor="#F5A9F2"><% attrib %> 
+                 <% field_index = field_index + 1 %>
+                </td>
+               <% END %>
+              <% END %>
+             <% ELSE %>
+              <% FOREACH attrib IN dev %>
+               <% IF field_index != dev.size %>
+                <td><% attrib %>
+                <% field_index = field_index + 1 %>
+               </td>
+               <% END %>
+              <% END %>
+             <% END %>
+             </tr>
+            <% row_index = row_index + 1 %>
+           <% END %>
+           </table>
+        </div>
+      </div>
+</div>
+</body>
+</html>

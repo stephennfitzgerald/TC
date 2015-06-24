@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+function goBack() 
+ {
+   window.history.back();
+ }
+
+function goHome()
+ {
+   window.location = '/';   
+ }
+</script>
+
+
+<head>
+<style>
+
+P {
+ font-size: 13px;
+ font-family:'Courier New';
+} 
+
+.view_info input[type="submit"] {
+ color: black;
+ background: #BDECB6;
+ display: inline;
+}
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+th,td {
+    padding: 15px;
+    text-align: center;
+}
+
+.table2, th, td {
+    border: 1px solid white;
+}
+
+</style>
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+         <p>
+          <button onclick="goHome()">Home</button>
+         <p>
+         <h1>Add a new assembly</h1>
+          <form action="<% add_a_new_assembly_url %>" method="get">
+           <p>
+           <table style="table2"><tr><td>
+           Add an assembly name </td><td> 
+           <input type="text" name="assembly_name">
+            </td></tr>
+            <tr><td>
+           Species </td><td>
+            <select class="dropdown" name="species_id">
+             <% FOREACH species IN species %>  
+              <option value="<% species.0 %>"><% species.1 %></option> 
+             <% END %>
+             </select></td></tr>
+            <tr><td>
+           GC_content </td><td>
+            <select class="dropdown" name="gc_content">
+            <% FOREACH gc_name IN [ 'Neutral', 'High', 'Low' ]%>
+             <option value="<% gc_name %>"><% gc_name %></option>
+            <% END %>
+           </select></td></tr>
+           </table>
+           <input type="submit" value="Submit">
+           </form>
+           <br></br>
+           <table><tr>
+            <% row_index = 1 %>
+            <% FOREACH assembly IN assemblies %>
+             <% IF assembly.4 == new_assembly_id %>
+              <tr bgcolor='#F5A9F2'> 
+             <% ELSIF row_index % 2 %>
+              <tr bgcolor='#CEECF5'>
+             <% ELSE %>
+              <tr>
+             <% END %>
+               <td><% assembly.1 %></td>
+               <td><% assembly.2 %></td>
+               <td><% assembly.3 %></td> 
+               <td><% assembly.5 %></td>
+               <td><% assembly.6 %></td>
+              </tr>
+              <% row_index = row_index + 1 %>
+            <% END %>
+           </table>
+        </div>
+      </div>
+</div>
+</body>
+</html>

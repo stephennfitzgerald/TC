@@ -49,6 +49,11 @@ th {
 
       <div id="content">
         <div id="header">
+         <p>
+          <button onclick="goBack()">Back</button>
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          <button onclick="goHome()">Home</button>
+         <p>
           <h1>Add a new experiment</h1>
           <table>
            <form action="<% add_experiment_data_url %>" method="post" enctype="multipart/form-data">
