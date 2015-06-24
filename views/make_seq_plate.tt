@@ -41,6 +41,9 @@ table, th, td {
       </div>
       <div id="content">
         <div id="header">
+         <p> 
+          <button onclick="goHome()">Home</button>
+         <p>
           <h1>Choose experiments to combine on one sequencing plate</h1>
           <form action="<% combine_plate_data_url %>" method="post" enctype="multipart/form-data">
            <table>
