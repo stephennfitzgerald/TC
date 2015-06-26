@@ -2,6 +2,18 @@
 <html>
 
 <script>
+
+function checkMix() {
+ var spike_mix = Number(document.getElementById("spike_mix").value);
+ var spike_vol = Number(document.getElementById("spike_vol").value);
+
+ if( (spike_mix || spike_vol) && !(spike_mix && spike_vol) ) {
+  alert("spike_mix ("+spike_mix+") and spike volume ("+spike_vol+") are incompatible");
+  return false;
+ }
+ return true;
+}
+
 function goBack() 
   {
     window.history.back();
@@ -35,14 +47,11 @@ th {
    border: 2px solid #FF3300;
    width: 154px;
 }
-.button {
-  color: #FF3300;
-}
 
 </style>
 </head>
 
-<body>
+<body background="images/zmp.jpg">
 <div id="page">
       <div id="sidebar">
       </div>
@@ -54,7 +63,7 @@ th {
          <p>
           <h1>Add a new experiment</h1>
           <table>
-           <form action="<% add_experiment_data_url %>" method="post" enctype="multipart/form-data">
+           <form action="<% add_experiment_data_url %>" method="post" enctype="multipart/form-data" onsubmit="return checkMix();">
             <% FOREACH table_res IN table_schema %>
              <% IF table_res.4 != NULL %>
               <% table_res.4 = table_res.4.replace('\s+', '_') %>
@@ -82,7 +91,7 @@ th {
 
               <% CASE 'Spike_mix' %>
                <td><% table_res.0 %></td><td>
-                <select class="dropdown" name=<% table_res.0 %>>
+                <select class="dropdown" id="spike_mix" name=<% table_res.0 %>>
                  <% FOREACH spike_id in spike_ids.keys.sort %> 
                   <option value=<% spike_id %>><% spike_ids.$spike_id %></option>
                  <% END %>
@@ -100,66 +109,66 @@ th {
 
               <% CASE 'Embryo_collection_date' %>
                <td><% table_res.0 %></td><td>
-                <input type="time" value="0000-00-00" class="txt_box" name=<% table_res.0 %>></td>
+                <input type="time" value="0000-00-00" class="txt_box" name="<% table_res.0 %>" required></td>
                <td><% last_ec_date %></td>
 
               <% CASE 'Experiment_name' %>
                <td><% table_res.0 %></td><td>
-                <input type="text" class="txt_box" name=<% table_res.0 %>></td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" required></td>
                <td><% last_exp_name %></td>
 
               <% CASE 'Study_name' %>
 	       <td><% table_res.0 %></td><td>
-                <select class="dropdown"  name=<% table_res.0 %>>
+                <select class="dropdown"  name="<% table_res.0 %>">
                  <% FOREACH std in study_names %>
-                  <option value=<% std.1 %>><% std.0 %></option>
+                  <option value="<% std.1 %>"><% std.0 %></option>
                  <% END %>
                 </select></td>
                <td><% last_std_name %></td>
 
               <% CASE 'Alleles' %>
                <td text-align="left"><% table_res.0 %></td><td>
-                <input type="text" class="txt_box" name=<% table_res.0 %>></td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" required></td>
                <td><% last_allele_name %></td>
 
               <% CASE 'Phenotype_description' %>
                <td><% table_res.0 %></td><td>
-                <input type="text" name=<% table_res.0 %>></td>
+                <input type="text" name="<% table_res.0 %>"></td>
                <td><% last_pheno_desc %></td>
 
               <% CASE 'Spike_dilution' %>
                <td><% table_res.0 %></td><td>
-                <input type="text" class="txt_box" name=<% table_res.0 %> value=<% table_res.4 %>></td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
                <td><% last_spike_dil %></td>
 
               <% CASE 'Spike_volume' %>
                <td><% table_res.0 %></td><td>
-                <input type="text" class="txt_box" name=<% table_res.0 %> value=<% table_res.4 %>></td>
+                <input type="text" class="txt_box" id="spike_vol" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
                <td><% last_spike_vol %></td>
                     
               <% CASE 'Number_of_embryos_collected' %>
                <td><% table_res.0 %></td><td>
-                <input type="text" class="txt_box" name=<% table_res.0 %>></td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" required></td>
                <td><% last_ec_numb %></td>
 
               <% CASE 'Embryo_collection_method' %>
                <td><% table_res.0 %></td><td>
-                <input type="text" class="txt_box" name=<% table_res.0 %> value=<% table_res.4 %>></td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
                <td><% last_ec_method %></td>
 
               <% CASE 'Embryos_collected_by' %>
                <td><% table_res.0 %></td><td>
-                <input type="text" class="txt_box" name=<% table_res.0 %> value=<% table_res.4 %>></td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
                <td><% last_ec_by %></td>
   
               <% CASE 'Lines_crossed' %>
                <td><% table_res.0 %></td><td>
-                <input type="text" name=<% table_res.0 %>></td>
+                <input type="text" name="<% table_res.0 %>"></td>
                <td><% last_lines_crossed %></td>
       
               <% CASE 'Founder' %>
                <td><% table_res.0 %></td><td>
-                <input type="text" name=<% table_res.0 %>></td>
+                <input type="text" name="<% table_res.0 %>"></td>
                <td><% last_founder %></td>
 
               <% CASE 'Asset_group' %>
@@ -169,8 +178,38 @@ th {
       
               <% CASE 'Image' %>
                <td><% table_res.0 %></td><td>
-                <input type="file" class="button" name="<% table_res.0 %>"></td>
+                <input type="file" name="<% table_res.0 %>"></td>
                <td><% last_image %></td>
+
+              <% CASE 'RNA_extracted_by' %>
+               <td><% table_res.0 %></td><td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
+               <td><% last_rna_ext_by %></td>
+  
+              <% CASE 'RNA_extraction_protocol_version' %>
+               <td><% table_res.0 %></td><td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
+               <td><% last_rna_ext_prot_version %></td>
+ 
+              <% CASE 'RNA_extraction_date' %>
+               <td><% table_res.0 %></td><td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
+               <td><% last_rna_ext_date %></td>
+
+              <% CASE 'RNA_library_creation_date' %>
+               <td><% table_res.0 %></td><td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
+               <td><% last_library_creation_date %></td>
+
+              <% CASE 'RNA_library_creation_protocol_version' %>
+               <td><% table_res.0 %></td><td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
+               <td><% last_library_creation_prot_version %></td>
+
+              <% CASE 'RNA_library_tube_id' %>
+               <td><% table_res.0 %></td><td>
+                <input type="text" name="<% table_res.0 %>"></td>
+               <td><% last_library_tube_id %></td>
 
              <% END %>
   
@@ -184,7 +223,6 @@ th {
             <input type="reset" value="Clear">
             &nbsp;&nbsp;&nbsp;&nbsp;
           </form>
-            <button onclick="goHome()">Home</button>
            </p>
         </div>
       </div>

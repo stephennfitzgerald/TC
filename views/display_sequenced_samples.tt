@@ -41,7 +41,7 @@ th,td {
 </style>
 </head>
 
-<body>
+<body background="images/zmp.jpg">
 <div id="page">
       <div id="sidebar">
       </div>
@@ -61,7 +61,7 @@ th,td {
              <% IF row_index % 2 %>
               <tr bgcolor='#CEECF5'>
              <% ELSE %>
-              <tr>
+              <tr bgcolor='#FFFFFF'>
              <%END %>
              <% FOREACH field IN smp %>
               <% IF row_index > 1 %> <!-- not the field names -->

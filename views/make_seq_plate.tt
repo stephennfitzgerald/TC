@@ -2,6 +2,20 @@
 <html>
 
 <script>
+var radioSum = 0;
+
+function sumUp ( chosen ) {
+ radioSum += chosen;
+ if( radioSum > 96 ){
+  alert("The combined sample number "+radioSum+" is greater than 96");
+  location.reload();
+ }
+}
+
+function reSet () {
+ radioSum = 0;
+}
+
 function goBack() 
   {
     window.history.back();
@@ -26,7 +40,7 @@ table, th, td {
 }
 
 .unseq_box {
-   color: #00FF00;
+   color: #339900;
 } 
 .seq_box {
    color: #FF0000;
@@ -35,7 +49,7 @@ table, th, td {
 </style>
 </head>
 
-<body>
+<body background="images/zmp.jpg" onload="combinePlate.reset();">
 <div id="page">
       <div id="sidebar">
       </div>
@@ -45,7 +59,7 @@ table, th, td {
           <button onclick="goHome()">Home</button>
          <p>
           <h1>Choose experiments to combine on one sequencing plate</h1>
-          <form action="<% combine_plate_data_url %>" method="post" enctype="multipart/form-data">
+          <form name="combinePlate" action="<% combine_plate_data_url %>" method="post" enctype="multipart/form-data">
            <table>
             <tr><td>Sequence_tag_set</td><td>
              <select name="tag_set_name">
@@ -59,7 +73,7 @@ table, th, td {
                <% unseq.$exp_id.0 %> ( <% unseq.$exp_id.1 %> ) <% unseq.$exp_id.2 %> 
               </td>
               <td class="unseq_box">
-               <input type="radio" name="<% exp_id %>" value="<% unseq.$exp_id.0 %>">
+               <input type="radio" name="<% exp_id %>" value="<% unseq.$exp_id.0 %>" onClick="sumUp(<% unseq.$exp_id.3 %>)">
                 &nbsp;&nbsp;&nbsp;&nbsp;
                <% unseq.$exp_id.3 %>
                 &nbsp;&nbsp;&nbsp;&nbsp; Not sequenced
@@ -72,7 +86,7 @@ table, th, td {
                <% seq.$exp_id.0 %> ( <% seq.$exp_id.1 %> ) <% seq.$exp_id.2 %> 
               </td>
               <td class="seq_box">
-               <input type="radio" name="<% exp_id %>" value="<% seq.$exp_id.0 %>">
+               <input type="radio" name="<% exp_id %>" value="<% seq.$exp_id.0 %>" disabled>
                 &nbsp;&nbsp;&nbsp;&nbsp;
                <% seq.$exp_id.3 %>
                &nbsp;&nbsp;&nbsp;&nbsp; Sequenced
@@ -82,7 +96,7 @@ table, th, td {
            </table>
             <input type="submit" value="Submit">
              &nbsp;&nbsp;&nbsp;&nbsp;
-             <input type="reset" value="Clear">
+             <input type="reset" value="Clear" onClick="reSet()">
            </form>
         </div>
       </div>

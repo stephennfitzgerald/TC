@@ -45,7 +45,7 @@ th,td {
 </style>
 </head>
 
-<body>
+<body background="images/zmp.jpg">
 <div id="page">
       <div id="sidebar">
       </div>
@@ -60,7 +60,7 @@ th,td {
            <p>
            <table style="table2"><tr><td>
            Add an assembly name </td><td> 
-           <input type="text" name="assembly_name">
+           <input type="text" name="assembly_name" required>
             </td></tr>
             <tr><td>
            Species </td><td>
@@ -70,7 +70,7 @@ th,td {
              <% END %>
              </select></td></tr>
             <tr><td>
-           GC_content </td><td>
+           GC content </td><td>
             <select class="dropdown" name="gc_content">
             <% FOREACH gc_name IN [ 'Neutral', 'High', 'Low' ]%>
              <option value="<% gc_name %>"><% gc_name %></option>
@@ -88,7 +88,7 @@ th,td {
              <% ELSIF row_index % 2 %>
               <tr bgcolor='#CEECF5'>
              <% ELSE %>
-              <tr>
+              <tr bgcolor='#FFFFFF'>
              <% END %>
                <td><% assembly.1 %></td>
                <td><% assembly.2 %></td>

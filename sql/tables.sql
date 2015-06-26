@@ -91,10 +91,11 @@ CREATE TABLE IF NOT EXISTS genome_reference (
 
 CREATE TABLE rna_extraction (
  id					INT(10) NOT NULL AUTO_INCREMENT,
- extracted_by				VARCHAR(255) NOT NULL,
- extraction_protocol			VARCHAR(255) NOT NULL,
- extraction_date			DATE NOT NULL,
- library_creation_date			DATE NOT NULL,
+ extracted_by				VARCHAR(255) DEFAULT "Neha" NOT NULL,
+ extraction_protocol_version		VARCHAR(255) DEFAULT 'V3' NOT NULL,
+ extraction_date			DATE DEFAULT '0000-00-00' NOT NULL,
+ library_creation_date			DATE DEFAULT '0000-00-00' NOT NULL,
+ library_creation_protocol_version      VARCHAR(255) DEFAULT 'V7.5' NOT NULL,
  library_tube_id			VARCHAR(255) NULL,
 
  PRIMARY				KEY(id)
@@ -379,17 +380,24 @@ CREATE OR REPLACE VIEW ExpView AS
         exp.spike_volume Spike_volume,
         exp.sample_visability Sample_visability,
         grf.name Genome_ref_name,
+        rna.extracted_by RNA_extracted_by,
+        rna.extraction_protocol_version RNA_extraction_protocol_version,
+        rna.extraction_date RNA_extraction_date,
+        rna.library_creation_date RNA_library_creation_date,
+        rna.library_creation_protocol_version RNA_library_creation_protocol_version,
         exp.image Image, 
         exp.lines_crossed Lines_crossed, 
         exp.founder Founder, 
         exp.phenotype_description Phenotype_description,
         exp.asset_group Asset_group,
+        rna.library_tube_id RNA_library_tube_id,
         exp.id Experiment_id
  FROM experiment exp INNER JOIN study std
         ON exp.study_id = std.id INNER JOIN genome_reference grf
         ON grf.id = exp.genome_reference_id INNER JOIN groupDevStageView dev
         ON exp.id = dev.experiment_id INNER JOIN groupAlleleView ale
-        ON ale.experiment_id = exp.id
+        ON ale.experiment_id = exp.id LEFT OUTER JOIN rna_extraction rna
+        ON exp.rna_extraction_id = rna.id
  GROUP BY std.name, exp.name
  ORDER BY std.name, exp.name;
 
@@ -695,7 +703,42 @@ VALUES (
  begins_param,
  landmarks_param
 );
-SET dev_id =  LAST_INSERT_ID();
+SET dev_id = LAST_INSERT_ID();
+END$$
+DELIMITER ;
+
+/** rna-extraction **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS add_rna_extraction_data$$
+
+CREATE PROCEDURE add_rna_extraction_data (
+ IN extracted_by_param VARCHAR(255),
+ IN extraction_protocol_version_param VARCHAR(255),
+ IN extraction_date_param DATE,
+ IN library_creation_date_param DATE,
+ IN library_creation_protocol_version_param VARCHAR(255),
+ IN library_tube_id_param VARCHAR(255),
+ OUT rna_ext_id INT(10)
+)
+BEGIN
+
+INSERT INTO rna_extraction (
+ extracted_by,
+ extraction_protocol_version,
+ extraction_date,
+ library_creation_date,
+ library_creation_protocol_version,
+ library_tube_id
+)
+VALUES (
+ extracted_by_param,
+ extraction_protocol_version_param,
+ extraction_date_param,
+ library_creation_date_param,
+ library_creation_protocol_version_param,
+ library_tube_id_param
+);
+SET rna_ext_id = LAST_INSERT_ID();
 END$$
 DELIMITER ;
 
@@ -703,7 +746,8 @@ DELIMITER ;
 DELIMITER $$
 DROP PROCEDURE IF EXISTS add_experiment_data$$
  
-CREATE PROCEDURE add_experiment_data(
+CREATE PROCEDURE add_experiment_data (
+ IN rna_extraction_id_param INT(10),
  IN image_param VARCHAR(255),
  IN study_id_param INT(10),
  IN genome_reference_id_param INT(10),
@@ -724,6 +768,7 @@ CREATE PROCEDURE add_experiment_data(
 BEGIN 
 
 INSERT INTO experiment (
+ rna_extraction_id,
  image,
  study_id,
  genome_reference_id,
@@ -741,6 +786,7 @@ INSERT INTO experiment (
  developmental_stage_id
 ) 
 VALUES ( 
+ rna_extraction_id_param,
  image_param,
  study_id_param,
  genome_reference_id_param,

@@ -29,7 +29,7 @@ table, th, td {
  color: black;
 }
 .border {
- color: #CCCCCC;
+ color: #B0B0B0;
  height: 150px;
  width: 400px;
  border: dashed;
@@ -41,7 +41,7 @@ table, th, td {
 </style>
 </head>
 
-<body>
+<body background="images/zmp.jpg">
 
 
 <div id="page">

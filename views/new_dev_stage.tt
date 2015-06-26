@@ -45,7 +45,7 @@ th,td {
 </style>
 </head>
 
-<body>
+<body background="images/zmp.jpg">
 <div id="page">
       <div id="sidebar">
       </div>
@@ -60,19 +60,19 @@ th,td {
            <p>
            <table style="table2"><tr><td>
            Add a period </td><td> 
-           <input type="text" name="period">
+           <input type="text" name="period" required>
            </td></tr>
            <tr><td>
            Add a stage </td><td>
-           <input type="text" name="stage">
+           <input type="text" name="stage" required>
            </td></tr>
            <tr><td>
            Add a begins </td><td>
-           <input type="text" name="begins">
+           <input type="text" name="begins" required>
            </td></tr>
            <tr><td>
            Add landmarks </td><td>
-           <input type="text" name="landmarks">
+           <input type="text" name="landmarks" required>
            </td></tr>
           </table>
            <input type="submit" value="Submit">
@@ -84,7 +84,7 @@ th,td {
             <% IF row_index % 2 %>
              <tr bgcolor='#CEECF5'>
             <% ELSE %>
-             <tr>
+             <tr bgcolor='#FFFFFF'>
             <%END %>
             <% field_index = 1 %>
              <% IF dev.last == new_dev_id %>

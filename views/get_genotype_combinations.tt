@@ -33,7 +33,7 @@ table, th, td {
 </style>
 </head>
 
-<body>
+<body background="images/zmp.jpg">
 <div id="page">
       <div id="sidebar">
       </div>
@@ -50,7 +50,7 @@ table, th, td {
             <% FOREACH count IN allele_combos.keys.nsort.reverse %>
              <% FOREACH combo IN allele_combos.$count.keys.sort %>
               <tr><td><% combo %></td><td>
-               <input type="text" class="txt_box" name="<% combo %>"></td>
+               <input type="number" class="txt_box" name="<% combo %>" min=0 max="<% count %>"></td>
                <td><% count %></td>
               </tr>
              <% END %>

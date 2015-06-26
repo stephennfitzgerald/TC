@@ -570,33 +570,39 @@ get '/get_new_experiment' => sub {
  $seq_plate_name = undef; ## re-set global
 
  template 'get_new_experiment', {
-   last_std_name            => $last_exp->[0],
-   last_exp_name            => $last_exp->[1],
-   last_allele_name         => $last_exp->[2],
-   last_lines_crossed       => $last_exp->[3],
-   last_founder             => $last_exp->[4],
-   last_dev_stage           => $last_exp->[5],
-   last_spike_mix	    => $last_exp->[6],
-   last_spike_dil           => $last_exp->[7],
-   last_spike_vol           => $last_exp->[8],
-   last_image               => $last_exp->[9],
-   last_pheno_desc          => $last_exp->[10],
-   last_ec_method           => $last_exp->[11],
-   last_ec_by               => $last_exp->[12],
-   last_ec_date             => $last_exp->[13],
-   last_ec_numb	            => $last_exp->[14],
-   last_visable             => $last_exp->[15],
-   last_asset_group         => $last_exp->[16],
-   last_genome_ref          => $last_exp->[17],
+   last_std_name                       => $last_exp->[0],
+   last_exp_name                       => $last_exp->[1],
+   last_allele_name                    => $last_exp->[2],
+   last_dev_stage                      => $last_exp->[3],
+   last_ec_numb	                       => $last_exp->[4],
+   last_ec_method                      => $last_exp->[5],
+   last_ec_date                        => $last_exp->[6],
+   last_ec_by                          => $last_exp->[7],
+   last_spike_mix                      => $last_exp->[8],
+   last_spike_dil                      => $last_exp->[9],
+   last_spike_vol                      => $last_exp->[10],
+   last_visable                        => $last_exp->[11],
+   last_genome_ref                     => $last_exp->[12],
+   last_rna_ext_by                     => $last_exp->[13],
+   last_rna_ext_prot_version           => $last_exp->[14],
+   last_rna_ext_date                   => $last_exp->[15],
+   last_library_creation_date          => $last_exp->[16],
+   last_library_creation_prot_version  => $last_exp->[17],
+   last_image                          => $last_exp->[18],
+   last_lines_crossed                  => $last_exp->[19],
+   last_founder                        => $last_exp->[20],
+   last_pheno_desc                     => $last_exp->[21],
+   last_asset_group                    => $last_exp->[22],
+   last_library_tube_id                => $last_exp->[23],
  
-   spike_ids                => \%spike_ids,
-   genref_names             => $genref_names, 
-   table_schema             => $table_schema,
-   dev_stages		    => $dev_stages,
-   visibility               => \%visability,
-   study_names              => $std_names,
+   spike_ids                           => \%spike_ids,
+   genref_names                        => $genref_names, 
+   table_schema                        => $table_schema,
+   dev_stages		               => $dev_stages,
+   visibility                          => \%visability,
+   study_names                         => $std_names,
 
-   add_experiment_data_url  => uri_for('/add_experiment_data'),
+   add_experiment_data_url             => uri_for('/add_experiment_data'),
  };
 
 };
@@ -634,10 +640,20 @@ post '/add_experiment_data' => sub {
    $image = 'No image';
   }
  }
- 
+ my @rna_extraction_data = (param('RNA_extracted_by'),
+                            param('RNA_extraction_protocol_version'),
+                            param('RNA_extraction_date'),
+                            param('RNA_library_creation_date'),
+                            param('RNA_library_creation_protocol_version'),
+                            param('RNA_library_tube_id')
+                           );
+ ## add the RNA-extraction info
+ my $rna_ext_sth = $dbh->prepare("CALL add_rna_extraction_data(?,?,?,?,?,?, \@rna_ext_id)");
+ $rna_ext_sth->execute(@rna_extraction_data);
+ my ($rna_ext_id) = $dbh->selectrow_array("SELECT \@rna_ext_id");
  ## add a new experiment
- my $exp_sth = $dbh->prepare("CALL add_experiment_data(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, \@exp_id)");
- $exp_sth->execute( $image, @$vals );
+ my $exp_sth = $dbh->prepare("CALL add_experiment_data(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, \@exp_id)");
+ $exp_sth->execute( $rna_ext_id, $image, @$vals );
  my ($exp_id) = $dbh->selectrow_array("SELECT \@exp_id");
 
  ## and add alleles to the global array 
@@ -961,7 +977,7 @@ sub color_plate {
 }
 
 sub get_schema {
-  return DBI->connect("DBI:mysql:$db_name;host=utlt-db;port=3307", 'tillingrw', 'tillingrw')
+  return DBI->connect("DBI:mysql:$db_name;host=utlt-db;port=3307", $ENV{'TC_USER'}, $ENV{'TC_PASS'})
     or die "Cannot connect to database\n";
 }
 

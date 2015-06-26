@@ -41,7 +41,7 @@ th,td {
 </style>
 </head>
 
-<body>
+<body background="images/zmp.jpg">
 <div id="page">
       <div id="sidebar">
       </div>
@@ -55,7 +55,7 @@ th,td {
           <form action="<% add_a_new_study_url %>" method="get">
            Add a new study name 
            &nbsp;&nbsp;&nbsp;&nbsp;
-           <input type="text" name="new_study">
+           <input type="text" name="new_study" required>
            &nbsp;&nbsp;&nbsp;&nbsp;
            <input type="submit" value="Submit">
           </form>
@@ -67,7 +67,7 @@ th,td {
              <% IF row_index % 2 %>
               <tr bgcolor='#CEECF5'>
              <% ELSE %>
-              <tr>
+              <tr bgcolor='#FFFFFF'>
              <%END %>
              <% IF std.1 == new_std_id %>
               <td bgcolor="#F5A9F2"><% std.0 %> 
