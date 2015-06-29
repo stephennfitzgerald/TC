@@ -12,7 +12,15 @@ function sumUp ( chosen ) {
  }
 }
 
-function reSet () {
+function radioCk() {
+ if( ! radioSum ) {
+  alert("At least one experiment must be selected");
+  return false;
+ }
+ return true;
+}
+
+function reSet() {
  radioSum = 0;
 }
 
@@ -59,7 +67,7 @@ table, th, td {
           <button onclick="goHome()">Home</button>
          <p>
           <h1>Choose experiments to combine on one sequencing plate</h1>
-          <form name="combinePlate" action="<% combine_plate_data_url %>" method="post" enctype="multipart/form-data">
+          <form name="combinePlate" action="<% combine_plate_data_url %>" method="post" enctype="multipart/form-data" onsubmit="return radioCk();">
            <table>
             <tr><td>Sequence_tag_set</td><td>
              <select name="tag_set_name">

@@ -37,13 +37,16 @@ table, th, td {
  text-align: left;
 }
 
+body {
+    background-image: url("images/zmp_index.jpg");
+    background-repeat: no-repeat;
+    background-size: cover;
+}
 
 </style>
 </head>
 
-<body background="images/zmp.jpg">
-
-
+<body>
 <div id="page">
  <div id="sidebar">
   </div>

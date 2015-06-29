@@ -519,16 +519,22 @@ CREATE OR REPLACE VIEW SpeciesView AS
  FROM species sp
  ORDER BY id DESC;
 
-
 CREATE OR REPLACE VIEW LstExpView AS
  SELECT *
  FROM ExpView ev INNER JOIN MaxExpId mei
   ON ev.Experiment_id = mei.max_id;
 
-
 CREATE OR REPLACE VIEW AlleleView AS
  SELECT * 
  FROM allele;
+
+CREATE OR REPLACE VIEW ExpStdy AS 
+ SELECT std.name study_name,
+        std.id study_id,
+        exp.name exp_name
+ FROM study std INNER JOIN experiment exp 
+        ON exp.study_id = std.id
+  ORDER BY std.name;
 
 
 /** procedures **/

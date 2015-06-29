@@ -627,6 +627,18 @@ post '/add_experiment_data' => sub {
    param('Developmental_stage')
  ];
 
+ ## check to see if new study and experiment names don't exist
+ my %std_exp_names;
+ my $std_exp_sth = $dbh->prepare("SELECT * FROM ExpStdy");
+ $std_exp_sth->execute;
+ foreach my $std_exp(@{ $std_exp_sth->fetchall_arrayref }) {
+  # study_id, exp_name, study_name
+  $std_exp_names{ $std_exp->[1] }{ $std_exp->[2] } = $std_exp->[0];
+ }
+ if(exists( $std_exp_names{ $vals->[0] }{ $vals->[2] } )) {
+  croak "Study \"$std_exp_names{ $vals->[0] }{ $vals->[2] }\" and experiment \"$vals->[2]\" already exist in the database";
+ }
+
  ## copy the image file
  my $image;
  if(param('Image') ne 'No image') {
