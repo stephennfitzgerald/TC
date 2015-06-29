@@ -296,6 +296,11 @@ CREATE OR REPLACE VIEW ExpStdNameView AS
  FROM study std INNER JOIN experiment exp 
    ON std.id = exp.study_id;
 
+CREATE OR REPLACE VIEW CheckAlleles AS 
+ SELECT name 
+ FROM allele
+ ORDER BY name;
+
 
 CREATE OR REPLACE VIEW groupAlleleView AS
  SELECT exp.id experiment_id,

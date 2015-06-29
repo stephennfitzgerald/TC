@@ -627,7 +627,7 @@ post '/add_experiment_data' => sub {
    param('Developmental_stage')
  ];
 
- ## check to see if new study and experiment names don't exist
+ ## check to see if new study and experiment names already exist
  my %std_exp_names;
  my $std_exp_sth = $dbh->prepare("SELECT * FROM ExpStdy");
  $std_exp_sth->execute;
@@ -639,6 +639,28 @@ post '/add_experiment_data' => sub {
   croak "Study \"$std_exp_names{ $vals->[0] }{ $vals->[2] }\" and experiment \"$vals->[2]\" already exist in the database";
  }
 
+ ## and add alleles to the global array 
+ my $alle_sth = $dbh->prepare("SELECT * FROM AlleleView WHERE name = ?");
+ @alleles=(); # empty the global array
+ my @no_alleles;
+ my $check_alleles_sth = $dbh->prepare("SELECT * FROM CheckAlleles");
+ $check_alleles_sth->execute;
+ my $check_alleles = $check_alleles_sth->fetchall_hashref('name'); 
+
+ ## check that the alleles exist in the database 
+ foreach my $allele_name(split":", param('Alleles')){
+  if(! exists($check_alleles->{"$allele_name"})) {
+   push @no_alleles, $allele_name;
+  } 
+  else {
+   $alle_sth->execute("$allele_name");
+   push @alleles, @{ $alle_sth->fetchall_arrayref };
+  }
+ }
+ if( scalar @no_alleles ) {
+  croak "Alleles ", join", ", @no_alleles, " do not exist in the database";
+ }
+  
  ## copy the image file
  my $image;
  if(param('Image') ne 'No image') {
@@ -668,14 +690,6 @@ post '/add_experiment_data' => sub {
  $exp_sth->execute( $rna_ext_id, $image, @$vals );
  my ($exp_id) = $dbh->selectrow_array("SELECT \@exp_id");
 
- ## and add alleles to the global array 
- my $alle_sth = $dbh->prepare("SELECT * FROM AlleleView WHERE name = ?");
- @alleles=(); # empty the global array
- foreach my $allele_name(split":", param('Alleles')){
-  $alle_sth->execute("$allele_name");
-  push @alleles, @{ $alle_sth->fetchall_arrayref };
- }
-  
  template 'get_genotypes_and_rna', {
     names_info     => get_study_and_exp_names($exp_id), 
     alleles        => \@alleles,
