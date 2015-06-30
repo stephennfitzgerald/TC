@@ -544,6 +544,23 @@ CREATE OR REPLACE VIEW ExpStdy AS
 
 /** procedures **/
 
+/** delete experiment and rna_extraction record **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS delete_exp$$
+
+CREATE PROCEDURE delete_exp (
+ IN exp_id_param INT(10)
+)
+BEGIN
+
+DELETE exp.*, 
+       rna_ext.* 
+FROM experiment exp INNER JOIN rna_extraction rna_ext
+       ON exp.rna_extraction_id = rna_ext.id 
+WHERE exp.id = exp_id_param;
+END$$
+DELIMITER ;
+
 /** genotype **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS add_genotype_data$$

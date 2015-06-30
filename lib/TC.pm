@@ -751,9 +751,13 @@ post '/get_genotypes_and_rna' => sub {
     }   
    }   
   }
- 
+
   %allele_combos = (); # re-set the global
+  my @wells_wo_genotypes;
   foreach my $well_id( keys %rna_plate ){
+   if( (! exists($rna_plate{ $well_id }{ 'genotype' })) || ((keys %{ $rna_plate{ $well_id }{ 'genotype' } }) != scalar @alleles) ) {
+    push @wells_wo_genotypes, $well_id; # discrepancy between rna-plate and genotype-plate(s)
+   }
    my ($geno_combos, $fail_count);
    foreach my $genotype(sort keys %{ $rna_plate{ $well_id }{ 'genotype' } }) {
     $fail_count += $rna_plate{ $well_id }{ 'genotype' }{ $genotype }; 
@@ -768,6 +772,15 @@ post '/get_genotypes_and_rna' => sub {
      push(@{ $allele_combos{ $geno_combos } }, [ $well_id, $rna_plate{ $well_id }{ 'rna' } ]);
     }
    }
+  }
+
+  if(scalar @wells_wo_genotypes) { # not all the wells on the rna plate have a genotype - this is a problem
+   my $dbh = get_schema();
+   my $exp_del_sth = $dbh->prepare("CALL delete_exp(?)");
+   $exp_del_sth->execute(param('exp_id')); # remove the experiment and rna_extraction record
+   croak 'Discrepancy between the wells (' . join(", ", @wells_wo_genotypes) . 
+         ') in the rna-plate and the genotyping plate(s). The experiment ' . 
+         param('exp_name') . ' has been removed from the database';
   }
 
   my %allele_geno_combinations;
