@@ -1,32 +1,45 @@
 package TC;
   
+use strict;
+use warnings;
 use Dancer2;
 use File::Path qw(make_path);
 use Excel::Writer::XLSX;
 use Spreadsheet::Read;
 use Spreadsheet::XLSX;
+use constant INCR => 3500; ## increase the color $dec
+use constant MAX_WELL_COL => 12;
+use constant MAX_WELL_ROW => 8;
+use constant PLATE_SIZE => 96;
 use Data::Dumper;
 use Carp;
 use DBI;
 
-our $VERSION = '0.1';
-my $db_name = "zfish_sf5_tc2_test";
-my $exel_file_dir = "./public/zmp_exel_files"; # need to change
-my $rna_dilution_dir = "./public/RNA_dilution_files";
-my $image_dir = "./public/images"; 
-my (@alleles, %rna_plate, %allele_combos);
-my $inc = 3500; ## increase the color $dec 
-my $seq_plate_name;
-my $schema_location = "images/schema_tables_zmp.png";
-
-my %genotypes_c = (
+use constant GENOTYPES_C => {
  'Blank'    => 0,
  'Hom'      => 'homozygous mutant',
  'Het'      => 'heterozygous',
  'Wildtype' => 'wild type',
  'Failed'   => 0,
  'Missing'  => 0,
-);
+};
+
+use constant KlusterCallerCodes => {
+ '0'        => 'Blank',
+ '1'        => 'Hom',
+ '2'        => 'Het',
+ '3'        => 'Wildtype',
+ '5'        => 'Failed',
+ '6'        => 'Missing',
+};
+
+our $VERSION = '0.1';
+my $db_name = "zfish_sf5_tc2_test";
+my $exel_file_dir = "./public/zmp_exel_files"; # need to change
+my $rna_dilution_dir = "./public/RNA_dilution_files";
+my $image_dir = "./public/images"; 
+my (@alleles, %rna_plate, %allele_combos, $dbh, $seq_plate_name);
+my $schema_location = "images/schema_tables_zmp.png";
 
 my %spike_ids = ( 
  '0'        => 'No spike mix',
@@ -39,23 +52,14 @@ my %visability = (
   2         => "Hold",
 );
 
-my %KlusterCallerCodes = (
- '0'        => 'Blank',
- '1'        => 'Hom',
- '2'        => 'Het',
- '3'        => 'Wildtype',
- '5'        => 'Failed',
- '6'        => 'Missing',
-);
-
 
 get '/' => sub {
     
  template 'index', { 
-  'schema_location' 	          => $schema_location,
+  'schema_location'               => $schema_location,
 
   'add_a_new_study_url'           => uri_for('/add_a_new_study'),
-  'add_a_new_assembly_url'         => uri_for('/add_a_new_assembly'),
+  'add_a_new_assembly_url'        => uri_for('/add_a_new_assembly'),
   'add_a_new_dev_stage_url'       => uri_for('/add_a_new_devstage'),
   'get_new_experiment_url'        => uri_for('/get_new_experiment'),
   'make_sequencing_plate_url'     => uri_for('/get_sequencing_info'),
@@ -69,9 +73,10 @@ get '/' => sub {
 
 get '/add_a_new_study' => sub {
  
- my $dbh = get_schema();
+ $dbh = get_schema();
  my $std_id;
  if(my $new_study_name = param('new_study')) {
+  $new_study_name=trim($new_study_name);
   my $new_std_sth = $dbh->prepare("CALL add_new_study(?, \@std_id)");
   $new_std_sth->execute($new_study_name);
   ($std_id) = $dbh->selectrow_array("SELECT \@std_id");
@@ -81,7 +86,7 @@ get '/add_a_new_study' => sub {
  $std_sth->execute;
  my $col_names = $std_sth->{'NAME'};
  my $all_studies = $std_sth->fetchall_arrayref();
- unshift @$all_studies, $col_names;
+ unshift @{ $all_studies }, $col_names;
 
  template 'new_study', {
  'studies'                      => $all_studies,
@@ -94,11 +99,15 @@ get '/add_a_new_study' => sub {
 
 get '/add_a_new_devstage' => sub {
  
- my $dbh = get_schema();
+ $dbh = get_schema();
  my $dev_id;
  my ($period, $stage, $begins, $landmarks) = (param('period'), param('stage'), param('begins'), param('landmarks'));
  
- if($stage and $stage and $begins and $landmarks) {
+ if($period and $stage and $begins and $landmarks) {
+  $period=trim($period);
+  $stage=trim($stage);
+  $begins=trim($begins);
+  $landmarks=trim($landmarks);
   my $new_devstage_sth = $dbh->prepare("CALL add_new_devstage(?,?,?,?, \@dev_id)");
   $new_devstage_sth->execute($period, $stage, $begins, $landmarks);
   ($dev_id) = $dbh->selectrow_array("SELECT \@dev_id");
@@ -108,7 +117,7 @@ get '/add_a_new_devstage' => sub {
  $dev_sth->execute;
  my $col_names = $dev_sth->{'NAME'};
  my $all_dev_stages = $dev_sth->fetchall_arrayref();
- unshift @$all_dev_stages, $col_names;
+ unshift @{ $all_dev_stages }, $col_names;
 
  template 'new_dev_stage', {
   'dev_stages'                    => $all_dev_stages,
@@ -121,11 +130,14 @@ get '/add_a_new_devstage' => sub {
 
 get '/add_a_new_assembly' => sub {
  
- my $dbh = get_schema();
+ $dbh = get_schema();
  my $assembly_id;
  my($species_id, $assembly_name, $gc_content) = (param('species_id'), param('assembly_name'), param('gc_content'));
-
+ 
  if($species_id and $assembly_name and $gc_content) {
+  $species_id=trim($species_id);
+  $assembly_name=trim($assembly_name);
+  $gc_content=trim($gc_content);
   my $new_assembly_sth = $dbh->prepare("CALL add_new_assembly(?,?,?, \@ass_id)");
   $new_assembly_sth->execute($assembly_name, $species_id, $gc_content);
   ($assembly_id) = $dbh->selectrow_array("SELECT \@ass_id");
@@ -135,7 +147,7 @@ get '/add_a_new_assembly' => sub {
  $assembly_sth->execute;
  my $col_names = $assembly_sth->{'NAME'};
  my $assemblies = $assembly_sth->fetchall_arrayref();
- unshift @$assemblies, $col_names;
+ unshift @{ $assemblies }, $col_names;
 
  my $species_sth = $dbh->prepare("SELECT * FROM SpeciesView");
  $species_sth->execute;
@@ -152,12 +164,12 @@ get '/add_a_new_assembly' => sub {
 
 get '/get_all_experiments' => sub {
  
- my $dbh = get_schema(); 
+ $dbh = get_schema(); 
  my $exp_disp_sth = $dbh->prepare('SELECT * FROM ExpDisplayView');
  $exp_disp_sth->execute;
  my $col_names = $exp_disp_sth->{'NAME'};
  my $all_experiments = $exp_disp_sth->fetchall_arrayref();
- unshift @$all_experiments, $col_names;
+ unshift @{ $all_experiments }, $col_names;
  
  my $gen_sth = $dbh->prepare("SELECT * FROM SpView");
  $gen_sth->execute;
@@ -177,9 +189,9 @@ get '/get_all_experiments' => sub {
  
  template 'all_experiments', {
   'all_experiments'              => $all_experiments,
-  'species_info'		 => $gen_sth->fetchall_hashref('Genome_ref_name'),
-  'spike_info'			 => $spikes_sth->fetchall_hashref('exp_id'),
-  'dev_info'			 => $dev_sth->fetchall_hashref('exp_id'),
+  'species_info'                 => $gen_sth->fetchall_hashref('Genome_ref_name'),
+  'spike_info'    => $spikes_sth->fetchall_hashref('exp_id'),
+  'dev_info'    => $dev_sth->fetchall_hashref('exp_id'),
   'allele_info'                  => \%allele_info,
   
   'get_sequenced_samples_url'    => uri_for('/get_sequenced_samples'),
@@ -189,14 +201,14 @@ get '/get_all_experiments' => sub {
 
 get '/get_sequenced_samples' => sub {
 
- my $dbh = get_schema();
+ $dbh = get_schema();
  my $exp_info = get_study_and_exp_names(param('exp_id'));
  
  my $sequenced_samples_sth = $dbh->prepare("SELECT * FROM seqSampleView WHERE Experiment_id = ?");
  $sequenced_samples_sth->execute(param('exp_id'));
  my $col_names = $sequenced_samples_sth->{'NAME'};
  my $sequenced_samples = $sequenced_samples_sth->fetchall_arrayref();
- unshift @$sequenced_samples, $col_names;
+ unshift @{ $sequenced_samples }, $col_names;
 
  template 'display_sequenced_samples', {
  
@@ -208,7 +220,7 @@ get '/get_sequenced_samples' => sub {
 
 get '/get_all_sequencing_plates' => sub {
 
- my $dbh = get_schema();
+ $dbh = get_schema();
  my $seq_plates_sth = $dbh->prepare('SELECT * FROM SeqPlateView');
  $seq_plates_sth->execute;
  my $all_seq_plates = $seq_plates_sth->fetchall_arrayref;
@@ -229,10 +241,10 @@ get '/display_well_order' => sub {
 
  template 'display_sequence_plate', {
   
-  display_plate_name     => param('display_plate_name'),
-  sequence_plate         => $color_plate->[0],
-  legend                 => $color_plate->[1],
-  plate_name		 => param('plate_name'),
+  display_plate_name              => param('display_plate_name'),
+  sequence_plate                  => $color_plate->[0],
+  legend                          => $color_plate->[1],
+  plate_name                      => param('plate_name'),
  
   'display_genot_order_url'       => uri_for('/display_genot_order'),
   'display_tag_order_url'         => uri_for('/display_tag_order'),
@@ -247,9 +259,9 @@ get '/display_tag_order' => sub {
 
  template 'display_sequence_plate', {
   
-  display_plate_name     => param('display_plate_name'),
-  sequence_plate         => $color_plate->[0],
-  plate_name             => param('plate_name'),
+  display_plate_name              => param('display_plate_name'),
+  sequence_plate                  => $color_plate->[0],
+  plate_name                      => param('plate_name'),
 
   'display_genot_order_url'       => uri_for('/display_genot_order'),
   'display_tag_order_url'         => uri_for('/display_tag_order'),
@@ -264,11 +276,11 @@ get '/display_genot_order' => sub {
 
  template 'display_sequence_plate', {
   
-  display_plate_name     => param('display_plate_name'),
-  sequence_plate         => $color_plate->[0],
-  legend                 => $color_plate->[1],
-  geno_legend	         => $color_plate->[2],
-  plate_name             => param('plate_name'),
+  display_plate_name              => param('display_plate_name'),
+  sequence_plate                  => $color_plate->[0],
+  legend                          => $color_plate->[1],
+  geno_legend                     => $color_plate->[2],
+  plate_name                      => param('plate_name'),
 
   'display_well_order_url'        => uri_for('/display_well_order'),
   'display_tag_order_url'         => uri_for('/display_tag_order'),
@@ -281,7 +293,7 @@ get '/get_sequencing_report' => sub {
 
  my $excel_file_loc;
  if($seq_plate_name) {
-  my $dbh = get_schema();
+  $dbh = get_schema();
 
   my @samples_for_excel = ( ## column names for the excel sheet
   'Library_Tube_ID',
@@ -342,13 +354,13 @@ get '/get_sequencing_report' => sub {
     }
     elsif( $col eq 'Sample_Description' ) {
      my %alle_geno;
-     foreach my $alle_genotype( split',',$sequence_plate->{"$index_tag_id"}->{'AlleleGenotype'} ) {
-      my($allele,$gene,$genotype) = split':',$alle_genotype;
+     foreach my $alle_genotype( split',', $sequence_plate->{"$index_tag_id"}->{'AlleleGenotype'} ) {
+      my($allele,$gene,$genotype) = split':', $alle_genotype;
       $alle_geno{$genotype}{"$gene allele $allele"}++;
      }
      my $description = "3' end enriched mRNA from a single genotyped ";
      foreach my $geno(sort keys %alle_geno) {
-      $description .= $genotypes_c{ $geno } . " embryo for ";
+      $description .= GENOTYPES_C->{ $geno } . " embryo for ";
       foreach my $gene_allele(sort keys %{ $alle_geno{ $geno } }) {
        $description .= "$gene_allele, ";
       }
@@ -357,8 +369,8 @@ get '/get_sequencing_report' => sub {
      $index_tag_seq=~s/CG$//xms; ## remove the final 2 bases - these are always "CG"
      my $zmp_exp_name = $sequence_plate->{"$index_tag_id"}->{'zmp_name'}; 
      $description .= "clutch 1 with " . $spike_ids{ $sequence_plate->{"$index_tag_id"}->{'desc_spike_mix'} } .
-      ". The 8 base indexing sequence ($index_tag_seq) is bases 13 to 20 of read 1 followed by CG " . 
-      'and polyT. More information describing the phenotype can be found at the ' .
+      ". A 8 base indexing sequence ($index_tag_seq) is bases 13 to 20 of read 1 followed by CG and polyT. " . 
+      'More information describing the phenotype can be found at the ' .
       'Wellcome Trust Sanger Institute Zebrafish Mutation Project website ' .
       "http://www.sanger.ac.uk/sanger/Zebrafish_Zmpsearch/$zmp_exp_name";
      push @data, $description;
@@ -379,11 +391,11 @@ get '/get_sequencing_report' => sub {
  }
 
  template 'index', { 
-  'schema_location'            => $schema_location,   
-  'excel_file_loc'             => $excel_file_loc,
+  'schema_location'               => $schema_location,   
+  'excel_file_loc'                => $excel_file_loc,
 
   'add_a_new_study_url'           => uri_for('/add_a_new_study'),
-  'add_a_new_assembly_url'         => uri_for('/add_a_new_assembly'),
+  'add_a_new_assembly_url'        => uri_for('/add_a_new_assembly'),
   'add_a_new_dev_stage_url'       => uri_for('/add_a_new_devstage'),
   'get_new_experiment_url'        => uri_for('/get_new_experiment'),
   'make_sequencing_plate_url'     => uri_for('/get_sequencing_info'),
@@ -396,12 +408,12 @@ get '/get_sequencing_report' => sub {
 
 get '/get_sequencing_info' => sub {
 
- my $dbh = get_schema();
+ $dbh = get_schema();
  my (%seq, %unseq);
  my $exp_seq_sth = $dbh->prepare("SELECT * FROM SeqExpView");
  $exp_seq_sth->execute;
  foreach my $exp_seq(@{ $exp_seq_sth->fetchall_arrayref }) {
-  my($exp_id, $exp_name, $std_name, $alleles, $seq_plate, $count) = @$exp_seq;
+  my($exp_id, $exp_name, $std_name, $alleles, $seq_plate, $count) = @{ $exp_seq };
   if($seq_plate){
    push(@{ $seq{ $exp_id } }, $exp_name, $std_name, $alleles, $count);
   }
@@ -417,7 +429,7 @@ get '/get_sequencing_info' => sub {
 
  template 'make_seq_plate', {
   unseq                     => \%unseq,
-  seq		            => \%seq,
+  seq              => \%seq,
   tag_set_names             => $tag_set_names,
 
   'combine_plate_data_url'  => uri_for('/combine_plate_data'), 
@@ -428,7 +440,7 @@ get '/get_sequencing_info' => sub {
 
 post '/combine_plate_data' => sub {
 
- my $dbh = get_schema();
+ $dbh = get_schema();
  my (%combined_plate, %exp_ids, %cell_color, %exp_color, %cell_mapping, %index_tag_set);
  my $dec = 45280; 
  my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
@@ -437,6 +449,7 @@ post '/combine_plate_data' => sub {
  my $tag_set_prefix = param('tag_set_name');
  my $tag_seqs_sth = $dbh->prepare("SELECT * FROM tagSeqView WHERE name_prefix = ?");
  $tag_seqs_sth->execute("$tag_set_prefix");
+ my $index_hash = make_grid()->[1]; ## for merging the experiment(s) onto a single plate
  my $tag_seqs = $tag_seqs_sth->fetchall_arrayref;
  
  ## try and get the spacing between experiments correct
@@ -451,12 +464,12 @@ post '/combine_plate_data' => sub {
   else {
    my $well_no = $plate_samples{ $exp_id }{ 'numb' };
    $sum += $well_no;
-   my $filler_size = 12 - ($well_no % 12);
-   $filler_size = $filler_size == 12 ? 0 : $filler_size;
+   my $filler_size = MAX_WELL_COL - ($well_no % MAX_WELL_COL);
+   $filler_size = $filler_size == MAX_WELL_COL ? 0 : $filler_size;
    push @numbers, [ $exp_id, $filler_size, 0];
   }
  }
- my $free_wells = 96 - $sum;
+ my $free_wells = PLATE_SIZE - $sum;
  pop @numbers;
  my $all_not_done = 1;
  while ($free_wells && $all_not_done) {
@@ -475,7 +488,6 @@ post '/combine_plate_data' => sub {
  
  my $display_plate_name;
  my $ct = 0; ## array index corresponds to the index positions in $index_hash below
- my $index_hash = make_grid()->[1]; ## for merging the experiment(s) onto a single plate
  foreach my $exp_id(sort {$b <=> $a} keys %{ $all_exps }) { ## most recent exp at top of plate
   if(my $exp_name = param("$exp_id")) {
    if($exp_name eq $all_exps->{"$exp_id"}->{'exp_name'}) { ## this should always be true
@@ -488,7 +500,7 @@ post '/combine_plate_data' => sub {
     foreach my $sample(@{ $rdp_sth->fetchall_arrayref }) {
      $exp_color{ $hex }{ 'std_name' } = $sample->[4];
      $exp_ids{ $sample->[2] }++; ## experiment_ids
-     my $tag_seq = shift @$tag_seqs;
+     my $tag_seq = shift @{ $tag_seqs };
      $index_tag_set{ $tag_seq->[0] } = $tag_seq->[1];
      $combined_plate{ $sample->[0] }{ 'rna_plate_well_name' }  = $sample->[1];
      $combined_plate{ $sample->[0] }{ 'exp_name' }             = $sample->[3];
@@ -500,8 +512,12 @@ post '/combine_plate_data' => sub {
      $cell_mapping{ $index_hash->{ $ct } } = $sample->[1]; ## mapping betweem rna plate(s) and seq plate
      $ct++;
     }
-    $ct += $filler{ $exp_id };
-    $dec += $inc;
+    if( $filler{ $exp_id } ) {
+     $ct += $filler{ $exp_id };
+     splice @{ $tag_seqs }, 0, $filler{ $exp_id }; ## remove the corresponding number of tag sequences as well
+    }
+    $dec += INCR;
+    
    }
   }
  }
@@ -541,7 +557,7 @@ post '/combine_plate_data' => sub {
 
   display_plate_name     => $display_plate_name,
   sequence_plate         => $seq_array,
-  legend		  => \%exp_color,
+  legend    => \%exp_color,
  };
   
 
@@ -549,7 +565,7 @@ post '/combine_plate_data' => sub {
 
 get '/get_new_experiment' => sub {
 
- my $dbh = get_schema();
+ $dbh = get_schema();
  my $exp_sth = $dbh->prepare("DESC ExpView");
  my $gen_sth = $dbh->prepare("SELECT Genome_ref_name, Genome_ref_id FROM SpView"); 
  my $dev_sth = $dbh->prepare("SELECT * FROM DevView"); 
@@ -574,7 +590,7 @@ get '/get_new_experiment' => sub {
    last_exp_name                       => $last_exp->[1],
    last_allele_name                    => $last_exp->[2],
    last_dev_stage                      => $last_exp->[3],
-   last_ec_numb	                       => $last_exp->[4],
+   last_ec_numb                        => $last_exp->[4],
    last_ec_method                      => $last_exp->[5],
    last_ec_date                        => $last_exp->[6],
    last_ec_by                          => $last_exp->[7],
@@ -598,7 +614,7 @@ get '/get_new_experiment' => sub {
    spike_ids                           => \%spike_ids,
    genref_names                        => $genref_names, 
    table_schema                        => $table_schema,
-   dev_stages		               => $dev_stages,
+   dev_stages                          => $dev_stages,
    visibility                          => \%visability,
    study_names                         => $std_names,
 
@@ -609,7 +625,7 @@ get '/get_new_experiment' => sub {
 
 post '/add_experiment_data' => sub {
 
- my $dbh = get_schema();
+ $dbh = get_schema();
  my $vals = [
    param('Study_name'),
    param('Genome_ref_name'),
@@ -648,7 +664,8 @@ post '/add_experiment_data' => sub {
  my $check_alleles = $check_alleles_sth->fetchall_hashref('name'); 
 
  ## check that the alleles exist in the database 
- foreach my $allele_name(split":", param('Alleles')){
+ foreach my $allele_name(split':', param('Alleles')){
+  $allele_name=trim($allele_name);
   if(! exists($check_alleles->{"$allele_name"})) {
    push @no_alleles, $allele_name;
   } 
@@ -658,7 +675,7 @@ post '/add_experiment_data' => sub {
   }
  }
  if( scalar @no_alleles ) {
-  croak "Alleles ", join", ", @no_alleles, " do not exist in the database";
+  croak 'Alleles ', join', ', @no_alleles, ' do not exist in the database';
  }
   
  ## copy the image file
@@ -687,12 +704,12 @@ post '/add_experiment_data' => sub {
  my ($rna_ext_id) = $dbh->selectrow_array("SELECT \@rna_ext_id");
  ## add a new experiment
  my $exp_sth = $dbh->prepare("CALL add_experiment_data(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, \@exp_id)");
- $exp_sth->execute( $rna_ext_id, $image, @$vals );
+ $exp_sth->execute( $rna_ext_id, $image, @{ $vals });
  my ($exp_id) = $dbh->selectrow_array("SELECT \@exp_id");
 
  template 'get_genotypes_and_rna', {
-    names_info     => get_study_and_exp_names($exp_id), 
-    alleles        => \@alleles,
+    names_info                 => get_study_and_exp_names($exp_id), 
+    alleles                    => \@alleles,
    
     get_genotypes_and_rna_url  => uri_for('/get_genotypes_and_rna'),
    
@@ -719,7 +736,7 @@ post '/get_genotypes_and_rna' => sub {
   my $rna_volume  = param('rna_volume');
 
   ## read in the file for the RNA concentrations
-  foreach my $row(1..8) {
+  foreach my $row(1..MAX_WELL_ROW) {
    foreach my $col("A".."L") {
     my $index = $col . $row;
     if(defined($workbook->[1]{$index})){
@@ -737,15 +754,15 @@ post '/get_genotypes_and_rna' => sub {
   foreach my $allele(@alleles) { # uses a global variable - need to change
    my $allele_name = $allele->[1];
    if( my $file = upload("$allele_name") ){
-    my @wells = map { split" ",$_ } $file->content=~/\[wells\] (.*)/xms;
+    my @wells = map { split' ', $_ } $file->content=~/\[wells\] (.*)/xms;
     foreach my $well(@wells) {
-     $well=~s/\,.*//;
-     my($well_id, $geno_id) = split'=',$well;
+     $well=~s/\,.*//x;
+     my($well_id, $geno_id) = split'=', $well;
      if( my($alpha, $num) = $well_id=~/(^[A-H])0?([1-9][0-9]?)/xms ) { 
       $well_id = $alpha . $num;
       if( exists($rna_plate{ $well_id }) ){
-       my $fail_num = $KlusterCallerCodes{ $geno_id } eq "Failed" ? 0 : 1;
-       $rna_plate{ $well_id }{ 'genotype' }{ $allele_name . ":" . $KlusterCallerCodes{ $geno_id } } = $fail_num; 
+       my $fail_num = KlusterCallerCodes->{ $geno_id } eq "Failed" ? 0 : 1;
+       $rna_plate{ $well_id }{ 'genotype' }{ $allele_name . ":" . KlusterCallerCodes->{ $geno_id } } = $fail_num; 
       }
      }   
     }   
@@ -775,7 +792,7 @@ post '/get_genotypes_and_rna' => sub {
   }
 
   if(scalar @wells_wo_genotypes) { # not all the wells on the rna plate have a genotype - this is a problem
-   my $dbh = get_schema();
+   $dbh = get_schema();
    my $exp_del_sth = $dbh->prepare("CALL delete_exp(?)");
    $exp_del_sth->execute(param('exp_id')); # remove the experiment and rna_extraction record
    croak 'Discrepancy between the wells (' . join(", ", @wells_wo_genotypes) . 
@@ -791,10 +808,10 @@ post '/get_genotypes_and_rna' => sub {
   }
 
   template 'get_genotype_combinations', {
-    names_info                        => get_study_and_exp_names(param('exp_id')), 
-    allele_combos                     => \%allele_geno_combinations,
-    rna_volume                        => $rna_volume,
-    min_rna_amount                    => $min_rna_amount,
+    names_info                         => get_study_and_exp_names(param('exp_id')), 
+    allele_combos                      => \%allele_geno_combinations,
+    rna_volume                         => $rna_volume,
+    min_rna_amount                     => $min_rna_amount,
    
     'populate_rna_dilution_plate_url'  => uri_for('/populate_rna_dilution_plate'),   
   };
@@ -803,7 +820,7 @@ post '/get_genotypes_and_rna' => sub {
 
 post '/populate_rna_dilution_plate' => sub {
 
- my $dbh = get_schema();
+ $dbh = get_schema();
  my $exp_id = param('exp_id');
 
  my (%selected_wells, $selected_for_seq, $new_arr);
@@ -844,7 +861,7 @@ post '/populate_rna_dilution_plate' => sub {
 
   ## add one or more genotypes
   foreach my $allele_genotype( keys %{ $rna_plate{ $well_id }{ 'genotype' } } ) {
-   my($allele_name, $genotype) = split":", $allele_genotype;
+   my($allele_name, $genotype) = split':', $allele_genotype;
    $alle_sth->execute("$allele_name");
    my $allele_id = $alle_sth->fetchrow_arrayref;
    $geno_sth->execute($allele_id->[0], $rna_dil_id, $genotype);
@@ -871,27 +888,27 @@ post '/populate_rna_dilution_plate' => sub {
 
  template 'display_rna_plates', {
   names_info                        => get_study_and_exp_names($exp_id),
-  template_array 	            => $new_arr,
+  template_array                    => $new_arr,
  };
 
 };
 
 sub write_file {
- my($excel_data, $seq_plate_name)=@_;
+ my($excel_data, $seq_plate)=@_;
  my $date_time = `date --rfc-3339=seconds | xargs echo -n`;
- my($date, $time) = split" ",$date_time;
- $time=~s/\+.*//;
- $time=~s/:/_/g;
+ my($date, $time) = split' ',$date_time;
+ $time=~s/\+.*//x;
+ $time=~s/:/_/xg;
  my $dir = "$exel_file_dir/$date-$time";
  make_path($dir, { verbose => 1,  mode => 0777 }); 
  
- my $file = "$dir/$seq_plate_name.xlsx"; 
+ my $file = "$dir/$seq_plate.xlsx"; 
 
  my $workbook  = Excel::Writer::XLSX->new( "$file" );
  my $worksheet = $workbook->add_worksheet();
 
  my($row,$col) = (0,0);
- for(my$i=0;$i<@$excel_data;$i++){
+ for(my$i=0;$i<@{ $excel_data };$i++){
   if(defined($excel_data->[$i]) && $excel_data->[$i] eq '###') {
    $row++;
    $col=0;
@@ -911,7 +928,7 @@ sub make_grid {
 
  my $new_arr;
  my @ALPH = 'A'..'H';
- my @NUM = 1..12;
+ my @NUM = 1..MAX_WELL_COL;
  my $ct = 0;
  my (%mhash, %chash);
  for(my$j=0;$j<@NUM;$j++){
@@ -931,10 +948,10 @@ sub make_grid {
   }
  }
  
- push @{ $new_arr }, '', 1..12, '##';
- for(my$i=0;$i<8;$i++){
+ push @{ $new_arr }, '', 1..MAX_WELL_COL, '##';
+ for(my$i=0;$i<MAX_WELL_ROW;$i++){
   push @{ $new_arr }, shift @ALPH;
-  for(my$j=$i;$j<96;$j=$j+8){
+  for(my$j=$i;$j<PLATE_SIZE;$j=$j + MAX_WELL_ROW){
    push @{ $new_arr },  $mhash{ $j };
   }
   push @{ $new_arr }, '##';
@@ -944,10 +961,10 @@ sub make_grid {
   
 sub switch_cols_rows {
  my(%al2nu, %nu2al);
- @al2nu{"A".."L"} = (1..12);
- @nu2al{1..8} = ("A".."H");
+ @al2nu{'A'..'L'} = (1..MAX_WELL_COL);
+ @nu2al{1..MAX_WELL_ROW} = ('A'..'H');
 
- return join "", map { $nu2al{ $_->[1] }, $al2nu{ $_->[0] } } [ split "", shift ];
+ return join '', map { $nu2al{ $_->[1] }, $al2nu{ $_->[0] } } [ split'', shift ];
 }
 
 sub make_file_path {
@@ -956,12 +973,18 @@ sub make_file_path {
   make_path("$dir", { verbose => 1,  mode => 0777 });
   return $dir;
  }
- undef;
+ return;
+}
+
+sub  trim { 
+ my $s = shift; 
+ $s =~ s/^\s+|\s+$//xg; 
+ return $s;
 }
 
 sub get_study_and_exp_names {
  my ($exp_id) = @_;
- my $dbh = get_schema();
+ $dbh = get_schema();
  my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView WHERE exp_id = ?");
  $exp_sth->execute($exp_id);
  return $exp_sth->fetchrow_arrayref || undef;
@@ -969,7 +992,7 @@ sub get_study_and_exp_names {
 
 sub color_plate {
  my $attrib = shift;
- my $dbh = get_schema();
+ $dbh = get_schema();
  my $seq_plate_sth = $dbh->prepare("SELECT * FROM SeqWellOrderView WHERE plate_name = ?");
  $seq_plate_sth->execute(param('plate_name'));
  my $seq_plate = $seq_plate_sth->fetchall_hashref('seq_well_name');
@@ -983,8 +1006,8 @@ sub color_plate {
     $well_id = [ $seq_plate->{$well_id}->{'color'}, $seq_plate->{$well_id}->{'rna_well_name'} ];
    }
    elsif($attrib eq 'genotypes') {
-    foreach my $genotype_str( split ",", $seq_plate->{$well_id}->{'AlleleGenotype'} ) {
-     my $well_genot = join ":", ( split ":", $genotype_str )[0,2];
+    foreach my $genotype_str( split',', $seq_plate->{$well_id}->{'AlleleGenotype'} ) {
+     my $well_genot = join ":", ( split':', $genotype_str )[0,2];
      $genot_legend{ $well_id }{ $well_genot }++;
      $num2geno{ $well_genot } = undef;
     }
@@ -1020,4 +1043,4 @@ sub get_schema {
     or die "Cannot connect to database\n";
 }
 
-true;
+1;
