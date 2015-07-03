@@ -717,7 +717,7 @@ post '/add_experiment_data' => sub {
  ];
 
  ## check to see if new study and experiment names already exist
- my %std_exp_names;
+ my (%std_exp_names, %allele_dups);
  my $std_exp_sth = $dbh->prepare("SELECT * FROM ExpStdy");
  $std_exp_sth->execute;
  foreach my $std_exp(@{ $std_exp_sth->fetchall_arrayref }) {
@@ -744,7 +744,8 @@ post '/add_experiment_data' => sub {
   } 
   else {
    $alle_sth->execute("$allele_name");
-   push @alleles, @{ $alle_sth->fetchall_arrayref };
+   my @allele_count = @{ $alle_sth->fetchall_arrayref };
+   push @alleles, shift @allele_count; ## hack: in case there is more than one gene associated with one allele, choose the first (random) allele/gene, ignore the rest
   }
  }
  if( scalar @no_alleles ) {
