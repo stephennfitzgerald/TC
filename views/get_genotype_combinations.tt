@@ -2,6 +2,25 @@
 <html>
 
 <script>
+
+function sumGenotypes() {
+ var elements = document.getElementsByClassName('txt_box');
+ var total = 0;
+     
+ for(var i = 0; i < elements.length; ++i) {
+  var num = parseInt(elements[i].value);
+  if( num > 0 ) {
+   total += num;
+  }
+ }
+
+ if(total <= 0) {
+  alert("At least one genotype must be selected");
+  return false;
+ }
+ return true;
+}
+
 function goBack() 
   {
     window.history.back();
@@ -42,7 +61,7 @@ table, th, td {
         <div id="header">
           <h1><% names_info.1 %> (<% names_info.0 %>)</h1>
 
-          <form action="<% populate_rna_dilution_plate_url %>" method="post" enctype="multipart/form-data">
+          <form action="<% populate_rna_dilution_plate_url %>" method="post" enctype="multipart/form-data" onsubmit="return sumGenotypes();">
            <input type="hidden" name="exp_id" value="<% names_info.2 %>">
            <input type="hidden" name="rna_volume" value="<% rna_volume %>">
            <input type="hidden" name="min_rna_amount" value="<% min_rna_amount %>">

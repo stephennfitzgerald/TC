@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+function setBlank() {
+ document.getElementById('exp_std').selectedIndex = -1;
+}
+
+function goBack() 
+ {
+   window.history.back();
+ }
+
+function goHome()
+ {
+   window.location = '/';   
+ }
+</script>
+
+
+<head>
+<style>
+
+P {
+ font-size: 13px;
+ font-family:'Courier New';
+} 
+
+.view_info input[type="submit"] {
+ color: black;
+ background: #BDECB6;
+ display: inline;
+}
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+th,td {
+    padding: 15px;
+    text-align: center;
+}
+
+.table2, th, td {
+    border: 1px solid white;
+    text-align: center;
+}
+
+</style>
+</head>
+
+<body background="images/zmp.jpg" onload="setBlank()">
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+         <p>
+          <button onclick="goHome()">Home</button>
+         <p>
+         <h1>Update a phenotype image</h1>
+          <form action="<% update_image_url %>" method="post" enctype="multipart/form-data">
+           <p>
+           <table style="table2"><tr><td>
+           Choose an experiment </td><td> 
+           <select class="dropdown" name="exp_id" id="exp_std" required>
+            <% FOREACH exp IN image_info %>
+             <option value="<% exp.2 %>" name="<% exp.1 %>"><% exp.1 %> (<% exp.0 %>)</option>
+            <% END %>
+           </select>
+           </td></tr>
+           <tr><td>
+           Add an image file </td><td>
+           <input type="file" name="new_image_loc" required>
+           </td></tr>
+          </table>
+           <p>
+           <input type="submit" value="Submit">
+          </form>
+          <br></br>
+          <table>
+           <% row_index = 1 %>
+           <% FOREACH row IN image_info %>
+            <% IF row_index % 2 %>
+             <tr bgcolor='#CEECF5'>
+            <% ELSE %>
+             <tr bgcolor='#FFFFFF'>
+            <%END %>
+            <% IF row.3 != "No image" %>
+             <td><% row.0 %></td>
+             <td><% row.1 %></td>
+             <td><A HREF="images/<% row.3 %>" target="_blank"><IMG HEIGHT=50 WIDTH=60 SRC="images/<% row.3 %>"></A></td>
+            <% ELSE %>
+             <td><% row.0 %></td>
+             <td><% row.1 %></td>
+             <td><% row.3 %></td>
+            <% END %>
+            </tr>
+           <% row_index = row_index + 1 %>
+           <% END %>
+           </table>
+        </div>
+      </div>
+</div>
+</body>
+</html>

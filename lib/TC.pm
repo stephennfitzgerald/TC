@@ -20,8 +20,8 @@ use constant GENOTYPES_C => {
  'Hom'      => 'homozygous mutant',
  'Het'      => 'heterozygous',
  'Wildtype' => 'wild type',
- 'Failed'   => 0,
- 'Missing'  => 0,
+ 'Failed'   => 'failed',
+ 'Missing'  => 'missing',
 };
 
 use constant KlusterCallerCodes => {
@@ -33,31 +33,32 @@ use constant KlusterCallerCodes => {
  '6'        => 'Missing',
 };
 
+use constant SPIKE_IDS => {
+ '0'        => 'No spike mix',
+ '1'        => 'ERCC spike mix 1 (Ambion)',
+ '2'        => 'ERCC spike mix 2 (Ambion)',
+};
+
+use constant VISIBILITY => {
+  1         => "Public",
+  2         => "Hold",
+};
+
 our $VERSION = '0.1';
-my $db_name = "zfish_sf5_tc2_test";
+my $db_name = "zfish_sf5_tc4_test";
 my $exel_file_dir = "./public/zmp_exel_files"; # need to change
 my $rna_dilution_dir = "./public/RNA_dilution_files";
 my $image_dir = "./public/images"; 
 my (@alleles, %rna_plate, %allele_combos, $dbh, $seq_plate_name);
 my $schema_location = "images/schema_tables_zmp.png";
 
-my %spike_ids = ( 
- '0'        => 'No spike mix',
- '1'        => 'ERCC spike mix 1 (Ambion)',
- '2'        => 'ERCC spike mix 2 (Ambion)',
-);
-
-my %visability = (
-  1         => "Public",
-  2         => "Hold",
-);
-
-
 get '/' => sub {
     
  template 'index', { 
   'schema_location'               => $schema_location,
 
+  'add_sequencing_form_url'    => uri_for('/add_sequencing_form'),
+  'update_image_url'              => uri_for('/update_image'),
   'add_a_new_study_url'           => uri_for('/add_a_new_study'),
   'add_a_new_assembly_url'        => uri_for('/add_a_new_assembly'),
   'add_a_new_dev_stage_url'       => uri_for('/add_a_new_devstage'),
@@ -68,6 +69,50 @@ get '/' => sub {
   'get_all_experiments_url'       => uri_for('/get_all_experiments'),
  };
        
+};
+
+
+get '/add_sequencing_form' => sub {
+
+ $dbh = get_schema();
+
+ my $seq_plates_sth = $dbh->prepare('SELECT * FROM SeqPlateView');
+ $seq_plates_sth->execute;
+ my $all_seq_plates = $seq_plates_sth->fetchall_arrayref;
+
+ template 'add_sequencing_form', {
+   'all_seq_plates'                => $all_seq_plates,
+   
+   'make_sequencing_report_url'    => uri_for('/get_sequencing_report'),
+ }; 
+
+};
+
+
+post '/update_image' => sub {
+
+ $dbh = get_schema();
+
+ if(my $new_image = upload('new_image_loc')) {
+  $new_image->copy_to("$image_dir");
+  my $image = $new_image->tempname;
+  $image=~s/.*\///xms;
+  if(my $exp_id = param('exp_id')) {
+   my $update_exp_sth = $dbh->prepare("CALL update_image(?,?)");
+   $update_exp_sth->execute($exp_id,$image);
+  }
+ }
+
+ my $std_exp_sth = $dbh->prepare("SELECT * FROM ImageView");
+ $std_exp_sth->execute;
+ my $image_info = $std_exp_sth->fetchall_arrayref;
+ 
+ template 'update_image', {
+  'image_info'                    => $image_info,
+
+  'update_image_url'              => uri_for('/update_image'),
+ };
+
 };
 
 
@@ -96,6 +141,7 @@ get '/add_a_new_study' => sub {
  };
 
 };
+
 
 get '/add_a_new_devstage' => sub {
  
@@ -127,6 +173,7 @@ get '/add_a_new_devstage' => sub {
  };
 
 };
+
 
 get '/add_a_new_assembly' => sub {
  
@@ -161,6 +208,7 @@ get '/add_a_new_assembly' => sub {
  };
 
 };
+
 
 get '/get_all_experiments' => sub {
  
@@ -199,6 +247,7 @@ get '/get_all_experiments' => sub {
 
 };
 
+
 get '/get_sequenced_samples' => sub {
 
  $dbh = get_schema();
@@ -218,6 +267,7 @@ get '/get_sequenced_samples' => sub {
 
 };
 
+
 get '/get_all_sequencing_plates' => sub {
 
  $dbh = get_schema();
@@ -234,6 +284,7 @@ get '/get_all_sequencing_plates' => sub {
  };
 
 };
+
 
 get '/display_well_order' => sub {
 
@@ -253,6 +304,7 @@ get '/display_well_order' => sub {
 
 };
 
+
 get '/display_tag_order' => sub {
 
  my $color_plate = color_plate( 'index_tags' );
@@ -269,6 +321,7 @@ get '/display_tag_order' => sub {
  };
 
 }; 
+
 
 get '/display_genot_order' => sub {
 
@@ -289,11 +342,19 @@ get '/display_genot_order' => sub {
 
 }; 
 
+
 get '/get_sequencing_report' => sub {
 
- my $excel_file_loc;
+ $dbh = get_schema();
+ my ($excel_file_loc, $all_seq_plates);
+ my $template = 'index';
+
+ if(my $new_seq_plate = param('new_seq_plate_name')) { ## adding a report to a pre-existing sequence plate
+  $seq_plate_name = $new_seq_plate;
+  $template = 'add_sequencing_form';
+ }
+
  if($seq_plate_name) {
-  $dbh = get_schema();
 
   my @samples_for_excel = ( ## column names for the excel sheet
   'Library_Tube_ID',
@@ -358,9 +419,9 @@ get '/get_sequencing_report' => sub {
       my($allele,$gene,$genotype) = split':', $alle_genotype;
       $alle_geno{$genotype}{"$gene allele $allele"}++;
      }
-     my $description = "3' end enriched mRNA from a single genotyped ";
+     my $description = "3' end enriched mRNA from a single genotyped embryo ";
      foreach my $geno(sort keys %alle_geno) {
-      $description .= GENOTYPES_C->{ $geno } . " embryo for ";
+      $description .= GENOTYPES_C->{ $geno } . " for ";
       foreach my $gene_allele(sort keys %{ $alle_geno{ $geno } }) {
        $description .= "$gene_allele, ";
       }
@@ -368,7 +429,7 @@ get '/get_sequencing_report' => sub {
      my $index_tag_seq = $sequence_plate->{"$index_tag_id"}->{'desc_tag_index_sequence'};
      $index_tag_seq=~s/CG$//xms; ## remove the final 2 bases - these are always "CG"
      my $zmp_exp_name = $sequence_plate->{"$index_tag_id"}->{'zmp_name'}; 
-     $description .= "clutch 1 with " . $spike_ids{ $sequence_plate->{"$index_tag_id"}->{'desc_spike_mix'} } .
+     $description .= "clutch 1 with " . SPIKE_IDS->{ $sequence_plate->{"$index_tag_id"}->{'desc_spike_mix'} } .
       ". A 8 base indexing sequence ($index_tag_seq) is bases 13 to 20 of read 1 followed by CG and polyT. " . 
       'More information describing the phenotype can be found at the ' .
       'Wellcome Trust Sanger Institute Zebrafish Mutation Project website ' .
@@ -390,10 +451,19 @@ get '/get_sequencing_report' => sub {
   }
  }
 
- template 'index', { 
+ if($template eq 'add_sequencing_form') { ## need to re-query after updating the db
+  my $seq_plates_sth = $dbh->prepare('SELECT * FROM SeqPlateView');
+  $seq_plates_sth->execute;
+  $all_seq_plates = $seq_plates_sth->fetchall_arrayref;
+ }  
+
+ template "$template", { 
   'schema_location'               => $schema_location,   
   'excel_file_loc'                => $excel_file_loc,
+  'all_seq_plates'                => $all_seq_plates,
 
+  'add_sequencing_form_url'       => uri_for('/add_sequencing_form'),
+  'update_image_url'              => uri_for('/update_image'),
   'add_a_new_study_url'           => uri_for('/add_a_new_study'),
   'add_a_new_assembly_url'        => uri_for('/add_a_new_assembly'),
   'add_a_new_dev_stage_url'       => uri_for('/add_a_new_devstage'),
@@ -405,6 +475,7 @@ get '/get_sequencing_report' => sub {
  };
 
 };
+
 
 get '/get_sequencing_info' => sub {
 
@@ -429,7 +500,7 @@ get '/get_sequencing_info' => sub {
 
  template 'make_seq_plate', {
   unseq                     => \%unseq,
-  seq              => \%seq,
+  seq                       => \%seq,
   tag_set_names             => $tag_set_names,
 
   'combine_plate_data_url'  => uri_for('/combine_plate_data'), 
@@ -560,8 +631,8 @@ post '/combine_plate_data' => sub {
   legend    => \%exp_color,
  };
   
-
 };
+
 
 get '/get_new_experiment' => sub {
 
@@ -611,17 +682,18 @@ get '/get_new_experiment' => sub {
    last_asset_group                    => $last_exp->[22],
    last_library_tube_id                => $last_exp->[23],
  
-   spike_ids                           => \%spike_ids,
+   spike_ids                           => SPIKE_IDS,
    genref_names                        => $genref_names, 
    table_schema                        => $table_schema,
    dev_stages                          => $dev_stages,
-   visibility                          => \%visability,
+   visibility                          => VISIBILITY,
    study_names                         => $std_names,
 
    add_experiment_data_url             => uri_for('/add_experiment_data'),
  };
 
 };
+
 
 post '/add_experiment_data' => sub {
 
@@ -640,6 +712,7 @@ post '/add_experiment_data' => sub {
    param('Embryo_collection_date'),
    param('Number_of_embryos_collected'),
    param('Phenotype_description'),
+   param('Asset_group'),
    param('Developmental_stage')
  ];
 
@@ -703,7 +776,7 @@ post '/add_experiment_data' => sub {
  $rna_ext_sth->execute(@rna_extraction_data);
  my ($rna_ext_id) = $dbh->selectrow_array("SELECT \@rna_ext_id");
  ## add a new experiment
- my $exp_sth = $dbh->prepare("CALL add_experiment_data(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, \@exp_id)");
+ my $exp_sth = $dbh->prepare("CALL add_experiment_data(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, \@exp_id)");
  $exp_sth->execute( $rna_ext_id, $image, @{ $vals });
  my ($exp_id) = $dbh->selectrow_array("SELECT \@exp_id");
 
@@ -717,10 +790,10 @@ post '/add_experiment_data' => sub {
 
 };
 
+
 post '/get_genotypes_and_rna' => sub {
 
-  my $rna_file = upload('rna_dilution_file');
- 
+  my $rna_file = upload('rna_dilution_file'); 
   my $workbook;
   %rna_plate = (); # re-set the global
 
@@ -794,7 +867,7 @@ post '/get_genotypes_and_rna' => sub {
   if(scalar @wells_wo_genotypes) { # not all the wells on the rna plate have a genotype - this is a problem
    $dbh = get_schema();
    my $exp_del_sth = $dbh->prepare("CALL delete_exp(?)");
-   $exp_del_sth->execute(param('exp_id')); # remove the experiment and rna_extraction record
+   $exp_del_sth->execute(param('exp_id')); # remove the experiment and rna_extraction record from the database
    croak 'Discrepancy between the wells (' . join(", ", @wells_wo_genotypes) . 
          ') in the rna-plate and the genotyping plate(s). The experiment ' . 
          param('exp_name') . ' has been removed from the database';
@@ -817,6 +890,7 @@ post '/get_genotypes_and_rna' => sub {
   };
   
 };
+
 
 post '/populate_rna_dilution_plate' => sub {
 
@@ -892,6 +966,7 @@ post '/populate_rna_dilution_plate' => sub {
  };
 
 };
+
 
 sub write_file {
  my($excel_data, $seq_plate)=@_;
@@ -976,7 +1051,7 @@ sub make_file_path {
  return;
 }
 
-sub  trim { 
+sub trim { 
  my $s = shift; 
  $s =~ s/^\s+|\s+$//xg; 
  return $s;

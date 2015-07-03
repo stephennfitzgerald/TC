@@ -294,13 +294,22 @@ CREATE OR REPLACE VIEW ExpStdNameView AS
         exp.name exp_name, 
         exp.id exp_id
  FROM study std INNER JOIN experiment exp 
-   ON std.id = exp.study_id;
+   ON std.id = exp.study_id
+ ORDER BY exp_id DESC;
+
+CREATE OR REPLACE VIEW ImageView AS
+ SELECT std.name study_name,
+        exp.name exp_name,
+        exp.id exp_id,
+        exp.image image
+ FROM study std INNER JOIN experiment exp
+   ON std.id = exp.study_id
+ ORDER BY exp_id DESC;
 
 CREATE OR REPLACE VIEW CheckAlleles AS 
  SELECT name 
  FROM allele
  ORDER BY name;
-
 
 CREATE OR REPLACE VIEW groupAlleleView AS
  SELECT exp.id experiment_id,
@@ -310,7 +319,6 @@ CREATE OR REPLACE VIEW groupAlleleView AS
    ON gt.rna_dilution_plate_id = rdp.id INNER JOIN allele ale
    ON ale.id = gt.allele_id
  GROUP BY exp.id;
-
 
 CREATE OR REPLACE VIEW groupDevStageView AS
  SELECT exp.id experiment_id,
@@ -790,6 +798,7 @@ CREATE PROCEDURE add_experiment_data (
  IN embryo_collection_date_param DATE,
  IN number_of_embryos_collected_param INT(10),
  IN phenotype_description_param VARCHAR(255),
+ IN asset_group_param VARCHAR(255),
  IN developmental_stage_id_param INT(10),
  OUT exp_id int(10)
 )
@@ -811,6 +820,7 @@ INSERT INTO experiment (
  embryo_collection_date,
  number_embryos_collected,
  phenotype_description,
+ asset_group,
  developmental_stage_id
 ) 
 VALUES ( 
@@ -829,6 +839,7 @@ VALUES (
  embryo_collection_date_param,
  number_of_embryos_collected_param,
  phenotype_description_param,
+ asset_group_param,
  developmental_stage_id_param
 );
 SET exp_id = LAST_INSERT_ID();
@@ -850,6 +861,23 @@ BEGIN
   excel_report_file_location  = excel_report_file_location_param,
   excel_report_created_date = excel_report_created_date_param
  WHERE plate_name = plate_name_param;
+
+END$$
+DELIMITER ;
+
+/** updating an phenotype image **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS update_image$$
+
+CREATE PROCEDURE update_image (
+ IN experiment_id_param INT(10),
+ IN image_param VARCHAR(255)
+)
+BEGIN
+
+UPDATE experiment SET
+ image = image_param
+WHERE id = experiment_id_param;
 
 END$$
 DELIMITER ;
