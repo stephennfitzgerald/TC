@@ -730,7 +730,7 @@ post '/add_experiment_data' => sub {
 
  ## and add alleles to the global array 
  my $alle_sth = $dbh->prepare("SELECT * FROM AlleleView WHERE name = ?");
- @alleles=(); # empty the global array
+ @alleles=(); ## empty the global array
  my @no_alleles;
  my $check_alleles_sth = $dbh->prepare("SELECT * FROM CheckAlleles");
  $check_alleles_sth->execute;
@@ -744,8 +744,9 @@ post '/add_experiment_data' => sub {
   } 
   else {
    $alle_sth->execute("$allele_name");
-   my @allele_count = @{ $alle_sth->fetchall_arrayref };
-   push @alleles, shift @allele_count; ## hack: in case there is more than one gene associated with one allele, choose the first (random) allele/gene, ignore the rest
+   ## hack: in case there is more than one gene associated with one allele, 
+   ## choose the first (random) allele/gene, ignore the rest
+   push @alleles, shift @{ $alle_sth->fetchall_arrayref };
   }
  }
  if( scalar @no_alleles ) {
