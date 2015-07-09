@@ -38,7 +38,7 @@ table, th, td {
 }
 .border2 {
  color: #B0B0B0;
- height: 180px;
+ height: 160px;
  width: 400px;
  border: dashed;
  padding: 25px;
@@ -83,21 +83,14 @@ body {
             </td>
            </tr>
           </tr><tr><tr>
-           <% IF excel_file_loc %>
-            <td width=260px>Get the sequencing form</td>
-            <td>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-             <a href="<% excel_file_loc %>" download><button type="button">&#8595;</button></a>
-              <% ELSE %>
-               <td width=260px> Make a sequencing form</td>
-                <td>
-                 <form action="<% make_sequencing_report_url %>" method=get">
-                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                 <input type=submit value="&#8594;">
-               </form>
-              <% END %>
-             </td>
-            </tr>
+           <td width=260px> Make a sequencing form</td>
+           <td>
+            <form action="<% make_sequencing_form_url %>" method=get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <input type=submit value="&#8594;">
+            </form>
+           </td>
+           </tr>
           </table>
          </div>
        </div>
@@ -169,14 +162,6 @@ body {
            <td width=260px>Add/update a phenotype image</td>
             <td>
              <form action="<% update_image_url %>" method="post">
-             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <input type=submit value="&#8594;"> 
-             </form>
-            </td>
-          </tr><tr><tr>
-           <td width=260px>Add a sequencing form</td>
-            <td>
-             <form action="<% add_sequencing_form_url %>" method="get">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <input type=submit value="&#8594;"> 
              </form>

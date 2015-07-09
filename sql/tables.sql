@@ -162,6 +162,10 @@ CREATE TABLE IF NOT EXISTS sequence_plate (
  
  id					INT(10) NOT NULL AUTO_INCREMENT,
  plate_name				VARCHAR(255) NOT NULL,
+ sanger_tube_id				VARCHAR(255) NULL,
+ sanger_sample_id			VARCHAR(255) NULL,
+ sample_volume				INT(10) NOT NULL,
+ sample_amount				FLOAT NOT NULL,
  excel_report_created_date		DATE NULL,
  excel_report_file_location             VARCHAR(255) NULL,
  well_name				VARCHAR(255) NOT NULL,
@@ -252,13 +256,15 @@ CREATE OR REPLACE VIEW tagSeqView AS
 CREATE OR REPLACE VIEW seqSampleView AS
  SELECT seq.sample_name Sample_name,
         seq.sample_public_name Sample_public_name,
+        seq.sanger_tube_id Sanger_tube_id,
+        seq.sanger_sample_id Sanger_sample_id,
         seq.well_name Sequence_plate_well,
         rdp.well_name Collection_plate_well, 
         ind.name Index_tag_name,
         ind.tag_index_sequence Index_tag_sequence,
-        rdp.rna_amount RNA_amount,
-        rdp.rna_volume RNA_volume,
-        rdp.cut_off_amount RNA_amount_threshold,
+        rdp.rna_amount "RNA_amount (ng/ul)",
+        ROUND(rdp.cut_off_amount / rdp.rna_amount) "RNA_volume (ul)",
+        rdp.cut_off_amount "Required_RNA_amount (ng)",
         rdp.experiment_id Experiment_id
  FROM rna_dilution_plate rdp INNER JOIN sequence_plate seq 
         ON seq.rna_dilution_plate_id = rdp.id INNER JOIN index_tag ind
@@ -334,6 +340,10 @@ CREATE OR REPLACE VIEW SeqReportView AS
         seq.plate_name "seq_plate_name",
         exp.name "zmp_name",
         rna_ext.library_tube_id "Library_Tube_ID",
+        seq.sample_volume "Sample_Volume",
+        ROUND(seq.sample_amount / seq.sample_volume) "Sample_Conc",
+        EXTRACT(YEAR FROM exp.embryo_collection_date) "Embryo_Collection_Date",
+        EXTRACT(YEAR FROM rna_ext.extraction_date) "RNA_Extraction_Date",
         exp.id "Experiment_id",
         ind_tag.name "Tag_ID",
         exp.asset_group "Asset_Group",
@@ -350,11 +360,12 @@ CREATE OR REPLACE VIEW SeqReportView AS
         ind_tag.tag_index_sequence "desc_tag_index_sequence",
         rdp.gender "Gender",
         exp.dna_source "DNA_Source",
+        exp.phenotype_description "Phenotype_Description",
         gr.name "Reference_Genome",
-        array_exp.age "Age",
         array_exp.cell_type "Cell_type",
         array_exp.compound "Compound",
         dev.dev_stage "Developmental_Stage",
+        REPLACE(dev_s.begins, "_", " ") "Age",
         array_exp.disease "Disease",
         array_exp.disease_state "Disease_State",
         array_exp.dose "Dose",
@@ -375,7 +386,8 @@ CREATE OR REPLACE VIEW SeqReportView AS
         ON seq.index_tag_id = ind_tag.id INNER JOIN groupDevStageView dev 
         ON dev.experiment_id = exp.id INNER JOIN genotAlleleView gav
         ON gav.rna_well_id = rdp.id LEFT OUTER JOIN rna_extraction rna_ext
-        ON exp.rna_extraction_id = rna_ext.id 
+        ON exp.rna_extraction_id = rna_ext.id INNER JOIN developmental_stage dev_s
+        ON dev_s.id = exp.developmental_stage_id 
  ORDER BY seq.plate_name, exp.id, ind_tag.id;
 
 
@@ -420,12 +432,14 @@ CREATE OR REPLACE VIEW ExpDisplayView AS
         ale.Alleles Alleles,
         dev.dev_stage Developmental_stage,
         exp.number_embryos_collected Number_of_embryos_collected,
+        exp.embryo_collection_date Embryo_collection_date,
         exp.spike_mix Spike_mix,
         exp.sample_visability Sample_visability,
         grf.name Genome_ref_name,
         exp.image Image, 
         exp.phenotype_description Phenotype_description,
         count(rdp.id) Sequenced_samples,
+        seqp.excel_report_created_date Excel_file_creation_date,
         seqp.excel_report_file_location Excel_file,
         exp.id Experiment_id
  FROM experiment exp INNER JOIN study std
@@ -465,7 +479,9 @@ CREATE OR REPLACE VIEW SeqWellOrderView AS
         gav.AlleleGenotype,
         SUBSTRING_INDEX(tag.name, ':', -2) tag_name,
         tag.tag_index_sequence tag_seq,
-        SUBSTRING_INDEX(tag.name, '.', 1) tag_set
+        SUBSTRING_INDEX(tag.name, '.', 1) tag_set,
+        seqp.sample_volume,
+        seqp.sample_amount
  FROM sequence_plate seqp INNER JOIN rna_dilution_plate rdp
         ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN experiment exp
         ON rdp.experiment_id = exp.id INNER JOIN study std 
@@ -479,7 +495,10 @@ CREATE OR REPLACE VIEW RnaDilPlateView AS
         rdp.well_name,
         rdp.experiment_id,
         exp.name experiment_name,
-        std.name study_name
+        std.name study_name,
+        rdp.cut_off_amount min_rna_amount,
+        rdp.rna_volume,
+        rdp.rna_amount
  FROM rna_dilution_plate rdp INNER JOIN experiment exp
         ON exp.id = rdp.experiment_id INNER JOIN study std
         ON std.id = exp.study_id
@@ -604,7 +623,9 @@ CREATE PROCEDURE add_sequence_plate_data (
  IN sample_public_name_param VARCHAR(255),
  IN rna_dilution_plate_id_param INT(10),
  IN index_tag_id_param INT(10),
- IN color_param VARCHAR(255)
+ IN color_param VARCHAR(255),
+ IN sample_volume_param INT(10),
+ IN sample_amount_param FLOAT
 )
 BEGIN
 
@@ -615,7 +636,9 @@ INSERT IGNORE INTO sequence_plate (
  sample_public_name,
  rna_dilution_plate_id,
  index_tag_id,
- color
+ color,
+ sample_volume,
+ sample_amount
 )
 VALUES (
  plate_name_param,
@@ -624,7 +647,9 @@ VALUES (
  sample_public_name_param,
  rna_dilution_plate_id_param,
  index_tag_id_param,
- color_param
+ color_param,
+ sample_volume_param,
+ sample_amount_param
 );
 END$$
 DELIMITER ;
@@ -861,6 +886,25 @@ BEGIN
   excel_report_file_location  = excel_report_file_location_param,
   excel_report_created_date = excel_report_created_date_param
  WHERE plate_name = plate_name_param;
+
+END$$
+DELIMITER ;
+
+/** updating sequence_plate cols sanger_tube_id and sanger_sample_id **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS update_sanger_tube_and_sample$$
+
+CREATE PROCEDURE update_sanger_tube_and_sample (
+ IN sanger_tube_id_param VARCHAR(255),
+ IN sanger_sample_id_param VARCHAR(255),
+ IN id_param INT(10)
+)
+BEGIN
+
+ UPDATE sequence_plate  SET
+  sanger_tube_id = sanger_tube_id_param,
+  sanger_sample_id = sanger_sample_id_param
+ WHERE id = id_param;
 
 END$$
 DELIMITER ;

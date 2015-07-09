@@ -7,13 +7,16 @@ use File::Path qw(make_path);
 use Excel::Writer::XLSX;
 use Spreadsheet::Read;
 use Spreadsheet::XLSX;
+use Spreadsheet::WriteExcel;
+use Scalar::Util qw(looks_like_number);
+use Data::Dumper;
+use Carp;
+use DBI;
+
 use constant INCR => 3500; ## increase the color $dec
 use constant MAX_WELL_COL => 12;
 use constant MAX_WELL_ROW => 8;
 use constant PLATE_SIZE => 96;
-use Data::Dumper;
-use Carp;
-use DBI;
 
 use constant GENOTYPES_C => {
  'Blank'    => 0,
@@ -44,6 +47,143 @@ use constant VISIBILITY => {
   2         => "Hold",
 };
 
+use constant HEADER_ROW => 9;
+
+use constant SANGER_COLS => {
+ 'SANGER TUBE ID'                                 => 'A',
+ 'SANGER SAMPLE ID'                               => 'B',
+ 'SUPPLIER SAMPLE NAME'                           => 'C',
+ 'COHORT'                                         => 'D',
+ 'VOLUME (ul)'                                    => 'E',
+ 'CONC. (ng/ul)'                                  => 'F',
+ 'GENDER'                                         => 'G',
+ 'COUNTRY OF ORIGIN'                              => 'H',
+ 'GEOGRAPHICAL REGION'                            => 'I',
+ 'ETHNICITY'                                      => 'J',
+ 'DNA SOURCE'                                     => 'K',
+ 'DATE OF SAMPLE COLLECTION (MM/YY or YYYY only)' => 'L',
+ 'DATE OF DNA EXTRACTION (MM/YY or YYYY only)'    => 'M',
+ 'IS SAMPLE A CONTROL?'                           => 'N',
+ 'IS RE-SUBMITTED SAMPLE?'                        => 'O',
+ 'DNA EXTRACTION METHOD'                          => 'P',
+ 'SAMPLE PURIFIED?'                               => 'Q',
+ 'PURIFICATION METHOD'                            => 'R',
+ 'CONCENTRATION DETERMINED BY'                    => 'S',
+ 'DNA STORAGE CONDITIONS'                         => 'T',
+ 'MOTHER (optional)'                              => 'U',
+ 'FATHER (optional)'                              => 'V',
+ 'SIBLING (optional)'                             => 'W',
+ 'GC CONTENT'                                     => 'X',
+ 'PUBLIC NAME'                                    => 'Y',
+ 'TAXON ID'                                       => 'Z',
+ 'COMMON NAME'                                    => 'AA',
+ 'SAMPLE DESCRIPTION'                             => 'AB',
+ 'STRAIN'                                         => 'AC',
+ 'SAMPLE VISIBILITY'                              => 'AD',
+ 'SAMPLE TYPE'                                    => 'AE',
+ 'GENOTYPE'                                       => 'AF',
+ 'PHENOTYPE (required for EGA)'                   => 'AG',
+ 'AGE (with units)'                               => 'AH',
+ 'Developmental stage'                            => 'AI',
+ 'Cell Type'                                      => 'AJ',
+ 'Disease State'                                  => 'AK',
+ 'Compound'                                       => 'AL',
+ 'Dose'                                           => 'AM',
+ 'Immunoprecipitate'                              => 'AN',
+ 'Growth condition'                               => 'AO',
+ 'RNAi'                                           => 'AP',
+ 'Organism part'                                  => 'AQ',
+ 'Time Point'                                     => 'AR',
+ 'Treatment'                                      => 'AS',
+ 'Subject'                                        => 'AT',
+ 'Disease'                                        => 'AU',
+ 'SAMPLE ACCESSION NUMBER (optional)'             => 'AV',
+ 'DONOR ID (required for cancer samples)'         => 'AW',
+};
+
+use constant HC => {
+ '1'   => undef,
+ '2'   => undef,
+ '3'   => undef,
+ '4'   => undef,
+ '5'   => undef,
+ '6'   => 'N',
+ '7'   => 'N',
+ '8'   => undef,
+ '9'   => 'Y',
+ '10'  => 'Other',
+ '11'  => 'Other',
+ '12'  => '-20C',
+ '13'  => undef,
+ '14'  => undef,
+ '15'  => undef,
+ '16'  => 'Library',
+ '17'  => undef,
+ '18'  => undef,
+ '19'  => undef,
+ '20'  => undef,
+ '21'  => undef,
+ '22'  => undef,
+ '23'  => undef,
+ '24'  => undef,
+ '25'  => undef,
+ '26'  => undef,
+ '27'  => undef,
+ '28'  => undef,
+}; 
+
+my @EXCEL_FIELDS = ( ## column names in the excel sheet - most are hard-coded (numbers)
+ [ 'SANGER TUBE ID', undef ],
+ [ 'SANGER SAMPLE ID', undef ],
+ [ 'SUPPLIER SAMPLE NAME', 'Sample_Name' ],
+ [ 'COHORT', 1 ],
+ [ 'VOLUME (ul)', 'Sample_Volume' ],
+ [ 'CONC. (ng/ul)', 'Sample_Conc' ],
+ [ 'GENDER', 2 ],
+ [ 'COUNTRY OF ORIGIN', 3 ],
+ [ 'GEOGRAPHICAL REGION', 4 ],
+ [ 'ETHNICITY', 5 ],
+ [ 'DNA SOURCE', 'DNA_Source' ],
+ [ 'DATE OF SAMPLE COLLECTION (MM/YY or YYYY only)', 'Embryo_Collection_Date' ],
+ [ 'DATE OF DNA EXTRACTION (MM/YY or YYYY only)', 'RNA_Extraction_Date' ],
+ [ 'IS SAMPLE A CONTROL?', 6 ],
+ [ 'IS RE-SUBMITTED SAMPLE?', 7 ],
+ [ 'DNA EXTRACTION METHOD', 8 ],
+ [ 'SAMPLE PURIFIED?', 9 ],
+ [ 'PURIFICATION METHOD', 10 ],
+ [ 'CONCENTRATION DETERMINED BY', 11 ],
+ [ 'DNA STORAGE CONDITIONS', 12 ],
+ [ 'MOTHER (optional)', 13 ],
+ [ 'FATHER (optional)', 14 ],
+ [ 'SIBLING (optional)', 15 ],
+ [ 'GC CONTENT', 'GC_Content' ],
+ [ 'PUBLIC NAME', 'Public_Name' ],
+ [ 'TAXON ID', 'Taxon_ID' ],
+ [ 'COMMON NAME', 'Common_Name' ],
+ [ 'SAMPLE DESCRIPTION', undef ],
+ [ 'STRAIN', 'Strain' ],
+ [ 'SAMPLE VISIBILITY', 'Sample_Visibility' ],
+ [ 'SAMPLE TYPE', 16 ],
+ [ 'GENOTYPE', 'Genotype' ],
+ [ 'PHENOTYPE (required for EGA)', 'Phenotype_Description' ],
+ [ 'AGE (with units)', 'Age' ],
+ [ 'Developmental stage', 'Developmental_Stage' ],
+ [ 'Cell Type', 17 ],
+ [ 'Disease State', 18 ],
+ [ 'Compound', 19 ],
+ [ 'Dose', 20 ],
+ [ 'Immunoprecipitate', 21 ],
+ [ 'Growth condition', 22 ],
+ [ 'RNAi', 23 ],
+ [ 'Organism part', 'Organism_Part' ],
+ [ 'Time Point', 24 ],
+ [ 'Treatment', 25 ],
+ [ 'Subject', 26 ],
+ [ 'Disease', 27 ],
+ [ 'SAMPLE ACCESSION NUMBER (optional)', 28 ],
+ [ 'DONOR ID (required for cancer samples)', 'Tag_ID' ],
+ );
+
 our $VERSION = '0.1';
 my $db_name = "zfish_sf5_tc4_test";
 my $exel_file_dir = "./public/zmp_exel_files"; # need to change
@@ -56,15 +196,14 @@ get '/' => sub {
     
  template 'index', { 
   'schema_location'               => $schema_location,
-
-  'add_sequencing_form_url'    => uri_for('/add_sequencing_form'),
+  
+  'make_sequencing_form_url'      => uri_for('/make_sequencing_form'),
   'update_image_url'              => uri_for('/update_image'),
   'add_a_new_study_url'           => uri_for('/add_a_new_study'),
   'add_a_new_assembly_url'        => uri_for('/add_a_new_assembly'),
   'add_a_new_dev_stage_url'       => uri_for('/add_a_new_devstage'),
   'get_new_experiment_url'        => uri_for('/get_new_experiment'),
   'make_sequencing_plate_url'     => uri_for('/get_sequencing_info'),
-  'make_sequencing_report_url'    => uri_for('/get_sequencing_report'),
   'get_all_sequencing_plates_url' => uri_for('/get_all_sequencing_plates'),
   'get_all_experiments_url'       => uri_for('/get_all_experiments'),
  };
@@ -72,7 +211,7 @@ get '/' => sub {
 };
 
 
-get '/add_sequencing_form' => sub {
+get '/make_sequencing_form' => sub {
 
  $dbh = get_schema();
 
@@ -80,10 +219,10 @@ get '/add_sequencing_form' => sub {
  $seq_plates_sth->execute;
  my $all_seq_plates = $seq_plates_sth->fetchall_arrayref;
 
- template 'add_sequencing_form', {
-   'all_seq_plates'                => $all_seq_plates,
-   
-   'make_sequencing_report_url'    => uri_for('/get_sequencing_report'),
+ template 'make_sequencing_form', {
+   'all_seq_plates'                    => $all_seq_plates,
+
+   'get_sequencing_report_url'         => uri_for('/get_sequencing_report'),
  }; 
 
 };
@@ -238,8 +377,8 @@ get '/get_all_experiments' => sub {
  template 'all_experiments', {
   'all_experiments'              => $all_experiments,
   'species_info'                 => $gen_sth->fetchall_hashref('Genome_ref_name'),
-  'spike_info'    => $spikes_sth->fetchall_hashref('exp_id'),
-  'dev_info'    => $dev_sth->fetchall_hashref('exp_id'),
+  'spike_info'                   => $spikes_sth->fetchall_hashref('exp_id'),
+  'dev_info'                     => $dev_sth->fetchall_hashref('exp_id'),
   'allele_info'                  => \%allele_info,
   
   'get_sequenced_samples_url'    => uri_for('/get_sequenced_samples'),
@@ -278,6 +417,7 @@ get '/get_all_sequencing_plates' => sub {
  template 'all_sequencing_plates', { 
   'all_seq_plates'                => $all_seq_plates,
   
+  'display_rna_vols_order_url'    => uri_for('/display_rna_vols_order'),
   'display_well_order_url'        => uri_for('/display_well_order'),
   'display_genot_order_url'       => uri_for('/display_genot_order'),
   'display_tag_order_url'         => uri_for('/display_tag_order'),
@@ -297,6 +437,7 @@ get '/display_well_order' => sub {
   legend                          => $color_plate->[1],
   plate_name                      => param('plate_name'),
  
+  'display_rna_vols_order_url'    => uri_for('/display_rna_vols_order'),
   'display_genot_order_url'       => uri_for('/display_genot_order'),
   'display_tag_order_url'         => uri_for('/display_tag_order'),
   'display_well_order_url'        => uri_for('/display_well_order'),
@@ -313,8 +454,31 @@ get '/display_tag_order' => sub {
   
   display_plate_name              => param('display_plate_name'),
   sequence_plate                  => $color_plate->[0],
+  legend                          => $color_plate->[1],
   plate_name                      => param('plate_name'),
 
+  'display_rna_vols_order_url'    => uri_for('/display_rna_vols_order'),
+  'display_genot_order_url'       => uri_for('/display_genot_order'),
+  'display_tag_order_url'         => uri_for('/display_tag_order'),
+  'display_well_order_url'        => uri_for('/display_well_order'),
+ };
+
+}; 
+
+
+get '/display_rna_vols_order' => sub {
+
+ my $color_plate = color_plate( 'rna_vols' );
+
+ template 'display_sequence_plate', {
+  
+  display_plate_name              => param('display_plate_name'),
+  sequence_plate                  => $color_plate->[0],
+  legend                          => $color_plate->[1],
+  plate_name                      => param('plate_name'),
+
+  
+  'display_rna_vols_order_url'    => uri_for('/display_rna_vols_order'),
   'display_genot_order_url'       => uri_for('/display_genot_order'),
   'display_tag_order_url'         => uri_for('/display_tag_order'),
   'display_well_order_url'        => uri_for('/display_well_order'),
@@ -335,6 +499,7 @@ get '/display_genot_order' => sub {
   geno_legend                     => $color_plate->[2],
   plate_name                      => param('plate_name'),
 
+  'display_rna_vols_order_url'    => uri_for('/display_rna_vols_order'),
   'display_well_order_url'        => uri_for('/display_well_order'),
   'display_tag_order_url'         => uri_for('/display_tag_order'),
   'display_genot_order_url'       => uri_for('/display_genot_order'),
@@ -343,135 +508,125 @@ get '/display_genot_order' => sub {
 }; 
 
 
-get '/get_sequencing_report' => sub {
+post '/get_sequencing_report' => sub {
 
  $dbh = get_schema();
- my ($excel_file_loc, $all_seq_plates);
- my $template = 'index';
 
- if(my $new_seq_plate = param('new_seq_plate_name')) { ## adding a report to a pre-existing sequence plate
-  $seq_plate_name = $new_seq_plate;
-  $template = 'add_sequencing_form';
- }
-
- if($seq_plate_name) {
-
-  my @samples_for_excel = ( ## column names for the excel sheet
-  'Library_Tube_ID',
-  'Tag_ID',
-  'Asset_Group',
-  'Sample_Name',
-  'Public_Name',
-  'Organism',
-  'Common_Name',
-  'Sample_Visability',
-  'GC_Content',
-  'Taxon_ID',
-  'Strain',
-  'Sample_Description',
-  'Gender',
-  'Country of origin',
-  'Geographical region',
-  'Ethnicity',
-  'DNA_Source',
-  'ENA Sample Accession Number',
-  'Cohort',
-  'Volume (µl)',
-  'Mother',
-  'Father',
-  'Replicate',
-  'Reference_Genome',
-  'Age',
-  'Cell_type',
-  'Compound',
-  'Developmental_Stage',
-  'Disease',
-  'Disease_State',
-  'Dose',
-  'Genotype',
-  'Growth_Condition',
-  'Immunoprecipitate',
-  'Organism_Part',
-  'Phenotype',
-  'RNAi',
-  'Subject',
-  'Time_Point',
-  'Treatment',
-  'Donor_ID',
-  '###'
-  );
-
-  my @data;
-  my $seq_plate_sth = $dbh->prepare("SELECT * FROM SeqReportView WHERE seq_plate_name = ?");
-  $seq_plate_sth->execute("$seq_plate_name");
-  my $sequence_plate = $seq_plate_sth->fetchall_hashref('index_tag_id'); 
-  foreach my $index_tag_id( sort {$a <=> $b} keys %{ $sequence_plate } ) {
-   foreach my $col( @samples_for_excel ) {
-    if($col eq '###') {
-     push @data, $col;
-    } 
-    elsif( exists($sequence_plate->{"$index_tag_id"}->{"$col"}) ) {
-     push @data, $sequence_plate->{"$index_tag_id"}->{"$col"};
-    }
-    elsif( $col eq 'Sample_Description' ) {
-     my %alle_geno;
-     foreach my $alle_genotype( split',', $sequence_plate->{"$index_tag_id"}->{'AlleleGenotype'} ) {
-      my($allele,$gene,$genotype) = split':', $alle_genotype;
-      $alle_geno{$genotype}{"$gene allele $allele"}++;
+ if(my $seq_plate_name = param('new_seq_plate_name')) {
+  if(my $sanger_sample_file = upload('sanger_sample_file')) {
+   my $copy_dir = make_file_path("$exel_file_dir", 'sanger_dir');
+   $sanger_sample_file->copy_to("$copy_dir");
+   my $sample_file_name = $sanger_sample_file->tempname;
+   $sample_file_name=~s/.*\///xms;
+   my $workbook_r = ReadData("$copy_dir/$sample_file_name", strip => 3);
+   my @mismatched_fields;
+   foreach my $col_hash( SANGER_COLS ){
+    foreach my $sanger_field( sort keys %{ $col_hash } ) {
+     my $cell_id = SANGER_COLS->{"$sanger_field"} . HEADER_ROW;
+     my $file_field_header = $workbook_r->[1]{$cell_id};
+     $file_field_header=~s/ +/ /gms;
+     if("$file_field_header" ne "$sanger_field"){
+      push @mismatched_fields, ["$file_field_header", "$sanger_field", "$cell_id"];
      }
-     my $description = "3' end enriched mRNA from a single genotyped embryo ";
-     foreach my $geno(sort keys %alle_geno) {
-      $description .= GENOTYPES_C->{ $geno } . " for ";
-      foreach my $gene_allele(sort keys %{ $alle_geno{ $geno } }) {
-       $description .= "$gene_allele, ";
+    }
+   }
+   if(@mismatched_fields) {
+    my $err_vals;
+    foreach my $mismatch(@mismatched_fields) {
+     $err_vals .= join(q{ : }, @{ $mismatch }) . "<br>";
+    }
+    croak "The following fields do not match between the file and the values in SANGER_COLS:<br>$err_vals";
+   }
+   else {
+    my (@sanger_samples, @sanger_fields);
+    my $row_value = HEADER_ROW + 1;
+    my $sanger_tube_id = SANGER_COLS->{'SANGER TUBE ID'};
+    my $sanger_sample_id = SANGER_COLS->{'SANGER SAMPLE ID'};
+    my ($s_tube_cell, $s_sample_cell) = ($sanger_tube_id . $row_value, $sanger_sample_id . $row_value);
+    while($workbook_r->[1]{$s_tube_cell} && $workbook_r->[1]{$s_sample_cell}) {
+     push @sanger_samples, [ $workbook_r->[1]{$s_tube_cell}, $workbook_r->[1]{$s_sample_cell} ];
+     $row_value++;
+     ($s_tube_cell, $s_sample_cell) = ($sanger_tube_id . $row_value, $sanger_sample_id . $row_value);
+    }
+    my @data;
+    my $seq_plate_sth = $dbh->prepare("SELECT * FROM SeqReportView WHERE seq_plate_name = ?");
+    $seq_plate_sth->execute("$seq_plate_name");
+    my $sequence_plate = $seq_plate_sth->fetchall_hashref('index_tag_id');
+    if(scalar keys %{ $sequence_plate } != @sanger_samples) {
+     croak 'The number of samples (' . scalar(keys %{ $sequence_plate }) . 
+           ') in the database is not equal to the number of rows in the excel file (' .
+            scalar(@sanger_samples) . ')';
+    }
+    @sanger_fields = map { $_->[0] } @EXCEL_FIELDS;
+    push @sanger_fields, '###';
+    foreach my $index_tag_id( sort {$a <=> $b} keys %{ $sequence_plate } ) {
+     my ($sanger_tube_id, $sanger_sample_id) = map { $_->[0], $_->[1] } shift @sanger_samples;
+     if($sanger_tube_id && $sanger_sample_id) {
+      foreach my $col( @EXCEL_FIELDS ) {
+       if( $col->[0] eq 'SANGER TUBE ID' ) {
+         push @data, $sanger_tube_id;
+       }
+       elsif( $col->[0] eq 'SANGER SAMPLE ID' ) {
+        push @data, $sanger_sample_id;
+       } 
+       elsif( $col->[1]  && $col->[1] eq 'Tag_ID' ) {
+        push @data, $sequence_plate->{"$index_tag_id"}->{ $col->[1] };
+        push @data, '###';
+       }
+       elsif( $col->[0] eq 'SAMPLE DESCRIPTION' ) {
+        my %alle_geno;
+        foreach my $alle_genotype( split',', $sequence_plate->{"$index_tag_id"}->{'AlleleGenotype'} ) {
+         my($allele,$gene,$genotype) = split':', $alle_genotype;
+         $alle_geno{$genotype}{"$gene allele $allele"}++;
+        }
+        my $description = "3' end enriched mRNA from a single genotyped embryo ";
+        foreach my $geno(sort keys %alle_geno) {
+         $description .= GENOTYPES_C->{ $geno } . " for ";
+         foreach my $gene_allele(sort keys %{ $alle_geno{ $geno } }) {
+          $description .= "$gene_allele, ";
+         }
+        }
+        my $index_tag_seq = $sequence_plate->{"$index_tag_id"}->{'desc_tag_index_sequence'};
+        $index_tag_seq=~s/CG$//xms; ## remove the final 2 bases - these are always "CG"
+        my $zmp_exp_name = $sequence_plate->{"$index_tag_id"}->{'zmp_name'}; 
+        $description .= "clutch 1 with " . SPIKE_IDS->{ $sequence_plate->{"$index_tag_id"}->{'desc_spike_mix'} } .
+         ". A 8 base indexing sequence ($index_tag_seq) is bases 13 to 20 of read 1 followed by CG and polyT. " . 
+         'More information describing the phenotype can be found at the ' .
+         'Wellcome Trust Sanger Institute Zebrafish Mutation Project website ' .
+         "http://www.sanger.ac.uk/sanger/Zebrafish_Zmpsearch/$zmp_exp_name";
+        push @data, $description;
+       }
+       elsif(looks_like_number($col->[1])) {
+        push @data, HC->{ $col->[1] };
+       }
+       else {
+        push @data, $sequence_plate->{"$index_tag_id"}->{ $col->[1] };
+       }
       }
+      my $sanger_info_sth = $dbh->prepare("Call update_sanger_tube_and_sample(?,?,?)");
+      my $seq_id = $sequence_plate->{"$index_tag_id"}->{'seq_plate_id'};
+      $sanger_info_sth->execute($sanger_tube_id, $sanger_sample_id, $seq_id);
      }
-     my $index_tag_seq = $sequence_plate->{"$index_tag_id"}->{'desc_tag_index_sequence'};
-     $index_tag_seq=~s/CG$//xms; ## remove the final 2 bases - these are always "CG"
-     my $zmp_exp_name = $sequence_plate->{"$index_tag_id"}->{'zmp_name'}; 
-     $description .= "clutch 1 with " . SPIKE_IDS->{ $sequence_plate->{"$index_tag_id"}->{'desc_spike_mix'} } .
-      ". A 8 base indexing sequence ($index_tag_seq) is bases 13 to 20 of read 1 followed by CG and polyT. " . 
-      'More information describing the phenotype can be found at the ' .
-      'Wellcome Trust Sanger Institute Zebrafish Mutation Project website ' .
-      "http://www.sanger.ac.uk/sanger/Zebrafish_Zmpsearch/$zmp_exp_name";
-     push @data, $description;
     }
-    else {
-     push @data, undef;
+    push @sanger_fields, @data;
+    my ($date, $file_loc) = write_file(\@sanger_fields, $seq_plate_name);
+  
+    if($date && $file_loc) {
+     my $seq_time_sth = $dbh->prepare("Call update_excel_file_location_and_date(?,?,?)");
+     my ($excel_file_loc) = $file_loc=~/\.\/public\/(.*)/xms;
+     $seq_time_sth->execute($excel_file_loc, $date, $seq_plate_name);
     }
    }
   }
-  push @samples_for_excel, @data;
-  my ($date, $file_loc) = write_file(\@samples_for_excel, $seq_plate_name);
-
-  if($date && $file_loc) {
-   my $seq_time_sth = $dbh->prepare("Call update_excel_file_location_and_date(?,?,?)");
-   ($excel_file_loc) = $file_loc=~/\.\/public\/(.*)/xms;
-   $seq_time_sth->execute($excel_file_loc, $date, $seq_plate_name);
-  }
  }
+ my $seq_plates_sth = $dbh->prepare('SELECT * FROM SeqPlateView');
+ $seq_plates_sth->execute;
+ my $all_seq_plates = $seq_plates_sth->fetchall_arrayref;
 
- if($template eq 'add_sequencing_form') { ## need to re-query after updating the db
-  my $seq_plates_sth = $dbh->prepare('SELECT * FROM SeqPlateView');
-  $seq_plates_sth->execute;
-  $all_seq_plates = $seq_plates_sth->fetchall_arrayref;
- }  
-
- template "$template", { 
-  'schema_location'               => $schema_location,   
-  'excel_file_loc'                => $excel_file_loc,
+ template 'make_sequencing_form', { 
   'all_seq_plates'                => $all_seq_plates,
 
-  'add_sequencing_form_url'       => uri_for('/add_sequencing_form'),
-  'update_image_url'              => uri_for('/update_image'),
-  'add_a_new_study_url'           => uri_for('/add_a_new_study'),
-  'add_a_new_assembly_url'        => uri_for('/add_a_new_assembly'),
-  'add_a_new_dev_stage_url'       => uri_for('/add_a_new_devstage'),
-  'get_new_experiment_url'        => uri_for('/get_new_experiment'),
-  'make_sequencing_plate_url'     => uri_for('/get_sequencing_info'),
-  'make_sequencing_report_url'    => uri_for('/get_sequencing_report'),
-  'get_all_sequencing_plates_url' => uri_for('/get_all_sequencing_plates'),
-  'get_all_experiments_url'       => uri_for('/get_all_experiments'),
+  'make_sequencing_form_url'      => uri_for('/make_sequencing_form'),
  };
 
 };
@@ -569,10 +724,20 @@ post '/combine_plate_data' => sub {
     $hex=~s/0x/#/;
     $exp_color{ $hex }{ 'exp_name' } = $exp_name; ## legend colors for exps
     foreach my $sample(@{ $rdp_sth->fetchall_arrayref }) {
+     # get the volume of RNA required 
+     my $min_rna_amount = $sample->[5];
+     my $rna_volume = $sample->[6];
+     my $rna_amount = $sample->[7];
+     my $total_rna = $rna_volume * $rna_amount;
+     my $required_rna_vol = int((($min_rna_amount / $total_rna) * $rna_volume) + 0.5); # round off to nearest int
+     my $required_rna_amount = sprintf "%.2f", $rna_amount * $required_rna_vol;
+
      $exp_color{ $hex }{ 'std_name' } = $sample->[4];
      $exp_ids{ $sample->[2] }++; ## experiment_ids
      my $tag_seq = shift @{ $tag_seqs };
      $index_tag_set{ $tag_seq->[0] } = $tag_seq->[1];
+     $combined_plate{ $sample->[0] }{ 'rec_rna_vol' }          = $required_rna_vol;
+     $combined_plate{ $sample->[0] }{ 'rec_rna_amt' }          = $required_rna_amount;
      $combined_plate{ $sample->[0] }{ 'rna_plate_well_name' }  = $sample->[1];
      $combined_plate{ $sample->[0] }{ 'exp_name' }             = $sample->[3];
      $combined_plate{ $sample->[0] }{ 'std_name' }             = $sample->[4];
@@ -593,12 +758,14 @@ post '/combine_plate_data' => sub {
   }
  }
  $seq_plate_name = join "_", keys %exp_ids;
- my $spd_sth = $dbh->prepare("CALL add_sequence_plate_data(?,?,?,?,?,?,?)");
+ my $spd_sth = $dbh->prepare("CALL add_sequence_plate_data(?,?,?,?,?,?,?,?,?)");
  my $seq_array = make_grid()->[0];
  foreach my $rna_plate_id(sort {$a <=> $b} keys %combined_plate) {
   my $seq_plate_well_name = $combined_plate{ $rna_plate_id }{ 'seq_plate_well_name' };
   my $rna_plate_well_name = $combined_plate{ $rna_plate_id }{ 'rna_plate_well_name' };
   my $index_tag_id = $combined_plate{ $rna_plate_id }{ 'index_tag_id' };
+  my $sample_volume = $combined_plate{ $rna_plate_id }{ 'rec_rna_vol' };
+  my $sample_amount = $combined_plate{ $rna_plate_id }{ 'rec_rna_amt' };
   my $sample_name = join "_", $combined_plate{ $rna_plate_id }{ 'exp_name' }, $rna_plate_well_name;
   my ($tag_num) = $index_tag_set{ $index_tag_id }=~m/\.([[:digit:]]+)/xms;
   my $sample_public_name = join "_", $sample_name, $seq_plate_well_name, $tag_num;
@@ -609,7 +776,9 @@ post '/combine_plate_data' => sub {
                      $sample_public_name,
                      $rna_plate_id,
                      $index_tag_id,
-                     $hex_color );                   
+                     $hex_color,
+                     $sample_volume,
+                     $sample_amount );                   
  }
  foreach my $cell( @{ $seq_array } ) {
   if(exists($cell_color{ $cell })) {
@@ -628,7 +797,7 @@ post '/combine_plate_data' => sub {
 
   display_plate_name     => $display_plate_name,
   sequence_plate         => $seq_array,
-  legend    => \%exp_color,
+  legend                 => \%exp_color,
  };
   
 };
@@ -787,7 +956,6 @@ post '/add_experiment_data' => sub {
     alleles                    => \@alleles,
    
     get_genotypes_and_rna_url  => uri_for('/get_genotypes_and_rna'),
-   
  };
 
 };
@@ -1092,6 +1260,9 @@ sub color_plate {
    elsif($attrib eq 'index_tags') {
     $well_id = [ $seq_plate->{$well_id}->{'color'}, $seq_plate->{$well_id}->{'tag_name'}, $seq_plate->{$well_id}->{'tag_seq'} ];
    } 
+   elsif($attrib eq 'rna_vols') {
+    $well_id = [ $seq_plate->{$well_id}->{'color'}, $seq_plate->{$well_id}->{'sample_volume'}, $seq_plate->{$well_id}->{'sample_amount'} ];
+   }
   }
   elsif( $well_id=~/[[:alpha:]][[:digit:]]+/xms ) {
    $well_id = [ '#D8D8D8', undef ]; ## grey for blank well

@@ -138,7 +138,11 @@ th,td {
                   <td><% field %>
                   </td>
 
-                 <% CASE 6 %> <!-- Spike_mix -->
+                 <% CASE 6 %> <!-- Embryo_collection_date -->
+                  <td><% field %>
+                  </td>
+
+                 <% CASE 7 %> <!-- Spike_mix -->
                   <td>
                   <% IF field %>
                    <% FOREACH exp_id IN spike_info.keys %>
@@ -155,11 +159,11 @@ th,td {
                   <% END %>
                   </td>
 
-	         <% CASE 7 %> <!-- Sample_visability -->
+	         <% CASE 8 %> <!-- Sample_visability -->
                   <td><% field %>
                   </td> 
 
-	         <% CASE 8 %> <!-- Genome_ref_name  -->
+	         <% CASE 9 %> <!-- Genome_ref_name  -->
                  
                   <% FOREACH assembly_name IN species_info.keys %>
                    <% IF assembly_name == field %>
@@ -175,7 +179,7 @@ th,td {
 
                   </td> 
   
-                 <% CASE 9 %> <!-- Image -->
+                 <% CASE 10 %> <!-- Image -->
                   <td style="text-align: center;">
 
                   <% IF field != 'No image' %>
@@ -185,22 +189,28 @@ th,td {
                   <% END %>
 
                 </td>
-               <% CASE 10 %> <!-- Phenotype_description -->
+               <% CASE 11 %> <!-- Phenotype_description -->
                  <td><% field %>
                  </td>
                
-               <% CASE 11 %> <!-- Sequenced_samples -->
+               <% CASE 12 %> <!-- Sequenced_samples -->
                 <td>
                 <form action="<% get_sequenced_samples_url %>" method="get">
                  <input type="hidden" name="exp_id" value="<% exp.last %>">
                  <input type="submit" value="<% field %>">
                 </form>
                 </td>
+               <% CASE 13 %> <!-- Excel_file_creation_date -->
+                <td><% field %>
+                </td>
 
-               <% CASE 12 %> <!-- Excel_file -->
+               <% CASE 14 %> <!-- Excel_file -->
+                <% IF field %>
                  <td style="text-align: center;"><a href="<% field %>" download><button type="button" style="background-color:#BDECB6;">view</button></a>
                  </td>
-
+                <% ELSE %>
+                 <td></td>
+                <% END %>
               <% END %> <!-- end of switch -->
 
              <% ELSE %> <!-- field headers -->

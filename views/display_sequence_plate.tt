@@ -45,6 +45,9 @@ table, th, td {
       <div id="content">
         <div id="header">
           <p></p>
+          <button onclick="goHome()">Home</button>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <button onclick="printWindow()">Print</button>
           <h1>Sequencing plate</h1> <h3> (<% display_plate_name %>)
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	   <% IF display_well_order_url %>
@@ -71,10 +74,14 @@ table, th, td {
            </form> 
 	   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	  <% END %>
-          <button onclick="goHome()">Home</button>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          <button onclick="printWindow()">Print</button>
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <% IF display_rna_vols_order_url %>
+            <form action="<% display_rna_vols_order_url %>" method="get" style="display: inline;">
+             <input type="hidden" name="plate_name" value="<% plate_name %>">
+             <input type="hidden" name="display_plate_name" value="<% display_plate_name %>">
+             <input type="submit" value="RNA volumes"></td>
+           </form> 
+	   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	  <% END %>
 
 </h3>
            <table>

@@ -44,6 +44,7 @@ th {
 
       <div id="content">
         <div id="header">
+          <button onclick="goHome()">Home</button>
           <h1><% names_info.1 %>(<% names_info.0 %>)</h1>
           <table>
 
@@ -76,7 +77,6 @@ th {
             <input type="reset" value="Clear">
             &nbsp;&nbsp;&nbsp;&nbsp;
           </form>
-            <button onclick="goHome()">Home</button>
            </p>
         </div>
       </div>

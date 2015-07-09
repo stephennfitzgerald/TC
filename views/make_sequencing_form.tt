@@ -30,17 +30,10 @@ P {
 }
 
 table, th, td {
-    border: 1px solid black;
-    border-collapse: collapse;
-}
-th,td {
-    padding: 15px;
-    text-align: center;
-}
-
-.table2, th, td {
     border: 1px solid white;
-    text-align: center;
+    padding: 15px;
+    border-collapse: collapse;
+    text-align: left;
 }
 
 </style>
@@ -56,7 +49,7 @@ th,td {
          <p>
           <button onclick="goHome()">Home</button>
          <p>
-         <h1>Add a sequencing form</h1>
+         <h1>Make a sequencing form</h1>
            <p>
           <table>
            <% FOREACH row IN all_seq_plates %>
@@ -64,10 +57,12 @@ th,td {
             <% row.2.split(',').join('::') %></td>
             <% IF row.1 %>
              <td><a href="<% row.1 %>" download><button type="button">excel &#8595;</button></a></td>
+             <td></td>
             <% ELSE %>
-             <form action="<% make_sequencing_report_url %>" method="get">
+             <form action="<% get_sequencing_report_url %>" method="post" enctype="multipart/form-data">
               <input type="hidden" name="new_seq_plate_name" value="<% row.0 %>">
-              <td><input type="submit" value="add"></td>
+              <td><input type="file", name="sanger_sample_file"></td>
+              <td><input type="submit" value="Submit"></td>
              </form> 
             <% END %>
             </tr>
