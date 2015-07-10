@@ -61,7 +61,7 @@ table, th, td {
             <% ELSE %>
              <form action="<% get_sequencing_report_url %>" method="post" enctype="multipart/form-data">
               <input type="hidden" name="new_seq_plate_name" value="<% row.0 %>">
-              <td><input type="file", name="sanger_sample_file"></td>
+              <td><input type="file", name="sanger_sample_file" required></td>
               <td><input type="submit" value="Submit"></td>
              </form> 
             <% END %>

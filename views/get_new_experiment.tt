@@ -3,7 +3,7 @@
 
 <script>
 
-function checkMix() {
+function checkForm() {
  var spike_mix = Number(document.getElementById("spike_mix").value);
  var spike_vol = Number(document.getElementById("spike_vol").value);
 
@@ -11,6 +11,44 @@ function checkMix() {
   alert("spike_mix ("+spike_mix+") and spike volume ("+spike_vol+") are incompatible");
   return false;
  }
+
+ var re = /^(\d{4})\-(\d{2})\-(\d{2})$/; 
+ var ec_date = document.getElementById("ec_date").value;
+ if( ec_date == "0000-00-00" ) {
+  alert("Embryo Collection Date must be filled in");
+  return false;
+ } else {
+  var mt = ec_date.match(re);
+  if( Number(mt[1]) < 2000 || Number(mt[2]) > 12 || Number(mt[3]) > 31 || Number(mt[2]) <= 0 || Number(mt[3]) <= 0) {
+   alert("Problem with Embryo Collection Date:\n\nYear: "+mt[1]+"\nMonth: "+mt[2]+"\nDay: "+mt[3]);
+   return false; 
+  }
+ }
+
+ var rna_ext_date = document.getElementById("rna_ext_date").value;
+ if( rna_ext_date == "0000-00-00" ) {
+  alert("RNA Extraction Date must be filled in");
+  return false;
+ } else {
+  var mt = rna_ext_date.match(re);
+  if( Number(mt[1]) < 2000 || Number(mt[2]) > 12 || Number(mt[3]) > 31 || Number(mt[2]) <= 0 || Number(mt[3]) <= 0) {
+   alert("Problem with RNA Extraction Date:\n\nYear: "+mt[1]+"\nMonth: "+mt[2]+"\nDay: "+mt[3]);
+   return false;
+  }
+ }
+
+ var lib_date = document.getElementById("lib_date").value;
+ if( lib_date == "0000-00-00" ) {
+  alert("Library Creation Date must be filled in");
+  return false;
+ } else {
+  var mt = lib_date.match(re);
+  if( Number(mt[1]) < 2000 || Number(mt[2]) > 12 || Number(mt[3]) > 31 || Number(mt[2]) <= 0 || Number(mt[3]) <= 0) {
+   alert("Problem with Library Creation Date:\n\nYear: "+mt[1]+"\nMonth: "+mt[2]+"\nDay: "+mt[3]);
+   return false;
+  }
+ }
+
  return true;
 }
 
@@ -63,7 +101,7 @@ th {
          <p>
           <h1>Add a new experiment</h1>
           <table>
-           <form action="<% add_experiment_data_url %>" method="post" enctype="multipart/form-data" onsubmit="return checkMix();">
+           <form action="<% add_experiment_data_url %>" method="post" enctype="multipart/form-data" onsubmit="return checkForm();">
             <% FOREACH table_res IN table_schema %>
              <% IF table_res.4 != NULL %>
               <% table_res.4 = table_res.4.replace('\s+', '_') %>
@@ -73,43 +111,43 @@ th {
 
               <% CASE 'Developmental_stage' %>
                <td><% table_res.0 %></td><td>
-                <select class="dropdown" name=<% table_res.0 %>>
+                <select class="dropdown" name="<% table_res.0 %>">
                  <% FOREACH id_stage IN dev_stages.keys.sort %>
-                  <option value=<% dev_stages.$id_stage.id %>><% dev_stages.$id_stage.time_stage %></option>
+                  <option value="<% dev_stages.$id_stage.id %>"><% dev_stages.$id_stage.time_stage %></option>
                  <% END %>
                 </select></td>
                 <td><% last_dev_stage %></td>
 
               <%  CASE 'Genome_ref_name' %>
                <td><% table_res.0 %></td><td>
-                <select class="dropdown" name=<% table_res.0 %>>     
+                <select class="dropdown" name="<% table_res.0 %>">     
                  <% FOREACH ref_name IN genref_names %>
-                  <option value=<% ref_name.1 %>><% ref_name.0 %></option>
+                  <option value="<% ref_name.1 %>"><% ref_name.0 %></option>
                  <% END %>
                 </select></td>  
                 <td><% last_genome_ref %></td>
 
               <% CASE 'Spike_mix' %>
                <td><% table_res.0 %></td><td>
-                <select class="dropdown" id="spike_mix" name=<% table_res.0 %>>
+                <select class="dropdown" id="spike_mix" name="<% table_res.0 %>">
                  <% FOREACH spike_id in spike_ids.keys.sort %> 
-                  <option value=<% spike_id %>><% spike_ids.$spike_id %></option>
+                  <option value="<% spike_id %>"><% spike_ids.$spike_id %></option>
                  <% END %>
                 </select></td>
                 <td><% spike_ids.$last_spike_mix %></td>
               
               <% CASE 'Sample_visability' %>
                <td><% table_res.0 %></td><td>
-                <select class="dropdown"  name=<% table_res.0 %>>
+                <select class="dropdown"  name="<% table_res.0 %>">
                  <% FOREACH vis in visibility.keys.sort %>  
-                  <option value=<% vis %>><% visibility.$vis %></option>
+                  <option value="<% vis %>"><% visibility.$vis %></option>
                  <% END %>
                 </select></td>
                 <td><% last_visable %></td>
 
               <% CASE 'Embryo_collection_date' %>
-               <td><% table_res.0 %></td><td>
-                <input type="time" value="0000-00-00" class="txt_box" name="<% table_res.0 %>" required></td>
+               <td><% table_res.0 %>&nbsp;&nbsp;(yyyy-mm-dd)</td><td>
+                <input type="time" value="0000-00-00" class="txt_box" name="<% table_res.0 %>" id="ec_date" required></td>
                <td><% last_ec_date %></td>
 
               <% CASE 'Experiment_name' %>
@@ -192,13 +230,13 @@ th {
                <td><% last_rna_ext_prot_version %></td>
  
               <% CASE 'RNA_extraction_date' %>
-               <td><% table_res.0 %></td><td>
-                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
+               <td><% table_res.0 %>&nbsp;&nbsp;(yyyy-mm-dd)</td><td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" id="rna_ext_date" required></td>
                <td><% last_rna_ext_date %></td>
 
               <% CASE 'RNA_library_creation_date' %>
-               <td><% table_res.0 %></td><td>
-                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
+               <td><% table_res.0 %>&nbsp;&nbsp;(yyyy-mm-dd)</td><td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" id="lib_date" required></td>
                <td><% last_library_creation_date %></td>
 
               <% CASE 'RNA_library_creation_protocol_version' %>

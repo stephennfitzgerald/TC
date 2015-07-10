@@ -568,6 +568,14 @@ CREATE OR REPLACE VIEW ExpStdy AS
         ON exp.study_id = std.id
   ORDER BY std.name;
 
+/** experiment ids to delete **/
+CREATE OR REPLACE VIEW expsToDelete AS
+ SELECT exp.id exp_id 
+ FROM experiment exp LEFT OUTER JOIN rna_extraction rna_ext
+   ON rna_ext.id = exp.rna_extraction_id LEFT OUTER JOIN rna_dilution_plate rdp 
+   ON rdp.experiment_id = exp.id 
+ GROUP BY exp.id
+ HAVING COUNT(rdp.id) = 0;
 
 /** procedures **/
 
@@ -585,6 +593,28 @@ DELETE exp.*,
 FROM experiment exp INNER JOIN rna_extraction rna_ext
        ON exp.rna_extraction_id = rna_ext.id 
 WHERE exp.id = exp_id_param;
+END$$
+DELIMITER ;
+
+/** delete experiments which have no rna_dilution_plate entries **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS delAllExp$$
+
+CREATE PROCEDURE delAllExp (
+)
+BEGIN
+
+DELETE genot.*,
+       seqp.*,
+       rdp.*,
+       rna_ext.*,
+       exp.*
+FROM experiment exp LEFT OUTER JOIN rna_extraction rna_ext
+       ON rna_ext.id = exp.rna_extraction_id LEFT OUTER JOIN rna_dilution_plate rdp 
+       ON rdp.experiment_id = exp.id LEFT OUTER JOIN sequence_plate seqp
+       ON seqp.rna_dilution_plate_id = rdp.id LEFT OUTER JOIN genotype genot 
+       ON genot.rna_dilution_plate_id = rdp.id INNER JOIN expsToDelete etd 
+       ON exp.id = etd.exp_id;
 END$$
 DELIMITER ;
 
