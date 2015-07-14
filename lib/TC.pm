@@ -8,6 +8,8 @@ use Excel::Writer::XLSX;
 use Spreadsheet::Read;
 use Spreadsheet::XLSX;
 use Spreadsheet::WriteExcel;
+use Spreadsheet::ParseExcel;
+use Spreadsheet::ParseExcel::SaveParser;
 use Scalar::Util qw(looks_like_number);
 use Data::Dumper;
 use Carp;
@@ -102,34 +104,34 @@ use constant SANGER_COLS => {
 };
 
 use constant HC => {
- '1'   => undef,
- '2'   => undef,
- '3'   => undef,
- '4'   => undef,
- '5'   => undef,
+ '1'   => 'N/A',
+ '2'   => 'N/A',
+ '3'   => 'N/A',
+ '4'   => 'N/A',
+ '5'   => 'N/A',
  '6'   => 'N',
  '7'   => 'N',
- '8'   => undef,
+ '8'   => 'N/A',
  '9'   => 'Y',
  '10'  => 'Other',
  '11'  => 'Other',
  '12'  => '-20C',
- '13'  => undef,
- '14'  => undef,
- '15'  => undef,
+ '13'  => 'N/A',
+ '14'  => 'N/A',
+ '15'  => 'N/A',
  '16'  => 'Library',
- '17'  => undef,
- '18'  => undef,
- '19'  => undef,
- '20'  => undef,
- '21'  => undef,
- '22'  => undef,
- '23'  => undef,
- '24'  => undef,
- '25'  => undef,
- '26'  => undef,
- '27'  => undef,
- '28'  => undef,
+ '17'  => 'N/A',
+ '18'  => 'N/A',
+ '19'  => 'N/A',
+ '20'  => 'N/A',
+ '21'  => 'N/A',
+ '22'  => 'N/A',
+ '23'  => 'N/A',
+ '24'  => 'N/A',
+ '25'  => 'N/A',
+ '26'  => 'N/A',
+ '27'  => 'N/A',
+ '28'  => 'N/A',
 }; 
 
 my @EXCEL_FIELDS = ( ## column names in the excel sheet - most are hard-coded (numbers)
@@ -185,7 +187,7 @@ my @EXCEL_FIELDS = ( ## column names in the excel sheet - most are hard-coded (n
  );
 
 our $VERSION = '0.1';
-my $db_name = "zfish_sf5_tc4_test";
+my $db_name = "zfish_sf5_tc2_test";
 my $exel_file_dir = "./public/zmp_exel_files"; # need to change
 my $rna_dilution_dir = "./public/RNA_dilution_files";
 my $image_dir = "./public/images"; 
@@ -518,7 +520,8 @@ post '/get_sequencing_report' => sub {
    $sanger_sample_file->copy_to("$copy_dir");
    my $sample_file_name = $sanger_sample_file->tempname;
    $sample_file_name=~s/.*\///xms;
-   my $workbook_r = ReadData("$copy_dir/$sample_file_name", strip => 3);
+   my $xlf = "$copy_dir/$sample_file_name";
+   my $workbook_r = ReadData("$xlf", strip => 3);
    my @mismatched_fields;
    foreach my $col_hash( SANGER_COLS ){
     foreach my $sanger_field( sort keys %{ $col_hash } ) {
@@ -538,7 +541,7 @@ post '/get_sequencing_report' => sub {
     croak "The following fields do not match between the file and the values in SANGER_COLS:<br>$err_vals";
    }
    else {
-    my (@sanger_samples, @sanger_fields);
+    my @sanger_samples;
     my $row_value = HEADER_ROW + 1;
     my $sanger_tube_id = SANGER_COLS->{'SANGER TUBE ID'};
     my $sanger_sample_id = SANGER_COLS->{'SANGER SAMPLE ID'};
@@ -557,21 +560,25 @@ post '/get_sequencing_report' => sub {
            ') in the database is not equal to the number of rows in the excel file (' .
             scalar(@sanger_samples) . ')';
     }
-    @sanger_fields = map { $_->[0] } @EXCEL_FIELDS;
-    push @sanger_fields, '###';
+    my $row_index = 0;
     foreach my $index_tag_id( sort {$a <=> $b} keys %{ $sequence_plate } ) {
      my ($sanger_tube_id, $sanger_sample_id) = map { $_->[0], $_->[1] } shift @sanger_samples;
      if($sanger_tube_id && $sanger_sample_id) {
       foreach my $col( @EXCEL_FIELDS ) {
        if( $col->[0] eq 'SANGER TUBE ID' ) {
-         push @data, $sanger_tube_id;
+         push @{ $data[$row_index] }, $sanger_tube_id;
        }
        elsif( $col->[0] eq 'SANGER SAMPLE ID' ) {
-        push @data, $sanger_sample_id;
+        push @{ $data[$row_index] }, $sanger_sample_id;
        } 
        elsif( $col->[1]  && $col->[1] eq 'Tag_ID' ) {
-        push @data, $sequence_plate->{"$index_tag_id"}->{ $col->[1] };
-        push @data, '###';
+        push @{ $data[$row_index] }, $sequence_plate->{"$index_tag_id"}->{ $col->[1] };
+        $row_index++;
+       }
+       elsif( $col->[0] eq 'COMMON NAME' ) {
+        my $species_name = $sequence_plate->{"$index_tag_id"}->{ $col->[1] };
+        $species_name=~s/_/ /gms;
+        push @{ $data[$row_index] }, $species_name;
        }
        elsif( $col->[0] eq 'SAMPLE DESCRIPTION' ) {
         my %alle_geno;
@@ -594,13 +601,13 @@ post '/get_sequencing_report' => sub {
          'More information describing the phenotype can be found at the ' .
          'Wellcome Trust Sanger Institute Zebrafish Mutation Project website ' .
          "http://www.sanger.ac.uk/sanger/Zebrafish_Zmpsearch/$zmp_exp_name";
-        push @data, $description;
+        push @{ $data[$row_index] }, $description;
        }
        elsif(looks_like_number($col->[1])) {
-        push @data, HC->{ $col->[1] };
+        push@{ $data[$row_index] }, HC->{ $col->[1] };
        }
        else {
-        push @data, $sequence_plate->{"$index_tag_id"}->{ $col->[1] };
+        push @{ $data[$row_index] }, $sequence_plate->{"$index_tag_id"}->{ $col->[1] };
        }
       }
       my $sanger_info_sth = $dbh->prepare("Call update_sanger_tube_and_sample(?,?,?)");
@@ -608,8 +615,7 @@ post '/get_sequencing_report' => sub {
       $sanger_info_sth->execute($sanger_tube_id, $sanger_sample_id, $seq_id);
      }
     }
-    push @sanger_fields, @data;
-    my ($date, $file_loc) = write_file(\@sanger_fields, $seq_plate_name);
+    my ($date, $file_loc) = overwrite_file("$xlf", \@data, $seq_plate_name);
   
     if($date && $file_loc) {
      my $seq_time_sth = $dbh->prepare("Call update_excel_file_location_and_date(?,?,?)");
@@ -1138,35 +1144,25 @@ post '/populate_rna_dilution_plate' => sub {
 };
 
 
-sub write_file {
- my($excel_data, $seq_plate)=@_;
+sub overwrite_file {
+ my($excel_file, $excel_data, $seq_plate)=@_;
  my $date_time = `date --rfc-3339=seconds | xargs echo -n`;
  my($date, $time) = split' ',$date_time;
- $time=~s/\+.*//x;
- $time=~s/:/_/xg;
- my $dir = "$exel_file_dir/$date-$time";
- make_path($dir, { verbose => 1,  mode => 0777 }); 
- 
- my $file = "$dir/$seq_plate.xlsx"; 
-
- my $workbook  = Excel::Writer::XLSX->new( "$file" );
- my $worksheet = $workbook->add_worksheet();
-
- my($row,$col) = (0,0);
- for(my$i=0;$i<@{ $excel_data };$i++){
-  if(defined($excel_data->[$i]) && $excel_data->[$i] eq '###') {
-   $row++;
-   $col=0;
-   next;
-  }
-  else {
-   $worksheet->write( $row, $col, $excel_data->[$i] );
+ my $parser = Spreadsheet::ParseExcel::SaveParser->new();
+ my $template = $parser->Parse("$excel_file");
+ my $worksheet = $template->worksheet(0);
+ my $row = HEADER_ROW; 
+ foreach my $row_array(@{ $excel_data }) {
+  my $col = 0;
+  foreach my $row_value(@{ $row_array }) {
+   my $format = $worksheet->{Cells}[$row][$col]->{FormatNo};
+   $worksheet->AddCell( $row, $col, "$row_value", $format );
    $col++;
   }
+  $row++
  }
- $workbook->close();
- 
- return($date, $file);
+ $template->SaveAs("$excel_file");
+ return($date, $excel_file);
 }
 
 sub make_grid {

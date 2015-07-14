@@ -15,7 +15,7 @@ function checkForm() {
  var re = /^(\d{4})\-(\d{2})\-(\d{2})$/; 
  var ec_date = document.getElementById("ec_date").value;
  if( ec_date == "0000-00-00" ) {
-  alert("Embryo Collection Date must be filled in");
+  alert("Please update the Embryo Collection Date");
   return false;
  } else {
   var mt = ec_date.match(re);
@@ -27,7 +27,7 @@ function checkForm() {
 
  var rna_ext_date = document.getElementById("rna_ext_date").value;
  if( rna_ext_date == "0000-00-00" ) {
-  alert("RNA Extraction Date must be filled in");
+  alert("Please update the RNA Extraction Date");
   return false;
  } else {
   var mt = rna_ext_date.match(re);
@@ -39,7 +39,7 @@ function checkForm() {
 
  var lib_date = document.getElementById("lib_date").value;
  if( lib_date == "0000-00-00" ) {
-  alert("Library Creation Date must be filled in");
+  alert("Please update the Library Creation Date");
   return false;
  } else {
   var mt = lib_date.match(re);
@@ -170,8 +170,8 @@ th {
                <td><% last_allele_name %></td>
 
               <% CASE 'Phenotype_description' %>
-               <td><% table_res.0 %></td><td>
-                <input type="text" name="<% table_res.0 %>"></td>
+               <td><% table_res.0 %>&nbsp;&nbsp;("Blind" or "Phenotypic")</td><td>
+                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
                <td><% last_pheno_desc %></td>
 
               <% CASE 'Spike_dilution' %>
@@ -216,7 +216,7 @@ th {
       
               <% CASE 'Image' %>
                <td><% table_res.0 %></td><td>
-                <input type="file" name="<% table_res.0 %>"></td>
+                <input type="file" name="<% table_res.0 %>" value="<% table_res.4 %>"></td>
                <td><% last_image %></td>
 
               <% CASE 'RNA_extracted_by' %>
