@@ -117,7 +117,7 @@ th {
               <% CASE 'Developmental_stage' %>
                <td><% table_res.0 %></td><td>
                 <select class="dropdown" name="<% table_res.0 %>">
-                 <% FOREACH id_stage IN dev_stages.keys.sort %>
+                 <% FOREACH id_stage IN dev_stages.keys.nsort %>
                   <option value="<% dev_stages.$id_stage.id %>"><% dev_stages.$id_stage.time_stage %></option>
                  <% END %>
                 </select></td>
