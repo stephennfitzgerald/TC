@@ -52,13 +52,15 @@ th {
             <input type="hidden" name="exp_name" value="<% names_info.1 %>">
             <input type="hidden" name="std_name" value="<% names_info.0 %>">
 
-             <td>RNA_dilution_file</td><td>
+             <td>RNA dilution file</td><td>
               <input type="file" class="button" name="rna_dilution_file" required></td></tr><tr> 
-             <td>RNA_volume</td><td>
+             <td>RNA volume for Qubit (ul)</td><td>
               <input type="text" class="txt_box" name="rna_volume" value="50" required></td></tr><tr>
-             <td>Minimum_RNA_amount</td><td>
+             <td>Minimum RNA amount (ng)</td><td>
               <input type="text" class="txt_box" name="minimum_rna_amount" value="300" required></td><tr>
-              <td>KlusterCaller_plate_files</td></tr>
+             <td>Final sample volume (ul)</td><td>
+              <input type="text" class="txt_box" name="final_sample_volume" value="89" required></td><tr>
+              <td>KlusterCaller plate files</td></tr>
 
                <% FOREACH allele IN alleles %>
                 <tr>

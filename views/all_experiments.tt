@@ -30,13 +30,19 @@ function dispSpike(mix, dilution, volume) {
                        );
 }
 
-function dispDev(period, stage, begins, dev_landmarks) {
+function dispDev(period, stage, begins, dev_landmarks, zfs_id) {
  var dispWin = window.open(period, "", "width=450,height=200");
  dispWin.document.write("Period: ", period, "<p>",
                         "Stage: ", stage, "<p>",
                         "Begins: ", begins, "<p>",
-                        "Landmarks: ", dev_landmarks, "<p>"
+                        "Landmarks: ", dev_landmarks, "<p>",
+                        "ZFS id: ", zfs_id, "<p>"
                        );
+}
+
+function dispExp(exp_desc_txt) {
+ var dispWin = window.open(exp_desc_txt, "", "width=450,height=200");
+ dispWin.document.write("Experiment Description: ", exp_desc_txt, "<p>");
 }
 
 function goBack() 
@@ -101,11 +107,18 @@ th,td {
                <% IF row_index > 1 %> <!-- not the field names -->
                 <% SWITCH field_index %>
                  <% CASE 1 %> <!-- Study_name -->
-                  <td><% field %> 
+                  <td><% field %>
                   </td>
 
                  <% CASE 2 %> <!-- Experiment_name -->
-                  <td><% field %>
+                  <td>
+                  <% exp_desc = exp.max() - 1 %>
+                  <% IF exp.$exp_desc %> 
+                   <% exp_desc_txt = exp.$exp_desc %> <! -- free text description -->
+                   <button onclick="dispExp('<% exp_desc_txt %>')"><% field %></button> 
+                  <% ELSE %>
+                   <% field %>
+                  <% END %>
                   </td>
 
                  <% CASE 3 %> <!-- Alleles -->
@@ -125,10 +138,12 @@ th,td {
                      <% stage  = dev_info.$exp_id.stage %>
                      <% begins = dev_info.$exp_id.begins %>
                      <% landmarks = dev_info.$exp_id.developmental_landmarks %>
+                     <% zfs_id = dev_info.$exp_id.zfs_id %>
                      <button onclick="dispDev('<% period %>', 
                                               '<% stage %>', 
                                               '<% begins %>', 
-                                              '<% landmarks %>'
+                                              '<% landmarks %>',
+                                              '<% zfs_id %>'
                                              )"><% field.replace(" : ","::") %></button>
                     <% END %>
                    <% END %>
@@ -214,8 +229,13 @@ th,td {
               <% END %> <!-- end of switch -->
 
              <% ELSE %> <!-- field headers -->
-              <% IF field != "Experiment_id" %>
-               <td><% field %>
+              <% IF field != "Experiment_id" && field != "Experiment_description" %>
+               <td>
+               <% IF field == "Phenotype_description" %>
+                Phenotypic_or_Blind
+               <% ELSE %>
+                <% field %>
+               <% END %>
                </td>
               <% END %>
              <% END %>

@@ -65,6 +65,7 @@ table, th, td {
            <input type="hidden" name="exp_id" value="<% names_info.2 %>">
            <input type="hidden" name="rna_volume" value="<% rna_volume %>">
            <input type="hidden" name="min_rna_amount" value="<% min_rna_amount %>">
+           <input type="hidden" name="final_sample_volume" value="<% final_sample_volume %>">
            <table>
             <% FOREACH count IN allele_combos.keys.nsort.reverse %>
              <% FOREACH combo IN allele_combos.$count.keys.sort %>

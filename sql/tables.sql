@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS developmental_stage (
  stage				VARCHAR(255) NOT NULL,
  begins				VARCHAR(255) NOT NULL,
  developmental_landmarks	VARCHAR(255) NOT NULL,
+ zfs_id				VARCHAR(255) NOT NULL,
 
  PRIMARY			KEY(id),
  UNIQUE				KEY(stage)
@@ -117,16 +118,17 @@ CREATE TABLE IF NOT EXISTS experiment (
  image					VARCHAR(255) DEFAULT 'No image' NOT NULL,
  spike_mix				ENUM('0', '1', '2') DEFAULT '0' NOT NULL,
  spike_dilution				VARCHAR(255) NOT NULL DEFAULT 0,
- spike_volume				INT(10) NOT NULL DEFAULT 0,
+ spike_volume				FLOAT NOT NULL DEFAULT 0.0,
  study_id				INT(10) NOT NULL, 
  embryo_collection_method		VARCHAR(255) DEFAULT "2ml assay block" NOT NULL,
  embryo_collected_by			VARCHAR(255) DEFAULT "Neha" NOT NULL,
  embryo_collection_date			DATE DEFAULT '0000-00-00' NOT NULL, 
  number_embryos_collected		INT(10) NULL,
- sample_visibility			ENUM('Hold', 'Public') DEFAULT 'Public' NOT NULL,	 
+ sample_visibility			ENUM('Hold', 'Public') DEFAULT 'Hold' NOT NULL,	 
  asset_group                            VARCHAR(255) NULL,
  rna_extraction_id			INT(10) NULL,
  array_express_data_id			INT(10) DEFAULT 1 NOT NULL,
+ description                            MEDIUMTEXT NULL,
 
  PRIMARY				KEY(id),
  UNIQUE					KEY(name,study_id),
@@ -147,6 +149,7 @@ CREATE TABLE IF NOT EXISTS rna_dilution_plate (
  rna_volume				FLOAT NOT NULL,
  well_name				VARCHAR(255) NOT NULL,
  cut_off_amount				FLOAT NOT NULL,
+ final_sample_volume                    FLOAT NOT NULL,
  qc_pass				TINYINT(1) DEFAULT 1 NOT NULL,
  selected_for_sequencing		TINYINT(1) DEFAULT 0 NOT NULL,
  gender				        ENUM('Male', 'Female', 'Unknown') DEFAULT 'Unknown' NOT NULL,
@@ -164,8 +167,9 @@ CREATE TABLE IF NOT EXISTS sequence_plate (
  plate_name				VARCHAR(255) NOT NULL,
  sanger_tube_id				VARCHAR(255) NULL,
  sanger_sample_id			VARCHAR(255) NULL,
- sample_volume				INT(10) NOT NULL,
+ sample_volume				FLOAT NOT NULL,
  sample_amount				FLOAT NOT NULL,
+ water_volume                           FLOAT NOT NULL,
  excel_report_created_date		DATE NULL,
  excel_report_file_location             VARCHAR(255) NULL,
  well_name				VARCHAR(255) NOT NULL,
@@ -232,6 +236,7 @@ CREATE OR REPLACE VIEW devView AS
         stage,
         begins,
         developmental_landmarks,
+        zfs_id,
         id
  FROM developmental_stage
  ORDER BY id DESC;
@@ -264,18 +269,22 @@ CREATE OR REPLACE VIEW seqSampleView AS
         ind.tag_index_sequence Index_tag_sequence,
         rdp.rna_amount "RNA_amount (ng/ul)",
         ROUND(rdp.cut_off_amount / rdp.rna_amount) "RNA_volume (ul)",
+        exp.spike_volume "Spike_volume (ul)",
+        seq.water_volume "Water_volume (ul)",
+        rdp.final_sample_volume "Final_sample_volume (ul)",
         rdp.cut_off_amount "Required_RNA_amount (ng)",
         rdp.experiment_id Experiment_id
  FROM rna_dilution_plate rdp INNER JOIN sequence_plate seq 
         ON seq.rna_dilution_plate_id = rdp.id INNER JOIN index_tag ind
-        ON ind.id = seq.index_tag_id
+        ON ind.id = seq.index_tag_id INNER JOIN experiment exp 
+        ON exp.id = rdp.experiment_id
  ORDER BY SUBSTR(Sequence_plate_well,1,1),
         LENGTH(SUBSTR(Sequence_plate_well,2)),
         SUBSTR(Sequence_plate_well,2); 
 
 CREATE OR REPLACE VIEW DevView AS
  SELECT id, 
-        GROUP_CONCAT(begins, '  ', stage) time_stage
+        GROUP_CONCAT(begins, '  ', stage, " : ", zfs_id) time_stage
  FROM developmental_stage 
  GROUP BY id 
  ORDER BY id;
@@ -285,7 +294,8 @@ CREATE OR REPLACE VIEW DevInfoView AS
         dev.period,
         dev.stage,
         dev.begins,
-        dev.developmental_landmarks
+        dev.developmental_landmarks,
+        dev.zfs_id
  FROM developmental_stage dev INNER JOIN experiment exp
         ON dev.id = exp.developmental_stage_id;
 
@@ -328,7 +338,7 @@ CREATE OR REPLACE VIEW groupAlleleView AS
 
 CREATE OR REPLACE VIEW groupDevStageView AS
  SELECT exp.id experiment_id,
-        GROUP_CONCAT(dev.begins, " : ", dev.stage) dev_stage
+        GROUP_CONCAT(dev.begins, " : ", dev.stage, " : ", zfs_id) dev_stage
  FROM experiment exp INNER JOIN developmental_stage dev 
    ON exp.developmental_stage_id = dev.id
  GROUP BY exp.id;
@@ -376,7 +386,8 @@ CREATE OR REPLACE VIEW SeqReportView AS
         array_exp.phenotype "Phenotype",
         array_exp.time_point "Time_Point",
         array_exp.treatment "Treatment",
-        array_exp.donor_id "Donor_ID"
+        array_exp.donor_id "Donor_ID",
+        exp.description 'experiment_description'
  FROM experiment exp INNER JOIN array_express_data array_exp 
         ON exp.array_express_data_id = array_exp.id INNER JOIN rna_dilution_plate rdp 
         ON rdp.experiment_id = exp.id INNER JOIN sequence_plate seq 
@@ -416,6 +427,7 @@ CREATE OR REPLACE VIEW ExpView AS
         exp.founder Founder, 
         exp.asset_group Asset_group,
         rna.library_tube_id RNA_library_tube_id,
+        exp.description Experiment_description,
         exp.id Experiment_id
  FROM experiment exp INNER JOIN study std
         ON exp.study_id = std.id INNER JOIN genome_reference grf
@@ -441,6 +453,7 @@ CREATE OR REPLACE VIEW ExpDisplayView AS
         count(rdp.id) Sequenced_samples,
         seqp.excel_report_created_date Excel_file_creation_date,
         seqp.excel_report_file_location Excel_file,
+        exp.description Experiment_description,
         exp.id Experiment_id
  FROM experiment exp INNER JOIN study std
         ON exp.study_id = std.id INNER JOIN genome_reference grf
@@ -481,6 +494,8 @@ CREATE OR REPLACE VIEW SeqWellOrderView AS
         tag.tag_index_sequence tag_seq,
         SUBSTRING_INDEX(tag.name, '.', 1) tag_set,
         seqp.sample_volume,
+        seqp.water_volume,
+        exp.spike_volume,
         seqp.sample_amount
  FROM sequence_plate seqp INNER JOIN rna_dilution_plate rdp
         ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN experiment exp
@@ -498,7 +513,9 @@ CREATE OR REPLACE VIEW RnaDilPlateView AS
         std.name study_name,
         rdp.cut_off_amount min_rna_amount,
         rdp.rna_volume,
-        rdp.rna_amount
+        rdp.rna_amount,
+        rdp.final_sample_volume,
+        exp.spike_volume
  FROM rna_dilution_plate rdp INNER JOIN experiment exp
         ON exp.id = rdp.experiment_id INNER JOIN study std
         ON std.id = exp.study_id
@@ -654,7 +671,8 @@ CREATE PROCEDURE add_sequence_plate_data (
  IN rna_dilution_plate_id_param INT(10),
  IN index_tag_id_param INT(10),
  IN color_param VARCHAR(255),
- IN sample_volume_param INT(10),
+ IN sample_volume_param FLOAT,
+ IN water_volume_param FLOAT,
  IN sample_amount_param FLOAT
 )
 BEGIN
@@ -668,6 +686,7 @@ INSERT IGNORE INTO sequence_plate (
  index_tag_id,
  color,
  sample_volume,
+ water_volume,
  sample_amount
 )
 VALUES (
@@ -679,6 +698,7 @@ VALUES (
  index_tag_id_param,
  color_param,
  sample_volume_param,
+ water_volume_param,
  sample_amount_param
 );
 END$$
@@ -697,6 +717,7 @@ CREATE PROCEDURE add_rna_dilution_data (
  IN cut_off_amount_param FLOAT,
  IN qc_pass_param TINYINT(1),
  IN selected_for_sequencing_param TINYINT(1),
+ IN final_sample_volume_param FLOAT,
  OUT rna_dilution_plate_id int(10)
 )
 BEGIN
@@ -708,7 +729,8 @@ INSERT INTO rna_dilution_plate (
  well_name,
  cut_off_amount,
  qc_pass,
- selected_for_sequencing
+ selected_for_sequencing,
+ final_sample_volume
 )
 VALUES (
  experiment_id_param,
@@ -717,7 +739,8 @@ VALUES (
  well_name_param,
  cut_off_amount_param,
  qc_pass_param,
- selected_for_sequencing_param
+ selected_for_sequencing_param,
+ final_sample_volume_param
 );
 SET rna_dilution_plate_id = LAST_INSERT_ID();
 END$$
@@ -778,6 +801,7 @@ CREATE PROCEDURE add_new_devstage (
  IN stage_param VARCHAR(255),
  IN begins_param VARCHAR(255),
  IN landmarks_param VARCHAR(255),
+ IN zfs_id_param VARCHAR(255),
  OUT dev_id INT(10)
 )
 BEGIN
@@ -786,13 +810,15 @@ INSERT INTO developmental_stage (
  period,
  stage,
  begins,
- developmental_landmarks
+ developmental_landmarks,
+ zfs_id
 )
 VALUES (
  period_param,
  stage_param,
  begins_param,
- landmarks_param
+ landmarks_param,
+ zfs_id_param
 );
 SET dev_id = LAST_INSERT_ID();
 END$$
@@ -847,7 +873,7 @@ CREATE PROCEDURE add_experiment_data (
  IN founder_param VARCHAR(255),
  IN spike_mix_param ENUM('0', '1', '2'), 
  IN spike_dilution_param VARCHAR(255),
- IN spike_volume_param INT(10),
+ IN spike_volume_param FLOAT,
  IN embryo_collection_method_param VARCHAR(255),
  IN embryos_collected_by_param VARCHAR(255),
  IN embryo_collection_date_param DATE,
@@ -855,6 +881,7 @@ CREATE PROCEDURE add_experiment_data (
  IN phenotype_description_param ENUM('Blind', 'Phenotypic'),
  IN asset_group_param VARCHAR(255),
  IN developmental_stage_id_param INT(10),
+ IN description_param MEDIUMTEXT, 
  OUT exp_id int(10)
 )
 BEGIN 
@@ -876,7 +903,8 @@ INSERT INTO experiment (
  number_embryos_collected,
  phenotype_description,
  asset_group,
- developmental_stage_id
+ developmental_stage_id,
+ description
 ) 
 VALUES ( 
  rna_extraction_id_param,
@@ -895,7 +923,8 @@ VALUES (
  number_of_embryos_collected_param,
  phenotype_description_param,
  asset_group_param,
- developmental_stage_id_param
+ developmental_stage_id_param,
+ description_param
 );
 SET exp_id = LAST_INSERT_ID();
 END$$

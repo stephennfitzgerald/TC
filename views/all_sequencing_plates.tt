@@ -68,12 +68,6 @@ table, th, td {
                   <input type="submit" value="tag order"></td>
                  </form>
                 </td><td> 
-                 <form action="<% display_rna_vols_order_url %>" method="get">
-                  <input type="hidden" name="plate_name" value="<% row.0 %>">
-                  <input type="hidden" name="display_plate_name" value="<% exp_names %>">
-                  <input type="submit" value="RNA volumes"></td>
-                 </form>
-                </td><td> 
                 <% IF row.1 %>
                  <a href="<% row.1 %>" download><button type="button">excel &#8595;</button></a>
                 <% END %>

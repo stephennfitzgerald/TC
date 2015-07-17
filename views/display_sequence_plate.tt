@@ -23,8 +23,8 @@ table, th, td {
     border: 1px solid black;
     border-collapse: collapse;
     table-layout: fixed;
-    width: 60px;
-    height: 60px;
+    width: 90px;
+    height: 90px;
     text-align: center;
 }
 .txt_box {
@@ -72,44 +72,57 @@ table, th, td {
              <input type="hidden" name="display_plate_name" value="<% display_plate_name %>">
              <input type="submit" value="genotype order"></td>
            </form> 
+         </h3>
 	   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	  <% END %>
-          <% IF display_rna_vols_order_url %>
-            <form action="<% display_rna_vols_order_url %>" method="get" style="display: inline;">
-             <input type="hidden" name="plate_name" value="<% plate_name %>">
-             <input type="hidden" name="display_plate_name" value="<% display_plate_name %>">
-             <input type="submit" value="RNA volumes"></td>
-           </form> 
-	   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	  <% END %>
-
-</h3>
            <table>
             <% FOREACH well IN sequence_plate %>
              <% IF well == '##' %>
               </tr><tr>
-             <% ELSIF well.0.search('^#') %>
+             <% ELSIF well.4 %> 
+               <td bgcolor="<% well.0 %>">
+                <% well.1 %><br>
+                <b><% well.2 %>
+                &nbsp;&nbsp;
+                <% well.3 %></b><br>
+                <% well.4 %>
+               </td>
+              <% ELSIF well.2 %>
+               <td bgcolor="<% well.0 %>">
+                <% well.1 %><br><% well.2 %>
+               </td>
+              <% ELSIF well.1 %>
+               <td bgcolor="<% well.0 %>">
+               <% well.1 %>
+               </td>
+              <% ELSE %>
               <td bgcolor="<% well.0 %>">
-              <% well.1 %>
-              </td>
-             <% ELSE %>
-              <td bgcolor="<% well.0 %>">
-              </td>
              <% END %>
+             </td>
             <% END %>
            </table>
            <p>
             <% FOREACH col IN legend.keys.sort %>
-             <table style="display: inline;border: 1px;"><tr><td style="width: 5px;height: 5px;" bgcolor="<% col %>"></td></tr></table>
+             <table style="display: inline;border: 1px;">
+              <tr><td style="width: 5px;height: 5px;" bgcolor="<% col %>">
+              </td></tr></table>
              <% legend.$col.exp_name %> (<% legend.$col.std_name %>)
 	    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <% END %>
           <p>
            <% IF geno_legend %>
             <% FOREACH geno IN geno_legend.keys.sort %>
-             <table style="display: inline;border: 1px solid white;"><tr><td><% geno %> <% geno_legend.$geno %></td></tr></table>
+             <table style="display: inline;border: 1px solid white;">
+              <tr><td><% geno %><br><% geno_legend.$geno %></br></td></tr></table>
             <% END %>
-           <% END %>
+           <% ELSIF well_legend %>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <table style="display: inline;border: 1px solid white;">
+             <tr><td><% well_legend.0 %><br>
+              <b><% well_legend.1 %>
+              &nbsp;<% well_legend.2 %></b><br>
+              <% well_legend.3 %></td></tr></table>
+          <% END %>
         </div>
       </div>
 </div>

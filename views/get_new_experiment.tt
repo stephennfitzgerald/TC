@@ -85,6 +85,11 @@ th {
    border: 2px solid #FF3300;
    width: 154px;
 }
+.txtarea {
+  border: 2px
+  width: 150px;
+  height: 100px;
+}
 
 </style>
 </head>
@@ -136,10 +141,10 @@ th {
                 </select></td>
                 <td><% spike_ids.$last_spike_mix %></td>
               
-              <% CASE 'Sample_visability' %>
+              <% CASE 'Sample_visibility' %>
                <td><% table_res.0 %></td><td>
                 <select class="dropdown"  name="<% table_res.0 %>">
-                 <% FOREACH vis in visibility.keys.sort %>  
+                 <% FOREACH vis in visibility.keys.nsort %>  
                   <option value="<% vis %>"><% visibility.$vis %></option>
                  <% END %>
                 </select></td>
@@ -170,8 +175,12 @@ th {
                <td><% last_allele_name %></td>
 
               <% CASE 'Phenotype_description' %>
-               <td><% table_res.0 %>&nbsp;&nbsp;("Blind" or "Phenotypic")</td><td>
-                <input type="text" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" required></td>
+               <td>Phenotypic or Blind</td><td>
+                <select class="dropdown"  name="<% table_res.0 %>">
+                 <% FOREACH pheno_des IN phenotype_description.keys.nsort %>
+                  <option value="<% pheno_des %>"><% phenotype_description.$pheno_des %></option>
+                 <% END %>
+                </select></td>
                <td><% last_pheno_desc %></td>
 
               <% CASE 'Spike_dilution' %>
@@ -248,6 +257,11 @@ th {
                <td><% table_res.0 %></td><td>
                 <input type="text" name="<% table_res.0 %>"></td>
                <td><% last_library_tube_id %></td>
+
+              <% CASE 'Experiment_description' %>
+               <td><% table_res.0 %></td><td>
+                <input type="text" style="padding: 8px 0px 8px 0px; font-size: 11px;" name="<% table_res.0 %>"></td>
+               <td><% last_exp_desc %></td>
 
              <% END %>
   
