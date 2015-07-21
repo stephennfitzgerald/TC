@@ -578,8 +578,10 @@ post '/get_sequencing_report' => sub {
                       . scalar(@sanger_samples) . ')';
                 }
                 my $row_index = 0;
-                foreach my $index_tag_id ( sort { $a <=> $b }
-                    keys %{$sequence_plate} )
+                foreach my $index_tag_id (
+                    sort { $a <=> $b }
+                    keys %{$sequence_plate}
+                  )
                 {
                     my ( $sanger_tube_id, $sanger_sample_id ) =
                       map { $_->[0], $_->[1] } shift @sanger_samples;
@@ -637,9 +639,14 @@ post '/get_sequencing_report' => sub {
                                 my $free_text =
                                   $sequence_plate->{"$index_tag_id"}
                                   ->{'experiment_description'};
-                                $free_text = trim($free_text);
-                                $free_text =~ s/\s+\.$//xms;
-                                $free_text .= q{.};
+                                if ($free_text) {
+                                    $free_text = trim($free_text);
+                                    $free_text =~ s/\s+\.$//xms;
+                                    $free_text .= q{. };
+                                }
+                                else {
+                                    $free_text = q{ };
+                                }
                                 $description .=
                                   "clutch 1 with "
                                   . SPIKE_IDS
@@ -647,7 +654,7 @@ post '/get_sequencing_report' => sub {
                                       ->{'desc_spike_mix'} }
                                   . ". A 8 base indexing sequence ($index_tag_seq) is bases 13 to 20 of read 1 followed by CG and polyT. "
                                   . $free_text
-                                  . ' More information describing the phenotype can be found at the '
+                                  . 'More information describing the phenotype can be found at the '
                                   . 'Wellcome Trust Sanger Institute Zebrafish Mutation Project website '
                                   . "http://www.sanger.ac.uk/sanger/Zebrafish_Zmpsearch/$zmp_exp_name";
                                 push @{ $data[$row_index] }, $description;
