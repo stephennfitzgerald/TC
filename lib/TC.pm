@@ -426,7 +426,9 @@ get '/display_well_order' => sub {
   legend                          => $color_plate->[1],
   plate_name                      => param('plate_name'),
   well_legend                     => [ 'well_id', 'RNA', 'H2O', 'spike' ],
+  current_view                    => 'well_names',
  
+  'flip_url'                      => uri_for('/flip'),
   'display_genot_order_url'       => uri_for('/display_genot_order'),
   'display_tag_order_url'         => uri_for('/display_tag_order'),
   'display_well_order_url'        => uri_for('/display_well_order'),
@@ -472,6 +474,39 @@ get '/display_genot_order' => sub {
  };
 
 }; 
+
+get '/flip' => sub {
+ 
+ my $color_plate = color_plate( param('current_view') );
+ my (@trans,@splice);
+
+ for(my $i=0;$i<@{ $color_plate->[0] };$i++){
+  if($color_plate->[0]->[$i] ne '##'){
+   push@splice, $color_plate->[0]->[$i];
+  }
+ }
+
+ my $n=0;
+ my $cols2rows = MAX_WELL_COL + 1; # 13
+ my $rows2cols = MAX_WELL_ROW + 1; # 9
+ my $total_cells = $cols2rows * $rows2cols; # 117
+ my $end_row = $rows2cols + 1; # 10
+ for(my$i=0;$i<$cols2rows;$i++) {
+  for(my$j=MAX_WELL_COL;$j<$total_cells;$j+=$cols2rows) {
+   if(!($n%$end_row)) {
+    push@trans, '##';
+    $n++;
+   }
+   push@trans, $splice[($j-$i)];
+   $n++;
+  }
+ }
+
+ template 'flip', {
+  flip_plate           => \@trans,
+ };
+
+};
 
 
 post '/get_sequencing_report' => sub {
@@ -1224,11 +1259,13 @@ sub color_plate {
    $exp_legend{ $seq_plate->{$well_id}->{'color'} }{ 'exp_name' } = $seq_plate->{$well_id}->{'exp_name'};
    $exp_legend{ $seq_plate->{$well_id}->{'color'} }{ 'std_name' } = $seq_plate->{$well_id}->{'std_name'};
    if($attrib eq 'well_names') {
+    # to allow template toolkit display a spike_voume of 0 
+    my $spike_vol = $seq_plate->{$well_id}->{'spike_volume'} ? $seq_plate->{$well_id}->{'spike_volume'} : -1;
     $well_id = [ $seq_plate->{$well_id}->{'color'}, 
                  $seq_plate->{$well_id}->{'rna_well_name'},
                  $seq_plate->{$well_id}->{'sample_volume'},
                  $seq_plate->{$well_id}->{'water_volume'},
-                 $seq_plate->{$well_id}->{'spike_volume'}
+                 $spike_vol
                ];
    }
    elsif($attrib eq 'genotypes') {

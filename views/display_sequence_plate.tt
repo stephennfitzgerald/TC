@@ -37,7 +37,7 @@ table, th, td {
 </style>
 </head>
 
-<body background="images/zmp.jpg">
+<body">
 <div id="page">
       <div id="sidebar">
       </div>
@@ -48,6 +48,15 @@ table, th, td {
           <button onclick="goHome()">Home</button>
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           <button onclick="printWindow()">Print</button>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <% IF flip_url %>
+           <form action="<% flip_url %>" method="get" style="display: inline;">
+            <input type="hidden" name="plate_name" value="<% plate_name %>">
+            <input type="hidden" name="display_plate_name" value="<% display_plate_name %>">
+            <input type="hidden" name="current_view"  value="<% current_view %>">
+            <input type="submit" value="flip"></td>
+           </form>
+          <% END %>
           <h1>Sequencing plate</h1> <h3> (<% display_plate_name %>)
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	   <% IF display_well_order_url %>
@@ -80,12 +89,17 @@ table, th, td {
              <% IF well == '##' %>
               </tr><tr>
              <% ELSIF well.4 %> 
+              <% IF well.4 == -1 %>
+               <% spike_vol = "0" %>
+              <% ELSE %>
+               <% spike_vol = well.4 %>
+              <% END %>
                <td bgcolor="<% well.0 %>">
                 <% well.1 %><br>
                 <b><% well.2 %>
                 &nbsp;&nbsp;
                 <% well.3 %></b><br>
-                <% well.4 %>
+                <% spike_vol %>
                </td>
               <% ELSIF well.2 %>
                <td bgcolor="<% well.0 %>">

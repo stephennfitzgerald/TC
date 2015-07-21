@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+function goBack() 
+  {
+    window.history.back();
+  }
+
+function goHome()
+  {
+    window.location = '/';   
+  }
+function printWindow() {
+    window.print();
+  }
+function goBack() 
+  {
+   window.history.back();
+  }
+
+</script>
+
+<head>
+<style>
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100px;
+    height: 95px;
+    text-align: center;
+    vertical-align: middle;
+}
+.txt_box {
+   solid #33CCFF;
+} 
+.button {
+  color: #33CCFF;
+}
+.vertical{
+    writing-mode:tb-rl;
+    -webkit-transform:rotate(-90deg);
+    -moz-transform:rotate(-90deg);
+    -o-transform: rotate(-90deg);
+    -ms-transform:rotate(-90deg);
+    transform: rotate(-90deg);
+    padding: 10px;
+    font-size: 25px;
+    white-space:nowrap;
+    display:block;
+    width:60px;
+    height:60px;
+}
+
+</style>
+</head>
+
+<body>
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+          <p></p>
+          <button onclick="goHome()">Home</button>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <button onclick="goBack()">Back</button>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <button onclick="printWindow()">Print</button>
+          <table>
+          <% FOREACH well IN flip_plate  %>
+           <% IF well == '##' %>
+            </tr><tr>
+           <% ELSIF well.4 %>
+            <% IF well.4 == -1 %>
+             <% spike_vol = "0" %>
+            <% ELSE %>
+             <% spike_vol = well.4 %>
+            <% END %>
+            <td bgcolor="<% well.0 %>"><font class="vertical">
+            <% well.1 %><br>
+            <b><% well.2 %>&nbsp;&nbsp;<% well.3 %></b><br>
+            <% spike_vol %></font>
+           <% ELSIF well.2 %>
+            <td bgcolor="<% well.0 %>"><font class="vertical">
+            <% well.1 %><br><% well.2 %></font>
+            </td>
+           <% ELSIF well.1 %>
+            <td bgcolor="<% well.0 %>"><font class="vertical">
+            <% well.1 %></font>
+          <% ELSE %>
+           <td bgcolor="<% well.0 %>"><font class="vertical">
+           </td>
+          <% END %>
+         <% END %>
+        </div>
+      </div>
+</div>
+</body>
+</html>
