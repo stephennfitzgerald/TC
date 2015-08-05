@@ -177,8 +177,8 @@ my @EXCEL_FIELDS =
 
 our $VERSION = '0.1';
 
-#my $db_name = "zfish_sf5_tc3_test";
-my $db_name          = "zfish_sf5_tc4_test";
+my $db_name = "zfish_sf5_tc4_test";
+#my $db_name          = "zfish_tilling_tc";
 my $exel_file_dir    = "./public/zmp_exel_files";       # need to change
 my $rna_dilution_dir = "./public/RNA_dilution_files";
 my $image_dir        = "./public/images";
@@ -1444,7 +1444,8 @@ sub color_plate {
 }
 
 sub get_schema {
-    return DBI->connect( "DBI:mysql:$db_name;host=utlt-db;port=3307",
+    my($host, $port)=($ENV{'TC_HOST'}, $ENV{'TC_PORT'});
+    return DBI->connect( "DBI:mysql:$db_name;host=$host;port=$port",
         $ENV{'TC_USER'}, $ENV{'TC_PASS'} )
       or die "Cannot connect to database\n";
 }
