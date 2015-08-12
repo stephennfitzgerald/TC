@@ -1,0 +1,58 @@
+-- MySQL dump 10.13  Distrib 5.5.44, for debian-linux-gnu (x86_64)
+--
+-- Host: utlt-db    Database: zfish_sf5_tc1_test
+-- ------------------------------------------------------
+-- Server version	5.5.31-log
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `developmental_stage`
+--
+
+DROP TABLE IF EXISTS `developmental_stage`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `developmental_stage` (
+  `id` int(10) NOT NULL AUTO_INCREMENT,
+  `period` varchar(255) DEFAULT NULL,
+  `stage` varchar(255) DEFAULT NULL,
+  `begins` varchar(255) DEFAULT NULL,
+  `developmental_landmarks` varchar(255) DEFAULT NULL,
+  `zfs_id` varchar(255) NOT NULL,
+  `namespace` varchar(255) NOT NULL DEFAULT 'zebrafish_stages',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `zfs_id` (`zfs_id`),
+  UNIQUE KEY `stage` (`stage`)
+) ENGINE=InnoDB AUTO_INCREMENT=147 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `developmental_stage`
+--
+
+LOCK TABLES `developmental_stage` WRITE;
+/*!40000 ALTER TABLE `developmental_stage` DISABLE KEYS */;
+INSERT INTO `developmental_stage` VALUES (1,'Unknown',NULL,NULL,NULL,'ZFS:0000000','zebrafish_stages'),(2,'Zygote (0 - 0.75 h)','1-cell','0.00_h','Cytoplasm streams toward animal pole to form blastodisc','ZFS:0000001','zebrafish_stages'),(3,'Cleavage (0.75 - 2.25 h)','2-cell','0.75_h','Partial cleavage','ZFS:0000002','zebrafish_stages'),(4,'Cleavage (0.75 - 2.25 h)','4-cell','1.00_h','2 X 2 array of blastomeres','ZFS:0000003','zebrafish_stages'),(5,'Cleavage (0.75 - 2.25 h)','8-cell','1.25_h','2 X 4 array of blastomeres','ZFS:0000004','zebrafish_stages'),(6,'Cleavage (0.75 - 2.25 h)','16-cell','1.50_h','4 X 4 array of blastomeres','ZFS:0000005','zebrafish_stages'),(7,'Cleavage (0.75 - 2.25 h)','32-cell','1.75_h','4 X 8 array of blastomeres','ZFS:0000006','zebrafish_stages'),(8,'Cleavage (0.75 - 2.25 h)','64-cell','2.00_h','3 regular tiers of blastomeres','ZFS:0000007','zebrafish_stages'),(9,'Blastula (2.25 - 5.25 h)','128-cell','2.25_h','5 blastomere tiers; cleavage planes irregular','ZFS:0000008','zebrafish_stages'),(10,'Blastula (2.25 - 5.25 h)','256-cell','2.50_h','7 blastomere tiers','ZFS:0000009','zebrafish_stages'),(11,'Blastula (2.25 - 5.25 h)','512-cell','2.75_h','9 blastomere tiers; YSL forms','ZFS:0000010','zebrafish_stages'),(12,'Blastula (2.25 - 5.25 h)','1k-cell','3.00_h','11 blastomere tiers; single row of YSL nuclei; asynchronous cell cycle','ZFS:0000011','zebrafish_stages'),(13,'Blastula (2.25 - 5.25 h)','High','3.33_h','> 11 blastomere tiers; blastodisc flattening begins; YSL nuclei in two rows','ZFS:0000012','zebrafish_stages'),(14,'Blastula (2.25 - 5.25 h)','Oblong','3.66_h','Blastodisc flattening; multiple rows of YSL nuclei','ZFS:0000013','zebrafish_stages'),(15,'Blastula (2.25 - 5.25 h)','Sphere','4.00_h','Spherical shape; flat border between blastodisc and yolk','ZFS:0000014','zebrafish_stages'),(16,'Blastula (2.25 - 5.25 h)','Dome','4.33_h','Yolk cell bulging toward animal pole as epiboly begins','ZFS:0000015','zebrafish_stages'),(17,'Blastula (2.25 - 5.25 h)','30%-epiboly','4.66_h','Blastoderm an inverted cup of uniform thickness','ZFS:0000016','zebrafish_stages'),(18,'Gastrula (5.25 - 10.33 h)','50%-epiboly','5.25_h','Blastoderm remains of uniform thickness','ZFS:0000017','zebrafish_stages'),(19,'Gastrula (5.25 - 10.33 h)','Germ-ring','5.66_h','Germ ring visible from animal pole; 50%-epiboly','ZFS:0000018','zebrafish_stages'),(20,'Gastrula (5.25 - 10.33 h)','Shield','6.00_h','Embryonic shield visible from animal pole; 50%-epiboly','ZFS:0000019','zebrafish_stages'),(21,'Gastrula (5.25 - 10.33 h)','75%-epiboly','8.00_h','Dorsal side distinctly thicker; epiblast, hypoblast, evacuation zone visible','ZFS:0000020','zebrafish_stages'),(22,'Gastrula (5.25 - 10.33 h)','90%-epiboly','9.00_h','Axis and neural plate; brain and notochord rudiments','ZFS:0000021','zebrafish_stages'),(23,'Gastrula (5.25 - 10.33 h)','Bud','10.00_h','Tail bud prominent; early polster; 100%-epiboly','ZFS:0000022','zebrafish_stages'),(24,'Segmentation (10.33 - 24 h)','1-4 somites','10.33_h','First somite furrow','ZFS:0000023','zebrafish_stages'),(25,'Segmentation (10.33 - 24 h)','5-9 somites','11.66_h','Polster prominent; optic vesicle, Kupffer\'s vesicle, neural keel','ZFS:0000024','zebrafish_stages'),(26,'Segmentation (10.33 - 24 h)','10-13 somites','14_h','Pronephros forms','ZFS:0000025','zebrafish_stages'),(27,'Segmentation (10.33 - 24 h)','14-19 somites','16_h','EL (embryo length) = 0.9 mm; otic placode, brain neuromeres','ZFS:0000026','zebrafish_stages'),(28,'Segmentation (10.33 - 24 h)','20-25 somites','19_h','EL = 1.4 mm; lens, otic vesicle, hindbrain neuromeres','ZFS:0000027','zebrafish_stages'),(29,'Segmentation (10.33 - 24 h)','26+ somites','22_h','EL = 1.6 mm; blood islands, otoliths, midbrain-hindbrain boundary','ZFS:0000028','zebrafish_stages'),(30,'Pharyngula (24 - 48 h)','Prim-5','24_h','EL = 1.9 mm; early pigmentation, heartbeat','ZFS:0000029','zebrafish_stages'),(31,'Pharyngula (24 - 48 h)','Prim-15','30_h','EL = 2.5 mm; early touch reflex, retina pigmented','ZFS:0000030','zebrafish_stages'),(32,'Pharyngula (24 - 48 h)','Prim-25','36_h','EL = 2.7 mm; early motility, tail pigmentation','ZFS:0000031','zebrafish_stages'),(33,'Pharyngula (24 - 48 h)','High-pec','42_h','EL = 2.9 mm; rudiments of pectoral fins','ZFS:0000032','zebrafish_stages'),(34,'Hatching (48 - 72 h)','Long-pec','48_h','EL = 3.1 mm; elongated pectoral fin buds','ZFS:0000033','zebrafish_stages'),(35,'Hatchin (48 - 72 h)','Pec-fin','60_h','EL = 3.3 mm; pectoral fin blades','ZFS:0000034','zebrafish_stages'),(36,'Larval','Protruding-mouth','72_h','3.5 mm total body length','ZFS:0000035','zebrafish_stages'),(37,'Larval','Day 4','96_h','3.7 mm total body length','ZFS:0000036','zebrafish_stages'),(38,'Larval','Day 5','120_h','3.9 mm total body length; 6 teeth','ZFS:0000037','zebrafish_stages'),(39,'Larval','Day 6','144_h','4.2 mm total body length','ZFS:0000038','zebrafish_stages'),(40,'Larval','Days 7-13','168_h','4.5 mm total body length; 8 teeth','ZFS:0000039','zebrafish_stages'),(41,'Larval','Days 14-20','14_d','6.2 mm total body length; 10 teeth','ZFS:0000040','zebrafish_stages'),(42,'Larval','Days 21-29','21_d','7.8 mm total body length','ZFS:0000041','zebrafish_stages'),(43,'Juvenile','Days 30-44','30_d','10 mm total body length; adult fins/pigment','ZFS:0000042','zebrafish_stages'),(44,'Juvenile','Days 45-89','45_d','14 mm total body length; 12 teeth','ZFS:0000043','zebrafish_stages'),(45,'Adult',NULL,NULL,NULL,'ZFS:0000044','zebrafish_stages'),(46,'Stage',NULL,NULL,NULL,'ZFS:0100000','zebrafish_stages');
+/*!40000 ALTER TABLE `developmental_stage` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2015-08-11 16:28:31
