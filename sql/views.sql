@@ -79,7 +79,7 @@ CREATE OR REPLACE VIEW seqSampleView AS
 
 CREATE OR REPLACE VIEW DevView AS
  SELECT id, 
-        GROUP_CONCAT(begins, '  ', stage, " : ", zfs_id) time_stage
+        GROUP_CONCAT(begins, '  ', stage, '  ',zfs_id) time_stage
  FROM developmental_stage 
  GROUP BY id 
  ORDER BY id;
@@ -379,6 +379,33 @@ CREATE OR REPLACE VIEW ExpStdy AS
  FROM study std INNER JOIN experiment exp 
         ON exp.study_id = std.id
   ORDER BY std.name;
+
+CREATE OR REPLACE VIEW AlleleGeneView AS
+ SELECT id, name, GROUP_CONCAT(gene_name SEPARATOR '::') gene_name
+ FROM allele GROUP BY name 
+ ORDER BY name;
+
+CREATE OR REPLACE VIEW AlleleExperimentView AS
+ SELECT std.name study_name, 
+        exp.name exp_name, 
+        gr.name genome_ref, 
+        alle.name allele_name, 
+        alle_gene.gene_name gene_name,
+        alle.snp_id location,
+        dev.zfs_id stage_id
+  FROM study std INNER JOIN experiment exp
+  ON exp.study_id = std.id INNER JOIN genome_reference gr
+  ON exp.genome_reference_id = gr.id INNER JOIN rna_dilution_plate rdp
+  ON rdp.experiment_id = exp.id INNER JOIN genotype gt
+  ON gt.rna_dilution_plate_id = rdp.id INNER JOIN allele alle 
+  ON gt.allele_id = alle.id INNER JOIN AlleleGeneView alle_gene
+  ON alle_gene.id = alle.id INNER JOIN developmental_stage dev 
+  ON dev.id = exp.developmental_stage_id LEFT OUTER JOIN zmp_allele_phenotype_eq zape
+  ON alle.id = zape.allele_id 
+  WHERE zape.allele_id IS NULL
+  GROUP BY std.name, exp.name, alle.name
+  ORDER BY exp.id DESC;
+
 
 /** experiment ids to delete **/
 CREATE OR REPLACE VIEW expsToDelete AS

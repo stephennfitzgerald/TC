@@ -24,12 +24,13 @@ CREATE TABLE IF NOT EXISTS allele (
 
  id				INT(10) NOT NULL AUTO_INCREMENT,
  name				VARCHAR(255) NOT NULL,
- gene_name			VARCHAR(255) NOT NULL,
+ gene_name			VARCHAR(255) NULL,
+ snp_id                         VARCHAR(255) NULL,
 
- PRIMARY 			KEY(id),
- UNIQUE				KEY(name,gene_name)
-
+ PRIMARY 			KEY(id)
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
+
+
 CREATE TABLE IF NOT EXISTS study (
 
  id			int(10) NOT NULL AUTO_INCREMENT,
@@ -71,8 +72,10 @@ CREATE TABLE IF NOT EXISTS developmental_stage (
  begins				VARCHAR(255) NULL,
  developmental_landmarks	VARCHAR(255) NULL,
  zfs_id				VARCHAR(255) NOT NULL,
+ namespace                      VARCHAR(255) DEFAULT 'zebrafish_stages' NOT NULL,
 
  PRIMARY			KEY(id),
+ UNIQUE                         KEY(stage),
  UNIQUE                         KEY(zfs_id)
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 
@@ -105,7 +108,6 @@ CREATE TABLE IF NOT EXISTS genome_reference (
 CREATE TABLE IF NOT EXISTS zmp_allele_phenotype_eq (
  id                             INT(10) NOT NULL AUTO_INCREMENT,
  genome_reference_id		INT(10) NOT NULL,
- snp_id                         VARCHAR(255) NOT NULL,
  allele_id                      INT(10) NOT NULL,
  stage                          VARCHAR(255) NULL,
  entity1                        VARCHAR(255) NULL,
@@ -114,6 +116,11 @@ CREATE TABLE IF NOT EXISTS zmp_allele_phenotype_eq (
  tag                            VARCHAR(255) NULL,
 
  PRIMARY                        KEY(id),
+ FOREIGN                        KEY(tag) REFERENCES zmp_ontology_term(ontology_id),
+ FOREIGN                        KEY(quality) REFERENCES zmp_ontology_term(ontology_id),
+ FOREIGN                        KEY(entity1) REFERENCES zmp_ontology_term(ontology_id),
+ FOREIGN                        KEY(entity2) REFERENCES zmp_ontology_term(ontology_id),
+ FOREIGN                        KEY(stage) REFERENCES developmental_stage(zfs_id),
  FOREIGN                        KEY(genome_reference_id) REFERENCES genome_reference(id),
  FOREIGN                        KEY(allele_id) REFERENCES allele(id)
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB; 
