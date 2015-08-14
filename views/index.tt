@@ -20,7 +20,7 @@ function goHome()
 
 
 <head>
-<style>
+<style  type="text/css">
 
 table, th, td {
  table-layout: fixed;
@@ -44,6 +44,26 @@ table, th, td {
  padding: 25px;
  text-align: left;
 }
+.border3 {
+ position: relative;
+ top: -500px;
+ right: -500px;
+ color: #BBB0B0;
+ height: 160px;
+ width: 400px;
+ border: dashed;
+ padding: 25px;
+ text-align: left;
+}
+
+#topright {
+    position: relative;
+}
+.topright {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+}
 
 body {
     background-image: url("images/zmp_index.jpg");
@@ -61,6 +81,22 @@ body {
  <div id="sidebar">
   </div>
     <p><p>
+
+    <div id="section" style="float:right;">
+     <div class="border1">
+      <div class="txt" style="float:left;">
+       <h2>Ontology terms</h2>
+        <table style="float:left;"><tr>
+         <td width=260px>Add terms an allele</td>
+          <form action="<% get_ontology_for_allele_url %>" method=get">
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+           <input type=submit value="&#8594;">
+          </form>
+         </td>
+        </tr></table>
+       </div>
+      </div>
+     </div>
     <div id="section">
      <div class="border1">
        <div class="txt">
@@ -95,7 +131,8 @@ body {
          </div>
        </div>
      </div>
-    <p><p> 
+    </div>
+    <p></p>
     <div id="section">
      <div class="border1">
        <div class="txt">
@@ -129,7 +166,7 @@ body {
        </div>
      </div>
    </div>
-    <p><p> 
+    <p></p>
     <div id="section">
      <div class="border2">
        <div class="txt">
@@ -169,6 +206,7 @@ body {
            </tr>
           </table>
          </div>
+        </div>
        </div>
      </div>
    </div>

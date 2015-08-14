@@ -118,6 +118,14 @@ use constant HC => {
     6 => 'Library',
 };
 
+use constant ONT => { ## ontology information input by user to associate with an allele
+    snp_id   => undef,
+    entity1  => undef,
+    entity2  => undef,
+    quality  => undef,
+    tag      => undef,
+};
+
 my @EXCEL_FIELDS =
   (    ## column names in the excel sheet - most are hard-coded (numbers)
     [ 'SANGER TUBE ID',       undef ],
@@ -177,12 +185,12 @@ my @EXCEL_FIELDS =
 
 our $VERSION = '0.1';
 
-my $db_name = "zfish_sf5_tc4_test";
+my $db_name = "zfish_sf5_tc2_test";
 #my $db_name          = "zfish_tilling_tc";
 my $exel_file_dir    = "./public/zmp_exel_files";       # need to change
 my $rna_dilution_dir = "./public/RNA_dilution_files";
 my $image_dir        = "./public/images";
-my ( @alleles, %rna_plate, %allele_combos, $dbh, $seq_plate_name );
+my ( @alleles, %rna_plate, %allele_combos, $dbh, $seq_plate_name, $all_exp_allele_info );
 my $schema_location = "images/schema_tables_zmp.png";
 
 get '/' => sub {
@@ -200,6 +208,7 @@ get '/' => sub {
         'get_all_sequencing_plates_url' =>
           uri_for('/get_all_sequencing_plates'),
         'get_all_experiments_url' => uri_for('/get_all_experiments'),
+        'get_ontology_for_allele_url' => uri_for('/get_ontology_for_allele'),  
     };
 
 };
@@ -1007,7 +1016,7 @@ post '/add_experiment_data' => sub {
     my $check_alleles = $check_alleles_sth->fetchall_hashref('name');
 
     ## check that the alleles exist in the database
-    foreach my $allele_name ( split ':', param('Alleles') ) {
+    foreach my $allele_name ( split /[:, ]/, param('Alleles') ) {
         $allele_name = trim($allele_name);
         if ( !exists( $check_alleles->{"$allele_name"} ) ) {
             push @no_alleles, $allele_name;
@@ -1272,6 +1281,56 @@ post '/populate_rna_dilution_plate' => sub {
 
 };
 
+### Handlers for ontology data 
+
+get '/get_ontology_for_allele' => sub {
+ 
+ $dbh = get_schema();
+ my $ont_sth = $dbh->prepare("SELECT * FROM AlleleOntologyView");
+ $ont_sth->execute;
+ my $col_names = $ont_sth->{'NAME'};
+ $all_exp_allele_info = $ont_sth->fetchall_arrayref; 
+ unshift @{ $all_exp_allele_info }, $col_names;
+
+ template 'get_ontology_for_allele',
+  {
+    allele_info     => $all_exp_allele_info, 
+      
+    'add_ontology_eq_terms_url'    => uri_for('/add_ontology_eq_terms'),
+  };
+
+};
+
+post '/add_ontology_eq_terms' => sub {
+
+ $dbh = get_schema();
+ shift @{ $all_exp_allele_info }; ## get rid of the header
+ my @alleles;
+ foreach my $rec( @{ $all_exp_allele_info } ) {
+  foreach my $ont_term(keys %{ +ONT }){
+   my $ont_key = $ont_term . q{_} . $rec->[3];
+   if(param("$ont_key")) {
+    my $ont_val = param("$ont_key");
+    print $ont_key, " ***** ", $ont_val, "\n";
+   }
+  }
+ }
+
+ my $ont_sth = $dbh->prepare("SELECT * FROM AlleleOntologyView");
+ $ont_sth->execute;
+ my $col_names = $ont_sth->{'NAME'};
+ $all_exp_allele_info = $ont_sth->fetchall_arrayref;
+ unshift @{ $all_exp_allele_info }, $col_names;
+ 
+ template 'get_ontology_for_allele',
+  {
+    allele_info     => $all_exp_allele_info,
+   
+    'add_ontology_eq_terms_url'    => uri_for('/add_ontology_eq_terms'),
+  };
+};
+
+
 sub overwrite_file {
     my ( $excel_file, $excel_data, $seq_plate ) = @_;
     my $date_time = `date --rfc-3339=seconds | xargs echo -n`;
@@ -1442,6 +1501,7 @@ sub color_plate {
     }
     return [ $template, \%exp_legend, \%num2geno, param('plate_name') ];
 }
+
 
 sub get_schema {
     my($host, $port)=($ENV{'TC_HOST'}, $ENV{'TC_PORT'});
