@@ -180,12 +180,12 @@ my @EXCEL_FIELDS =
     [ 'Subject',                                     1 ],
     [ 'Disease',                                     1 ],
     [ 'SAMPLE ACCESSION NUMBER (optional)',          1 ],
-    [ 'DONOR ID (required for cancer samples)',      'Tag_ID' ],
+    [ 'DONOR ID (required for cancer samples)',      'DONOR_ID' ],
   );
 
 our $VERSION = '0.1';
 
-my $db_name = "zfish_sf5_tc2_test";
+my $db_name = "zfish_sf5_tc4_test";
 #my $db_name          = "zfish_tilling_tc";
 my $exel_file_dir    = "./public/zmp_exel_files";       # need to change
 my $rna_dilution_dir = "./public/RNA_dilution_files";
@@ -209,7 +209,97 @@ get '/' => sub {
           uri_for('/get_all_sequencing_plates'),
         'get_all_experiments_url' => uri_for('/get_all_experiments'),
         'get_ontology_for_allele_url' => uri_for('/get_ontology_for_allele'),  
+        'delete_experiment_url'     => uri_for('/delete_experiment'),
+        'add_sequencing_plate_data_url' => uri_for('/add_sequencing_plate_data'),
     };
+
+};
+
+post '/add_sequencing_plate_data' => sub {
+
+## adds library conc values and comments to alleles + genotypes
+  $dbh = get_schema();
+  my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
+  $exp_sth->execute;
+  my $study_exp = $exp_sth->fetchall_arrayref;
+  unshift @{ $study_exp }, [ 'NullOption' ];
+
+  my $exp_id = param('exp_to_update');
+  my $lib_con_file = param('library_conc_file');
+  my ($expAlleGeno, $template);
+  if($exp_id && $exp_id=~/\d+/ && ! $lib_con_file) {
+   my $ag_sth = $dbh->prepare("SELECT * FROM expAlleGeno");
+   $ag_sth->execute;
+   foreach my $row(@{ $ag_sth->fetchall_arrayref }) {
+    my($exp,$allele,$genot) = split'::',$row->[0];
+    if($exp == $exp_id) {
+     push@{ $expAlleGeno }, [$allele,$genot];
+    }
+   }
+   $template = 'add_sequencing_plate_data';
+  }
+  elsif($lib_con_file) {
+   if ( my $lib_conc_file = upload('library_conc_file') ) {
+    my $rec_library_amount = param('rec_library_amount');
+    my $lib_resusp_vol =param('resusp_library_vol');
+    my $copy_dir = make_file_path( "$exel_file_dir", 'library_dir' );
+    my $library_file_name = $lib_conc_file->tempname;
+    $library_file_name =~ s/.*\///xms;
+    $lib_conc_file->copy_to("$copy_dir");
+    my $xlf = "$copy_dir/$library_file_name";
+
+    ## read in the file for the library concentrations
+    my $workbook = ReadData( "$xlf", strip => 3 );
+    my %lib_plate;
+    foreach my $row ( 1 .. MAX_WELL_ROW ) {
+        foreach my $col ( "A" .. "L" ) {
+            my $index = $col . $row;
+            if ( defined( $workbook->[1]{$index} ) ) {
+                my $lib_amount = $workbook->[1]{$index};
+                my $sw_index =
+                  switch_cols_rows($index);    ## need to switch rows and cols
+                $lib_plate{$sw_index}{'lib_amt'} = $lib_amount;
+                if($lib_amount != 0) {
+                 my $lib_vol = sprintf "%.2f", $rec_library_amount / $lib_amount;
+                 $lib_plate{$sw_index}{'lib_vol'} = $lib_vol;
+                 if($lib_vol >= $lib_resusp_vol) { ## not enough library 
+                   $lib_plate{$sw_index}{'lib_qc_fail'} = 1;
+                 }
+                 else {
+                  $lib_plate{$sw_index}{'lib_qc_fail'} = 0;
+                 }
+                }
+                else { ## little or no library 
+                 $lib_plate{$sw_index}{'lib_amt'} = 0;
+                 $lib_plate{$sw_index}{'lib_vol'} = undef;
+                 $lib_plate{$sw_index}{'lib_qc_fail'} = 1;
+                }
+            }
+        }
+    }
+    my $addLibFile_sth = $dbh->prepare("CALL addLibFile(?,?)");
+    $addLibFile_sth->execute($exp_id, $xlf);
+    my $addLibAmts_sth = $dbh->prepare("CALL addLibAmts(?,?,?,?,?)");
+    foreach my $well_id(keys %lib_plate){
+     my $lib_qc = $lib_plate{$well_id}{'lib_qc_fail'};
+     $lib_qc = $lib_qc ? 0 : 1;
+     $addLibAmts_sth->execute($exp_id, $well_id, 
+                 $lib_plate{$well_id}{'lib_amt'},
+                 $lib_plate{$well_id}{'lib_vol'},
+                 $lib_qc);
+    }
+   }
+   $template = 'check_library_wells';
+  }
+
+  template "$template", {
+   
+   'study_exp' => $study_exp,
+   'exp_id'    => $exp_id,
+   'alle_geno' => $expAlleGeno,
+   
+   'add_sequencing_plate_data_url' => uri_for('/add_sequencing_plate_data'),
+  };
 
 };
 
@@ -225,6 +315,27 @@ get '/make_sequencing_form' => sub {
         'all_seq_plates' => $all_seq_plates,
 
         'get_sequencing_report_url' => uri_for('/get_sequencing_report'),
+    };
+
+};
+
+get '/delete_experiment' => sub {
+
+    $dbh = get_schema();
+    if(my $exp_id = param('exp_to_delete')) {
+      roll_back({ $exp_id => undef });
+    }
+
+    my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
+    $exp_sth->execute;
+    my $study_exp = $exp_sth->fetchall_arrayref;
+    unshift @{ $study_exp }, [ 'NullOption' ];
+
+    template 'delete_experiment', {
+ 
+    'study_exp' => $study_exp,
+    
+    'delete_experiment_url'     => uri_for('/delete_experiment'),
     };
 
 };
@@ -529,6 +640,7 @@ post '/get_sequencing_report' => sub {
             my $sample_file_name = $sanger_sample_file->tempname;
             $sample_file_name =~ s/.*\///xms;
             my $xlf = "$copy_dir/$sample_file_name";
+
             my $workbook_r = ReadData( "$xlf", strip => 3 );
             my @mismatched_fields;
             foreach my $col_hash (SANGER_COLS) {
@@ -602,10 +714,8 @@ post '/get_sequencing_report' => sub {
                             elsif ( $col->[0] eq 'SANGER SAMPLE ID' ) {
                                 push @{ $data[$row_index] }, $sanger_sample_id;
                             }
-                            elsif ( $col->[1] && $col->[1] eq 'Tag_ID' ) {
-                                push @{ $data[$row_index] },
-                                  $sequence_plate->{"$index_tag_id"}
-                                  ->{ $col->[1] };
+                            elsif ( $col->[1] && $col->[1] eq 'DONOR_ID' ) {
+                                push @{ $data[$row_index] }, $sanger_sample_id;
                                 $row_index++;
                             }
                             elsif ( $col->[0] eq 'COMMON NAME' ) {
@@ -759,6 +869,10 @@ post '/combine_plate_data' => sub {
     my $index_hash =
       make_grid()->[1];    ## for merging the experiment(s) onto a single plate
     my $tag_seqs = $tag_seqs_sth->fetchall_arrayref;
+    
+    ## $tag_offset_num is the tag_seq_id from which to start (default = 1)
+    my $tag_offset_num = param('tag_offset');
+    splice @{$tag_seqs}, 0, ($tag_offset_num - 1);
 
     ## try and get the spacing between experiments correct
     my $wells_per_exp_sth = $dbh->prepare("SELECT * FROM SelectedExpNumView");
@@ -829,7 +943,17 @@ post '/combine_plate_data' => sub {
 
                     $exp_color{$hex}{'std_name'} = $sample->[4];
                     $exp_ids{ $sample->[2] }++;    ## experiment_ids
-                    my $tag_seq = shift @{$tag_seqs};
+                 
+                    my $tag_seq;
+                    if( ! @{ $tag_seqs } ) { ## we have run out of tag seqs - delete exps from db and throw error
+        	     roll_back(\%exp_ids);
+                     die("tag off_set position ( $tag_offset_num ) is too large.\n" . 
+                     " ** All associated experiments have been deleted from the database **\n");
+                    }
+                    else {
+                     $tag_seq = shift @{$tag_seqs};
+                    }
+
                     $index_tag_set{ $tag_seq->[0] } = $tag_seq->[1];
                     $combined_plate{ $sample->[0] }{'rec_rna_vol'} =
                       $required_rna_vol;
@@ -864,20 +988,20 @@ post '/combine_plate_data' => sub {
     my $spd_sth =
       $dbh->prepare("CALL add_sequence_plate_data(?,?,?,?,?,?,?,?,?,?)");
     my $seq_array = make_grid()->[0];
+
     foreach my $rna_plate_id ( sort { $a <=> $b } keys %combined_plate ) {
         my $seq_plate_well_name =
           $combined_plate{$rna_plate_id}{'seq_plate_well_name'};
         my $rna_plate_well_name =
           $combined_plate{$rna_plate_id}{'rna_plate_well_name'};
-        my $index_tag_id  = $combined_plate{$rna_plate_id}{'index_tag_id'};
+        my $index_tag_id = $combined_plate{$rna_plate_id}{'index_tag_id'};
         my $sample_volume = $combined_plate{$rna_plate_id}{'rec_rna_vol'};
         my $water_volume  = $combined_plate{$rna_plate_id}{'water_vol'};
         my $sample_amount = $combined_plate{$rna_plate_id}{'rec_rna_amt'};
         my $sample_name = join "_", $combined_plate{$rna_plate_id}{'exp_name'},
           $rna_plate_well_name;
         my ($tag_num) = $index_tag_set{$index_tag_id} =~ m/\.([[:digit:]]+)/xms;
-        my $sample_public_name = join "_", $sample_name, $seq_plate_well_name,
-          $tag_num;
+        my $sample_public_name = join "_", $combined_plate{$rna_plate_id}{'exp_name'}, $seq_plate_well_name;
         my $hex_color = $combined_plate{$rna_plate_id}{'color'};
         $spd_sth->execute(
             $seq_plate_name,     $seq_plate_well_name, $sample_name,
@@ -954,9 +1078,8 @@ get '/get_new_experiment' => sub {
         last_image                         => $last_exp->[19],
         last_lines_crossed                 => $last_exp->[20],
         last_founder                       => $last_exp->[21],
-        last_asset_group                   => $last_exp->[22],
-        last_library_tube_id               => $last_exp->[23],
-        last_exp_desc                      => $last_exp->[24],
+        last_library_tube_id               => $last_exp->[22],
+        last_exp_desc                      => $last_exp->[23],
 
         spike_ids             => SPIKE_IDS,
         genref_names          => $genref_names,
@@ -988,7 +1111,6 @@ post '/add_experiment_data' => sub {
         param('Embryo_collection_date'),
         param('Number_of_embryos_collected'),
         param('Phenotype_description'),
-        param('Asset_group'),
         param('Developmental_stage'),
         param('Experiment_description')
     ];
@@ -1016,7 +1138,7 @@ post '/add_experiment_data' => sub {
     my $check_alleles = $check_alleles_sth->fetchall_hashref('name');
 
     ## check that the alleles exist in the database
-    foreach my $allele_name ( split /[:, ]/, param('Alleles') ) {
+    foreach my $allele_name ( split /[:,\s]+/, param('Alleles') ) {
         $allele_name = trim($allele_name);
         if ( !exists( $check_alleles->{"$allele_name"} ) ) {
             push @no_alleles, $allele_name;
@@ -1061,7 +1183,7 @@ post '/add_experiment_data' => sub {
     my ($rna_ext_id) = $dbh->selectrow_array("SELECT \@rna_ext_id");
     ## add a new experiment
     my $exp_sth = $dbh->prepare(
-"CALL add_experiment_data(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, \@exp_id)"
+"CALL add_experiment_data(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, \@exp_id)"
     );
     $exp_sth->execute( $rna_ext_id, $image, @{$vals} );
     my ($exp_id) = $dbh->selectrow_array("SELECT \@exp_id");
@@ -1502,6 +1624,14 @@ sub color_plate {
     return [ $template, \%exp_legend, \%num2geno, param('plate_name') ];
 }
 
+sub roll_back { # delete experiment(s) from the database 
+ my $exp_ids = shift;
+ my $dbh = get_schema();
+ my $del_sth = $dbh->prepare("CALL delete_exp(?)");
+ foreach my $exp_id(keys %{ $exp_ids }){
+  $del_sth->execute($exp_id);
+ } 
+}
 
 sub get_schema {
     my($host, $port)=($ENV{'TC_HOST'}, $ENV{'TC_PORT'});

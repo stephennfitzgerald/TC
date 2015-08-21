@@ -13,12 +13,22 @@ function sumUp ( chosen ) {
 }
 
 function radioCk() {
- if( ! radioSum ) {
+ var tag_offset = document.getElementsByName("tag_offset")[0].value;
+ if( tag_offset > 96 || tag_offset < 1 ) {
+  alert("tag number must be >= 1 and <= 96");
+  return false;
+ }
+ else if( (tag_offset - 1) + radioSum > 96) {
+  alert("Tag_number_to_start is too high");
+  return false;
+ }
+ else if( ! radioSum ) {
   alert("At least one experiment must be selected");
   return false;
  }
  return true;
 }
+
 
 function reSet() {
  radioSum = 0;
@@ -41,7 +51,7 @@ function goHome()
 table, th, td {
     table-layout: fixed;
     border-collapse: collapse;
-    width: 400px;
+    width: 450px;
     height: 50px;
     padding: 5px;
     text-align: left;
@@ -74,7 +84,18 @@ table, th, td {
               <% FOREACH tag_set_name IN tag_set_names %>
                <option value="<% tag_set_name.0 %>"><% tag_set_name.0 %></option>
 	      <% END %>
-             </select></td>
+             </select></td></tr>
+            <tr><td>Tag_number_to_start</td><td>
+            <input type="number" name="tag_offset" value=1 min=1 max=96 required>
+            &nbsp;(1:A)
+            &nbsp;(13:B)
+            &nbsp;(25:C)
+            &nbsp;(37:D)
+            &nbsp;(49:E)
+            &nbsp;(61:F)
+            &nbsp;(73:G)
+            &nbsp;(85:H)
+            </td></tr>
             <% FOREACH exp_id IN unseq.keys.nsort.reverse %>
              <tr>
               <td>

@@ -38,7 +38,7 @@ table, th, td {
 }
 .border2 {
  color: #B0B0B0;
- height: 160px;
+ height: 190px;
  width: 400px;
  border: dashed;
  padding: 25px;
@@ -98,7 +98,7 @@ body {
       </div>
      </div>
     <div id="section">
-     <div class="border1">
+     <div class="border2">
        <div class="txt">
         <h2>Make a sequencing plate</h2>
          <table><tr>
@@ -119,9 +119,27 @@ body {
             </td>
            </tr>
           </tr><tr><tr>
-           <td width=260px> Make a sequencing form</td>
+           <td width=260px>Add sequencing plate data</td>
+            <td>
+             <form action="<% add_sequencing_plate_data_url %>" method="post">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr>
+          </tr><tr><tr>
+           <td width=260px>Make a sequencing form</td>
            <td>
             <form action="<% make_sequencing_form_url %>" method=get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <input type=submit value="&#8594;">
+            </form>
+           </td>
+           </tr>
+          </tr><tr><tr>
+           <td width=260px><font color="red">Delete an Experiment</font></td>
+           <td>
+            <form action="<% delete_experiment_url %>" method=get">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
              <input type=submit value="&#8594;">
             </form>

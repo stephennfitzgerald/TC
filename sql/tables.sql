@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS array_express_data (
  genotype		VARCHAR(255) DEFAULT "N/A" NOT NULL,
  growth_condition	VARCHAR(255) DEFAULT "N/A" NOT NULL,
  immunoprecipitate	VARCHAR(255) DEFAULT "N/A" NOT NULL,
- organism_part          VARCHAR(255) DEFAULT "Whole Embryo" NOT NULL, 
+ organism_part          VARCHAR(255) DEFAULT 'Whole_Embryo' NOT NULL, 
  phenotype		VARCHAR(255) DEFAULT "N/A" NOT NULL,
  time_point		VARCHAR(255) DEFAULT "N/A" NOT NULL,
  treatment		VARCHAR(255) DEFAULT "N/A" NOT NULL,
@@ -161,10 +161,10 @@ CREATE TABLE IF NOT EXISTS experiment (
  embryo_collection_date			DATE DEFAULT '0000-00-00' NOT NULL, 
  number_embryos_collected		INT(10) NULL,
  sample_visibility			ENUM('Hold', 'Public') DEFAULT 'Hold' NOT NULL,	 
- asset_group                            VARCHAR(255) NULL,
  rna_extraction_id			INT(10) NULL,
  array_express_data_id			INT(10) DEFAULT 1 NOT NULL,
  description                            MEDIUMTEXT NULL,
+ library_conc_file			VARCHAR(255) NULL,
 
  PRIMARY				KEY(id),
  UNIQUE					KEY(name,study_id),
@@ -214,6 +214,10 @@ CREATE TABLE IF NOT EXISTS sequence_plate (
  rna_dilution_plate_id			INT(10) NOT NULL,
  index_tag_id                           INT(10) NOT NULL,
  color					VARCHAR(255) NULL,
+ library_amount				FLOAT NULL,
+ library_volume				FLOAT NULL,
+ library_qc				TINYINT(1) DEFAULT 1 NOT NULL,
+ selected                               TINYINT(1) DEFAULT 1 NOT NULL,
  
 
  PRIMARY 				KEY(id),
@@ -231,6 +235,7 @@ CREATE TABLE IF NOT EXISTS genotype (
  allele_id				INT(10) NOT NULL,
  rna_dilution_plate_id			INT(10) NOT NULL,
  name					ENUM('Het','Hom','Wildtype','Failed','Missing','Blank'),
+ sample_comment			        MEDIUMTEXT NULL,	
 
  PRIMARY				KEY(id),
  FOREIGN				KEY(allele_id) REFERENCES allele(id),
@@ -247,4 +252,4 @@ INSERT IGNORE INTO array_express_data
     organism_part,phenotype,time_point,treatment,donor_id) 
 VALUES (
     1,"N/A","N/A","N/A","N/A","N/A","N/A","N/A","N/A","N/A",
-    "WholeEmbryo","N/A","N/A","N/A","N/A");
+    'Whole Embryo',"N/A","N/A","N/A","N/A");

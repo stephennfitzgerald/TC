@@ -1,5 +1,13 @@
 /** views **/
 
+CREATE OR REPLACE VIEW expAlleGeno AS
+ SELECT DISTINCT(CONCAT_WS('::', exp.id, alle.name, gt.name)) exp_alle_geno 
+ FROM experiment exp INNER JOIN rna_dilution_plate rdp 
+ ON rdp.experiment_id = exp.id INNER JOIN genotype gt 
+ ON gt.rna_dilution_plate_id = rdp.id INNER JOIN sequence_plate sp 
+ ON sp.rna_dilution_plate_id = rdp.id INNER JOIN allele alle 
+ ON alle.id = gt.allele_id;
+
 CREATE OR REPLACE VIEW genotAlleleView AS
  SELECT genot.rna_dilution_plate_id rna_well_id, 
         group_concat(alle.name,":", alle.gene_name, ":", genot.name) AlleleGenotype 
@@ -99,7 +107,6 @@ CREATE OR REPLACE VIEW StdView AS
  FROM study
  ORDER BY id DESC;
 
-
 CREATE OR REPLACE VIEW ExpStdNameView AS
  SELECT std.name study_name, 
         exp.name exp_name, 
@@ -151,7 +158,6 @@ CREATE OR REPLACE VIEW SeqReportView AS
         EXTRACT(YEAR FROM rna_ext.extraction_date) "RNA_Extraction_Date",
         exp.id "Experiment_id",
         ind_tag.name "Tag_ID",
-        exp.asset_group "Asset_Group",
         seq.sample_name "Sample_Name",
         seq.sample_public_name "Public_Name",
         sp.name "Organism",
@@ -196,7 +202,6 @@ CREATE OR REPLACE VIEW SeqReportView AS
         ON dev_s.id = exp.developmental_stage_id 
  ORDER BY seq.plate_name, exp.id, ind_tag.id;
 
-
 CREATE OR REPLACE VIEW ExpView AS
  SELECT std.name Study_name, 
         exp.name Experiment_name, 
@@ -220,7 +225,6 @@ CREATE OR REPLACE VIEW ExpView AS
         exp.image Image, 
         exp.lines_crossed Lines_crossed, 
         exp.founder Founder, 
-        exp.asset_group Asset_group,
         rna.library_tube_id RNA_library_tube_id,
         exp.description Experiment_description,
         exp.id Experiment_id

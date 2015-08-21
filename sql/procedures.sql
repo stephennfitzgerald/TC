@@ -9,11 +9,19 @@ CREATE PROCEDURE delete_exp (
 )
 BEGIN
 
-DELETE exp.*, 
-       rna_ext.* 
+SET foreign_key_checks = 0;
+DELETE seqp.*,
+       gt.*,
+       rdp.*,
+       rna_ext.*,
+       exp.* 
 FROM experiment exp INNER JOIN rna_extraction rna_ext
-       ON exp.rna_extraction_id = rna_ext.id 
+       ON exp.rna_extraction_id = rna_ext.id LEFT OUTER JOIN rna_dilution_plate rdp
+       ON rdp.experiment_id = exp.id LEFT OUTER JOIN genotype gt 
+       ON gt.rna_dilution_plate_id = rdp.id LEFT OUTER JOIN sequence_plate seqp
+       ON seqp.rna_dilution_plate_id = rdp.id
 WHERE exp.id = exp_id_param;
+SET foreign_key_checks = 1;
 END$$
 DELIMITER ;
 
@@ -283,7 +291,6 @@ CREATE PROCEDURE add_experiment_data (
  IN embryo_collection_date_param DATE,
  IN number_of_embryos_collected_param INT(10),
  IN phenotype_description_param ENUM('Blind', 'Phenotypic'),
- IN asset_group_param VARCHAR(255),
  IN developmental_stage_id_param INT(10),
  IN description_param MEDIUMTEXT, 
  OUT exp_id int(10)
@@ -306,7 +313,6 @@ INSERT INTO experiment (
  embryo_collection_date,
  number_embryos_collected,
  phenotype_description,
- asset_group,
  developmental_stage_id,
  description
 ) 
@@ -326,7 +332,6 @@ VALUES (
  embryo_collection_date_param,
  number_of_embryos_collected_param,
  phenotype_description_param,
- asset_group_param,
  developmental_stage_id_param,
  description_param
 );
@@ -353,6 +358,48 @@ BEGIN
 END$$
 DELIMITER ;
 
+/** library conc. excel file location to experiment **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS addLibFile$$
+
+CREATE PROCEDURE addLibFile (
+ IN exp_id_param INT(10),
+ IN lib_file_loc_param VARCHAR(255)
+)
+BEGIN
+
+ UPDATE experiment SET 
+  library_conc_file = lib_file_loc_param
+ WHERE id = exp_id_param;
+
+END$$
+DELIMITER ;
+
+/** update sequence_plate table with library amount and volume **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS addLibAmts$$
+
+CREATE PROCEDURE addLibAmts (
+ IN exp_id_param INT(10),
+ IN well_name_param VARCHAR(255),
+ IN library_amount_param FLOAT,
+ IN library_volume_param FLOAT,
+ IN library_qc_param TINYINT(1)
+)
+BEGIN
+ 
+ UPDATE sequence_plate seqp INNER JOIN rna_dilution_plate rdp 
+ ON rdp.id = seqp.rna_dilution_plate_id INNER JOIN experiment exp 
+ ON rdp.experiment_id = exp.id 
+ SET seqp.library_amount = library_amount_param, 
+     seqp.library_volume = library_volume_param, 
+     seqp.library_qc = library_qc_param 
+ WHERE exp.id = exp_id_param 
+ AND seqp.well_name = well_name_param;
+
+END$$
+DELIMITER ;
+  
 /** updating sequence_plate cols sanger_tube_id and sanger_sample_id **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS update_sanger_tube_and_sample$$
