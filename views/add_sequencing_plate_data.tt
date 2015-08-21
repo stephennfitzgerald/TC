@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+function goBack() 
+ {
+   window.history.back();
+ }
+
+function goHome()
+ {
+   window.location = '/';   
+ }
+</script>
+
+
+
+<style>
+
+P {
+ font-size: 13px;
+ font-family:'Courier New';
+} 
+
+.view_info input[type="submit"] {
+ color: black;
+ background: #BDECB6;
+ display: inline;
+}
+
+table, th, td {
+    border-collapse: collapse;
+}
+th,td {
+    padding: 30px;
+    text-align: left;
+}
+
+</style>
+
+
+
+<body background="images/zmp.jpg">
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+         <p>
+          <button onclick="goHome()">Home</button>
+         </p><p>
+         </p><form action="http://gen1d.internal.sanger.ac.uk:5000/add_sequencing_plate_data" method="post" enctype="multipart/form-data">
+         <table><tbody><tr><td>
+         <% IF exp_id %>
+          <h2 style="display: inline;">Choose an experiment
+           </h2></td><td>
+            <select class="dropdown" name="exp_to_update" required>
+            <% FOREACH exp IN study_exp %> 
+             <% IF exp.2 == exp_id %>
+              <option value="<% exp.2 %>"><% exp.0 %> :: <% exp.1 %></option>
+             <% END %>
+            <% END %>
+            </select>
+            </td></tr>
+             <tr><td>
+              <h2 style="display: inline;">Required library amount (ng)</h2>
+              </td><td>
+              <input type="text" class="txt_box" name="rec_library_amount" value="400" required>
+             </td></tr>
+             <tr><td>
+             <h2 style="display: inline;">Library volume (ul)</h2>
+             </td><td>
+              <input type="text" class="txt_box" name="resusp_library_vol" value="55" required="">
+             </td></tr>
+             <tr><td>
+              <h2 style="display: inline;">Library concentrations file (Excel)</h2>
+              </td><td>
+              <input type="file" class="button" name="library_conc_file" required="">
+             </td></tr>
+             <tr><td>
+              <h2>Add comment to allele + genotype</h2>
+             </td></tr>
+              <% FOREACH allgn IN alle_geno %>
+               <% allgen_name = allgn.0 _ '::' _ allgn.1 %>
+               <tr><td><% allgen_name %></td><td> 
+               <input type="text" class="txt_box" name="<% allgen_name %>">
+              </td></tr>
+             <% END %>
+         <% ELSE %>     
+          <h2 style="display: inline;">Choose an experiment
+           </h2></td><td>
+            <select class="dropdown" name="exp_to_update" required>
+             <% FOREACH exp IN study_exp %>           
+              <% IF exp.0 == 'NullOption' %>
+               <option value disabled selected> -- select an experiment -- </option>
+              <% ELSE %>
+               <option value="<% exp.2 %>"><% exp.0 %> :: <% exp.1 %></option>
+              <% END %>
+             <% END %>
+         <% END %>    
+            </tbody></table>
+            <input type="submit" value="Submit">
+           </form>
+         </div>
+       </div>
+     </div>
+
+<div id="footer">
+</div>
+
+</body></html>

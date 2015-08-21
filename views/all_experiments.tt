@@ -226,6 +226,7 @@ th,td {
                 <% ELSE %>
                  <td></td>
                 <% END %>
+              
               <% END %> <!-- end of switch -->
 
              <% ELSE %> <!-- field headers -->

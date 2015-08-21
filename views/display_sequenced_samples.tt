@@ -65,9 +65,14 @@ th,td {
              <%END %>
              <% FOREACH field IN smp %>
               <% IF row_index > 1 %> <!-- not the field names -->
-               <% IF field_index != smp.size %> <!-- experiment_id -->
-                <td><% field %> 
-                </td>
+               <% IF field_index == 1 && field == 0 %> <!-- library samples which have been de-selected for sequencing -->
+                <td bgcolor="red"><% field %></td>
+               <% ELSIF field_index == 1 %>
+                <td><% field %></td>
+               <% END %>
+               <% IF field_index != smp.size && field_index != 1 %> <!-- experiment_id -->
+                 <td><% field %> 
+                 </td>
                <% END %>
               <% ELSE %> <!-- field headers -->
                <% IF field != "Experiment_id" %>

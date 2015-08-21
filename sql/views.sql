@@ -1,5 +1,34 @@
 /** views **/
 
+CREATE OR REPLACE VIEW libSampleIdView AS 
+ SELECT exp.id exp_id, seqp.id seq_id
+ FROM experiment exp INNER JOIN rna_dilution_plate rdp
+ ON rdp.experiment_id = exp.id INNER JOIN sequence_plate seqp
+ ON seqp.rna_dilution_plate_id = rdp.id; 
+
+CREATE OR REPLACE VIEW libSamplesView AS
+ SELECT exp.id exp_id, 
+        seqp.id seq_id,
+        seqp.well_name well_id, 
+        seqp.sample_name sample_name, 
+        tag.tag_index_sequence index_sequence, 
+        seqp.library_volume 'library_volume', 
+        seqp.library_amount 'library_conc (ug/ul)', 
+        seqp.library_qc, 
+        std.name study_name, 
+        exp.name exp_name, 
+        genot.AlleleGenotype genotypes,
+        seqp.selected
+ FROM experiment exp INNER JOIN study std 
+ ON exp.study_id = std.id INNER JOIN rna_dilution_plate rdp 
+ ON rdp.experiment_id = exp.id INNER JOIN genotAlleleView genot 
+ ON genot.rna_well_id = rdp.id INNER JOIN sequence_plate seqp 
+ ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN index_tag tag 
+ ON tag.id = seqp.index_tag_id
+ ORDER BY SUBSTR(well_id,1,1),
+          LENGTH(SUBSTR(well_id,2)),
+          SUBSTR(well_id,2); 
+
 CREATE OR REPLACE VIEW expAlleGeno AS
  SELECT DISTINCT(CONCAT_WS('::', exp.id, alle.name, gt.name)) exp_alle_geno 
  FROM experiment exp INNER JOIN rna_dilution_plate rdp 
@@ -62,7 +91,8 @@ CREATE OR REPLACE VIEW tagSeqView AS
  ORDER BY id;
 
 CREATE OR REPLACE VIEW seqSampleView AS
- SELECT seq.sample_name Sample_name,
+ SELECT seq.selected Selected_for_sequencing,
+        seq.sample_name Sample_name,
         seq.sample_public_name Sample_public_name,
         seq.sanger_tube_id Sanger_tube_id,
         seq.sanger_sample_id Sanger_sample_id,
@@ -152,8 +182,8 @@ CREATE OR REPLACE VIEW SeqReportView AS
         seq.plate_name "seq_plate_name",
         exp.name "zmp_name",
         rna_ext.library_tube_id "Library_Tube_ID",
-        seq.sample_volume "Sample_Volume",
-        ROUND(seq.sample_amount / seq.sample_volume) "Sample_Conc",
+        seq.library_volume "Sample_Volume",
+        seq.library_amount "Sample_Conc",
         EXTRACT(YEAR FROM exp.embryo_collection_date) "Embryo_Collection_Date",
         EXTRACT(YEAR FROM rna_ext.extraction_date) "RNA_Extraction_Date",
         exp.id "Experiment_id",
@@ -200,6 +230,7 @@ CREATE OR REPLACE VIEW SeqReportView AS
         ON gav.rna_well_id = rdp.id LEFT OUTER JOIN rna_extraction rna_ext
         ON exp.rna_extraction_id = rna_ext.id INNER JOIN developmental_stage dev_s
         ON dev_s.id = exp.developmental_stage_id 
+ WHERE seq.selected = 1
  ORDER BY seq.plate_name, exp.id, ind_tag.id;
 
 CREATE OR REPLACE VIEW ExpView AS

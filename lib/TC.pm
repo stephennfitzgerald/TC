@@ -226,7 +226,8 @@ post '/add_sequencing_plate_data' => sub {
 
   my $exp_id = param('exp_to_update');
   my $lib_con_file = param('library_conc_file');
-  my ($expAlleGeno, $template);
+  my $template = 'add_sequencing_plate_data';
+  my ($expAlleGeno,$lib_samples);
   if($exp_id && $exp_id=~/\d+/ && ! $lib_con_file) {
    my $ag_sth = $dbh->prepare("SELECT * FROM expAlleGeno");
    $ag_sth->execute;
@@ -236,7 +237,6 @@ post '/add_sequencing_plate_data' => sub {
      push@{ $expAlleGeno }, [$allele,$genot];
     }
    }
-   $template = 'add_sequencing_plate_data';
   }
   elsif($lib_con_file) {
    if ( my $lib_conc_file = upload('library_conc_file') ) {
@@ -289,7 +289,18 @@ post '/add_sequencing_plate_data' => sub {
                  $lib_qc);
     }
    }
-   $template = 'check_library_wells';
+   my $lib_samples_sth = $dbh->prepare("SELECT * FROM libSamplesView WHERE exp_id = ?");
+   $lib_samples_sth->execute($exp_id);
+   my $col_names  = $lib_samples_sth->{'NAME'};   
+   $lib_samples = $lib_samples_sth->fetchall_arrayref();
+   unshift @{$lib_samples}, $col_names;
+   
+   if(@{ $lib_samples }){ 
+    $template = 'check_library_wells';
+   } 
+   else {
+    $template = 'add_sequencing_plate_data';
+   }
   }
 
   template "$template", {
@@ -297,11 +308,42 @@ post '/add_sequencing_plate_data' => sub {
    'study_exp' => $study_exp,
    'exp_id'    => $exp_id,
    'alle_geno' => $expAlleGeno,
+   'lib_samples' => $lib_samples,
    
    'add_sequencing_plate_data_url' => uri_for('/add_sequencing_plate_data'),
+   'update_sequence_plate_url'     => uri_for('/update_sequence_plate'),
   };
 
 };
+
+get '/update_sequence_plate' => sub {
+
+  my $dbh = get_schema();
+  my $exp_id = param('exp_id');
+  my $seqp_view_sth = $dbh->prepare("SELECT * FROM libSampleIdView WHERE exp_id = ?"); 
+  $seqp_view_sth->execute($exp_id);
+  my $upd_seqp_sth = $dbh->prepare("CALL updateSeqPlateSel(?)");
+  
+  foreach my $seqp(@{ $seqp_view_sth->fetchall_arrayref }) {
+   my $name = 'SEQID:' . $seqp->[1];
+   if(param($name)) {
+    $upd_seqp_sth->execute( $seqp->[1] );
+   }
+  }
+  my $lib_samples_sth = $dbh->prepare("SELECT * FROM libSamplesView WHERE exp_id = ?");
+  $lib_samples_sth->execute($exp_id);
+  my $col_names  = $lib_samples_sth->{'NAME'};   
+  my $lib_samples = $lib_samples_sth->fetchall_arrayref();
+  unshift @{$lib_samples}, $col_names;
+ 
+  template 'check_library_wells', {
+
+   'exp_id'    => $exp_id,
+   'lib_samples' => $lib_samples,
+  };
+
+};
+
 
 get '/make_sequencing_form' => sub {
 

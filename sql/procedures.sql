@@ -436,3 +436,19 @@ WHERE id = experiment_id_param;
 END$$
 DELIMITER ;
 
+/** updating sequence_plate for wells which have been de-selected **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS updateSeqPlateSel$$
+
+CREATE PROCEDURE updateSeqPlateSel (
+ IN seq_id_param INT(10)
+)
+BEGIN
+
+UPDATE sequence_plate SET
+ selected = 0
+WHERE id = seq_id_param;
+
+END$$
+DELIMITER ;
+
