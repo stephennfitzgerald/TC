@@ -54,19 +54,22 @@ DROP PROCEDURE IF EXISTS add_genotype_data$$
 CREATE PROCEDURE add_genotype_data (
  IN allele_id_param INT(10),
  IN rna_dilution_plate_id_param INT(10),
- IN name_param ENUM('Het','Hom','Wildtype','Failed','Missing','Blank')
+ IN name_param ENUM('Het','Hom','Wildtype','Failed','Missing','Blank'),
+ IN sample_comment_param MEDIUMTEXT
 )
 BEGIN
 
 INSERT IGNORE INTO genotype (
  allele_id,
  rna_dilution_plate_id,
- name
+ name,
+ sample_comment
 )
 VALUES (
  allele_id_param,
  rna_dilution_plate_id_param,
- name_param
+ name_param,
+ sample_comment_param
 );
 END$$
 DELIMITER ;
@@ -399,6 +402,30 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+/** update genotype table with comments **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS addGenotComments$$
+ 
+CREATE PROCEDURE addGenotComments (
+ IN exp_id_param INT(10),
+ IN allele_name_param VARCHAR(255),
+ IN geno_name_param VARCHAR(255),
+ IN samp_comment_param MEDIUMTEXT  
+)
+BEGIN
+
+UPDATE genotype gt INNER JOIN rna_dilution_plate rdp
+ ON gt.rna_dilution_plate_id = rdp.id INNER JOIN experiment exp
+ ON exp.id = rdp.experiment_id INNER JOIN allele alle
+ ON alle.id = gt.allele_id
+SET gt.sample_comment = samp_comment_param
+WHERE alle.name = allele_name_param 
+AND gt.name = geno_name_param
+AND exp.id = exp_id_param;
+
+END$$
+DELIMITER ;
   
 /** updating sequence_plate cols sanger_tube_id and sanger_sample_id **/
 DELIMITER $$
@@ -448,6 +475,25 @@ BEGIN
 UPDATE sequence_plate SET
  selected = 0
 WHERE id = seq_id_param;
+
+END$$
+DELIMITER ;
+
+/** reset sequence_plate so that all wells are selected **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS resetSeqPlateSel$$
+
+CREATE PROCEDURE resetSeqPlateSel (
+ IN exp_id_param INT(10)
+)
+BEGIN
+
+UPDATE sequence_plate seqp INNER JOIN rna_dilution_plate rdp
+ ON seqp.rna_dilution_plate_id = rdp.id
+ SET seqp.selected = 1,
+     seqp.excel_report_created_date = NULL,
+     seqp.excel_report_file_location = NULL 
+ WHERE rdp.experiment_id = exp_id_param;
 
 END$$
 DELIMITER ;

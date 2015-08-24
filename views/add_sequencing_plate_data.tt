@@ -83,8 +83,9 @@ th,td {
               <h2>Add comment to allele + genotype</h2>
              </td></tr>
               <% FOREACH allgn IN alle_geno %>
-               <% allgen_name = allgn.0 _ '::' _ allgn.1 %>
+               <% allgen_name = allgn.1 _ '::' _ allgn.2 %>
                <tr><td><% allgen_name %></td><td> 
+               <% allgen_name = allgn.0 _ '::' _ allgen_name %>
                <input type="text" class="txt_box" name="<% allgen_name %>">
               </td></tr>
              <% END %>

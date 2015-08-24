@@ -190,7 +190,7 @@ my $db_name = "zfish_sf5_tc4_test";
 my $exel_file_dir    = "./public/zmp_exel_files";       # need to change
 my $rna_dilution_dir = "./public/RNA_dilution_files";
 my $image_dir        = "./public/images";
-my ( @alleles, %rna_plate, %allele_combos, $dbh, $seq_plate_name, $all_exp_allele_info );
+my ( @alleles, %rna_plate, %allele_combos, $dbh, $seq_plate_name, $all_exp_allele_info, $expAlleGeno );
 my $schema_location = "images/schema_tables_zmp.png";
 
 get '/' => sub {
@@ -227,14 +227,15 @@ post '/add_sequencing_plate_data' => sub {
   my $exp_id = param('exp_to_update');
   my $lib_con_file = param('library_conc_file');
   my $template = 'add_sequencing_plate_data';
-  my ($expAlleGeno,$lib_samples);
+  my $lib_samples;
   if($exp_id && $exp_id=~/\d+/ && ! $lib_con_file) {
+   $expAlleGeno = undef;
    my $ag_sth = $dbh->prepare("SELECT * FROM expAlleGeno");
    $ag_sth->execute;
    foreach my $row(@{ $ag_sth->fetchall_arrayref }) {
-    my($exp,$allele,$genot) = split'::',$row->[0];
+    my($exp,$allele,$genot,$genot_id) = split'::',$row->[0];
     if($exp == $exp_id) {
-     push@{ $expAlleGeno }, [$allele,$genot];
+     push@{ $expAlleGeno }, [$exp, $allele, $genot];
     }
    }
   }
@@ -289,6 +290,13 @@ post '/add_sequencing_plate_data' => sub {
                  $lib_qc);
     }
    }
+   my $add_comment_sth = $dbh->prepare("CALL addGenotComments(?,?,?,?)");
+   foreach my $allele_geno ( @{ $expAlleGeno } ) {
+    my $ag_name = join'::',@{ $allele_geno };
+    if(my $comment = param($ag_name)) {
+     $add_comment_sth->execute(@{ $allele_geno }, $comment);
+    }
+   }
    my $lib_samples_sth = $dbh->prepare("SELECT * FROM libSamplesView WHERE exp_id = ?");
    $lib_samples_sth->execute($exp_id);
    my $col_names  = $lib_samples_sth->{'NAME'};   
@@ -298,11 +306,8 @@ post '/add_sequencing_plate_data' => sub {
    if(@{ $lib_samples }){ 
     $template = 'check_library_wells';
    } 
-   else {
-    $template = 'add_sequencing_plate_data';
-   }
   }
-
+  
   template "$template", {
    
    'study_exp' => $study_exp,
@@ -322,6 +327,10 @@ get '/update_sequence_plate' => sub {
   my $exp_id = param('exp_id');
   my $seqp_view_sth = $dbh->prepare("SELECT * FROM libSampleIdView WHERE exp_id = ?"); 
   $seqp_view_sth->execute($exp_id);
+  ## reset all wells to selected (set to 1)
+  my $reset_seqp_sth = $dbh->prepare("CALL resetSeqPlateSel(?)");
+  $reset_seqp_sth->execute($exp_id);
+  ## de-select chosen wells (set to 0)
   my $upd_seqp_sth = $dbh->prepare("CALL updateSeqPlateSel(?)");
   
   foreach my $seqp(@{ $seqp_view_sth->fetchall_arrayref }) {
@@ -773,10 +782,10 @@ post '/get_sequencing_report' => sub {
                                     $sequence_plate->{"$index_tag_id"}
                                     ->{'AlleleGenotype'} )
                                 {
-                                    my ( $allele, $gene, $genotype ) =
-                                      split ':', $alle_genotype;
+                                    my ( $allele, $gene, $genotype, $samp_comment ) =
+                                      split '::', $alle_genotype;
                                     $alle_geno{$genotype}
-                                      {"$gene allele $allele"}++;
+                                      {"$gene allele $allele"} = $samp_comment;
                                 }
                                 my $description =
 "3' end enriched mRNA from a single genotyped embryo ";
@@ -786,7 +795,13 @@ post '/get_sequencing_report' => sub {
                                     foreach my $gene_allele (
                                         sort keys %{ $alle_geno{$geno} } )
                                     {
-                                        $description .= "$gene_allele, ";
+                                        $description .= $gene_allele;
+                                        if($alle_geno{$geno}->{$gene_allele}) {
+                                          $description .=  ' (' . $alle_geno{$geno}->{$gene_allele} . '), ';
+                                        }
+                                        else {
+                                         $description .=  ', ';
+                                        }
                                     }
                                 }
                                 my $index_tag_seq =
@@ -1054,13 +1069,13 @@ post '/combine_plate_data' => sub {
     }
     foreach my $cell ( @{$seq_array} ) {
         if ( exists( $cell_color{$cell} ) ) {
-            $cell = [ $cell_color{$cell}, $cell_mapping{$cell} ];
+            $cell = [ undef, $cell_color{$cell}, $cell_mapping{$cell} ];
         }
         elsif ( $cell =~ /[[:alpha:]][[:digit:]]+/xms ) {
             $cell = [ '#D8D8D8', undef ];
         }
         elsif ( $cell ne "##" ) {
-            $cell = [ '#FFFFFF', $cell ];
+            $cell = [ undef, '#FFFFFF', $cell ];
         }
     }
     $display_plate_name =~ s/::$//msx;
@@ -1382,7 +1397,7 @@ post '/populate_rna_dilution_plate' => sub {
 
     my $rna_sth = $dbh->prepare(
         "CALL add_rna_dilution_data(?,?,?,?,?,?,?,?, \@rna_dil_id)");
-    my $geno_sth = $dbh->prepare("CALL add_genotype_data(?,?,?)");
+    my $geno_sth = $dbh->prepare("CALL add_genotype_data(?,?,?,?)");
 
     foreach my $well_id ( keys %rna_plate ) {
         my $rna_amount = $rna_plate{$well_id}{'rna'};
@@ -1415,7 +1430,7 @@ post '/populate_rna_dilution_plate' => sub {
             my ( $allele_name, $genotype ) = split ':', $allele_genotype;
             $alle_sth->execute("$allele_name");
             my $allele_id = $alle_sth->fetchrow_arrayref;
-            $geno_sth->execute( $allele_id->[0], $rna_dil_id, $genotype );
+            $geno_sth->execute( $allele_id->[0], $rna_dil_id, $genotype, '' );
         }
     }
     $new_arr = make_grid()->[0];
@@ -1609,6 +1624,7 @@ sub color_plate {
                   ? $seq_plate->{$well_id}->{'spike_volume'}
                   : -1;
                 $well_id = [
+                    $seq_plate->{$well_id}->{'selected'},
                     $seq_plate->{$well_id}->{'color'},
                     $seq_plate->{$well_id}->{'rna_well_name'},
                     $seq_plate->{$well_id}->{'sample_volume'},
@@ -1633,6 +1649,7 @@ sub color_plate {
                     $tag_seq =~ s/CG$//;
                 }
                 $well_id = [
+                    $seq_plate->{$well_id}->{'selected'},
                     $seq_plate->{$well_id}->{'color'},
                     $seq_plate->{$well_id}->{'tag_name'},
                     $tag_seq
@@ -1640,10 +1657,10 @@ sub color_plate {
             }
         }
         elsif ( $well_id =~ /[[:alpha:]][[:digit:]]+/xms ) {
-            $well_id = [ '#D8D8D8', undef ];    ## grey for blank well
+            $well_id = [ undef, '#D8D8D8', undef ];    ## grey for blank well
         }
         elsif ( $well_id ne "##" ) {
-            $well_id = [ '#FFFFFF', $well_id ];    ## white
+            $well_id = [ undef, '#FFFFFF', $well_id ];    ## white
         }
     }
     if ( keys %num2geno ) {
@@ -1656,6 +1673,7 @@ sub color_plate {
         {    ## set the wells for the genotypes
             if ( exists( $genot_legend{$well_id} ) ) {
                 $well_id = [
+                    $seq_plate->{$well_id}->{'selected'},
                     $seq_plate->{$well_id}->{'color'},
                     join ":",
                     sort map { $num2geno{$_} } keys %{ $genot_legend{$well_id} }

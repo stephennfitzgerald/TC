@@ -87,7 +87,7 @@ body {
       <div class="txt" style="float:left;">
        <h2>Ontology terms</h2>
         <table style="float:left;"><tr>
-         <td width=260px>Add terms an allele</td>
+         <td width=260px>Add terms to an allele</td>
           <form action="<% get_ontology_for_allele_url %>" method=get">
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
            <input type=submit value="&#8594;">
@@ -119,7 +119,7 @@ body {
             </td>
            </tr>
           </tr><tr><tr>
-           <td width=260px>Add sequencing plate data</td>
+           <td width=260px>Modify sequencing plate</td>
             <td>
              <form action="<% add_sequencing_plate_data_url %>" method="post">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;

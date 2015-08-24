@@ -1,5 +1,12 @@
 /** views **/
 
+CREATE OR REPLACE VIEW genotAlleleView AS
+ SELECT genot.rna_dilution_plate_id rna_well_id, 
+        group_concat(alle.name,"::", alle.gene_name, "::", genot.name, "::", genot.sample_comment) AlleleGenotype 
+ FROM allele alle INNER JOIN genotype genot
+        ON genot.allele_id = alle.id 
+ GROUP BY genot.rna_dilution_plate_id;
+
 CREATE OR REPLACE VIEW libSampleIdView AS 
  SELECT exp.id exp_id, seqp.id seq_id
  FROM experiment exp INNER JOIN rna_dilution_plate rdp
@@ -36,13 +43,6 @@ CREATE OR REPLACE VIEW expAlleGeno AS
  ON gt.rna_dilution_plate_id = rdp.id INNER JOIN sequence_plate sp 
  ON sp.rna_dilution_plate_id = rdp.id INNER JOIN allele alle 
  ON alle.id = gt.allele_id;
-
-CREATE OR REPLACE VIEW genotAlleleView AS
- SELECT genot.rna_dilution_plate_id rna_well_id, 
-        group_concat(alle.name,":", alle.gene_name, ":", genot.name) AlleleGenotype 
- FROM allele alle INNER JOIN genotype genot
-        ON genot.allele_id = alle.id 
- GROUP BY genot.rna_dilution_plate_id;
 
 CREATE OR REPLACE VIEW alleleGeneView AS 
  SELECT rdp.experiment_id exp_id, 
@@ -326,7 +326,8 @@ CREATE OR REPLACE VIEW SeqWellOrderView AS
         seqp.sample_volume,
         seqp.water_volume,
         exp.spike_volume,
-        seqp.sample_amount
+        seqp.sample_amount,
+        seqp.selected
  FROM sequence_plate seqp INNER JOIN rna_dilution_plate rdp
         ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN experiment exp
         ON rdp.experiment_id = exp.id INNER JOIN study std 
@@ -337,7 +338,7 @@ CREATE OR REPLACE VIEW SeqWellOrderView AS
 
 CREATE OR REPLACE VIEW RnaDilPlateView AS
  SELECT rdp.id rna_plate_id,
-        rdp.well_name,
+        rdp.well_name rdp_well_name,
         rdp.experiment_id,
         exp.name experiment_name,
         std.name study_name,
@@ -348,12 +349,12 @@ CREATE OR REPLACE VIEW RnaDilPlateView AS
         exp.spike_volume
  FROM rna_dilution_plate rdp INNER JOIN experiment exp
         ON exp.id = rdp.experiment_id INNER JOIN study std
-        ON std.id = exp.study_id
+        ON std.id = exp.study_id 
  WHERE rdp.selected_for_sequencing
  ORDER BY experiment_id, 
-        SUBSTR(well_name,1,1), 
-        LENGTH(SUBSTR(well_name,2)), 
-        SUBSTR(well_name,2);
+        SUBSTR(rdp_well_name,1,1), 
+        LENGTH(SUBSTR(rdp_well_name,2)), 
+        SUBSTR(rdp_well_name,2);
 
 CREATE OR REPLACE VIEW SelectedExpNumView AS
  SELECT exp.id exp_id, 

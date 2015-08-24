@@ -74,25 +74,37 @@ table, th, td {
           <% FOREACH well IN flip_plate  %>
            <% IF well == '##' %>
             </tr><tr>
-           <% ELSIF well.4 %>
-            <% IF well.4 == -1 %>
+           <% ELSIF well.5 %>
+            <% IF well.5 == -1 %>
              <% spike_vol = "0" %>
             <% ELSE %>
-             <% spike_vol = well.4 %>
+             <% spike_vol = well.5 %>
             <% END %>
-            <td bgcolor="<% well.0 %>"><font class="vertical">
-            <% well.1 %><br>
-            <b><% well.2 %>&nbsp;&nbsp;<% well.3 %></b><br>
+            <% IF well.0 == 0 %>
+             <td bgcolor="red"><font class="vertical">
+            <% ELSE %>
+             <td bgcolor="<% well.1 %>"><font class="vertical">
+            <% END %>
+            <% well.2 %><br>
+            <b><% well.3 %>&nbsp;&nbsp;<% well.4 %></b><br>
             <% spike_vol %></font>
-           <% ELSIF well.2 %>
-            <td bgcolor="<% well.0 %>"><font class="vertical">
-            <% well.1 %><br><% well.2 %></font>
+           <% ELSIF well.3 %>
+           <% IF well.0 == 0 %>
+            <td bgcolor="red"><font class="vertical">
+           <% ELSE %>
+            <td bgcolor="<% well.1 %>"><font class="vertical">
+           <% END %>
+            <% well.2 %><br><% well.3 %></font>
             </td>
-           <% ELSIF well.1 %>
-            <td bgcolor="<% well.0 %>"><font class="vertical">
-            <% well.1 %></font>
+           <% ELSIF well.2 %>
+            <% IF well.0 == 0 %>
+             <td bgcolor="red"><font class="vertical">
+            <% ELSE %>
+             <td bgcolor="<% well.1 %>"><font class="vertical">
+            <% END %>
+            <% well.2 %></font>
           <% ELSE %>
-           <td bgcolor="<% well.0 %>"><font class="vertical">
+           <td bgcolor="<% well.1 %>"><font class="vertical">
            </td>
           <% END %>
          <% END %>

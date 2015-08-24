@@ -88,29 +88,41 @@ table, th, td {
             <% FOREACH well IN sequence_plate %>
              <% IF well == '##' %>
               </tr><tr>
-             <% ELSIF well.4 %> 
-              <% IF well.4 == -1 %>
+             <% ELSIF well.5 %> 
+              <% IF well.5 == -1 %>
                <% spike_vol = "0" %>
               <% ELSE %>
-               <% spike_vol = well.4 %>
+               <% spike_vol = well.5 %>
               <% END %>
-               <td bgcolor="<% well.0 %>">
-                <% well.1 %><br>
-                <b><% well.2 %>
+               <% IF well.0 == 0 %>
+                <td bgcolor="red">
+               <% ELSE %>
+                <td bgcolor="<% well.1 %>">
+               <% END %>
+                <% well.2 %><br>
+                <b><% well.3 %>
                 &nbsp;&nbsp;
-                <% well.3 %></b><br>
+                <% well.4 %></b><br>
                 <% spike_vol %>
                </td>
+              <% ELSIF well.3 %>
+               <% IF well.0 == 0 %>
+                <td bgcolor="red">
+               <% ELSE %>
+                <td bgcolor="<% well.1 %>">
+               <% END %>
+                <% well.2 %><br><% well.3 %>
+               </td>
               <% ELSIF well.2 %>
-               <td bgcolor="<% well.0 %>">
-                <% well.1 %><br><% well.2 %>
+               <% IF well.0 == 0 %>
+                <td bgcolor="red">
+               <% ELSE %>
+                <td bgcolor="<% well.1 %>">
+               <% END %>
+               <% well.2 %>
                </td>
-              <% ELSIF well.1 %>
-               <td bgcolor="<% well.0 %>">
-               <% well.1 %>
-               </td>
-              <% ELSE %>
-              <td bgcolor="<% well.0 %>">
+             <% ELSE %>
+              <td bgcolor="<% well.1 %>">
              <% END %>
              </td>
             <% END %>
