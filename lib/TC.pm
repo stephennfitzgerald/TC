@@ -290,6 +290,9 @@ post '/add_sequencing_plate_data' => sub {
                  $lib_qc);
     }
    }
+   # reset all the allele-genotype comments to null 
+   my $reset_comment_sth = $dbh->prepare("CALL resetGenotComments(?)");
+   $reset_comment_sth->execute($exp_id);
    my $add_comment_sth = $dbh->prepare("CALL addGenotComments(?,?,?,?)");
    foreach my $allele_geno ( @{ $expAlleGeno } ) {
     my $ag_name = join'::',@{ $allele_geno };
@@ -796,7 +799,7 @@ post '/get_sequencing_report' => sub {
                                         sort keys %{ $alle_geno{$geno} } )
                                     {
                                         $description .= $gene_allele;
-                                        if($alle_geno{$geno}->{$gene_allele}) {
+                                        if($alle_geno{$geno}->{$gene_allele}=~/[[:alpha:]]+/xms) {
                                           $description .=  ' (' . $alle_geno{$geno}->{$gene_allele} . '), ';
                                         }
                                         else {

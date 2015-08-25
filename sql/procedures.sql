@@ -426,7 +426,25 @@ AND exp.id = exp_id_param;
 
 END$$
 DELIMITER ;
-  
+
+/** reset sample_comment field in genotype table **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS resetGenotComments$$
+
+CREATE PROCEDURE resetGenotComments (
+ IN exp_id_param INT(10)
+)
+BEGIN
+
+UPDATE genotype gt INNER JOIN rna_dilution_plate rdp
+ ON gt.rna_dilution_plate_id = rdp.id INNER JOIN experiment exp
+ ON exp.id = rdp.experiment_id
+SET gt.sample_comment = ""
+WHERE exp.id = exp_id_param;
+
+END$$
+DELIMITER ;
+
 /** updating sequence_plate cols sanger_tube_id and sanger_sample_id **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS update_sanger_tube_and_sample$$
