@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS zmp_allele_phenotype_eq (
  allele_id                      INT(10) NOT NULL,
  stage                          VARCHAR(255) NULL,
  entity1                        VARCHAR(255) NULL,
- entity2                        VARCHAR(255) NULL,
+ entity2                        VARCHAR(255) DEFAULT " " NULL,
  quality                        VARCHAR(255) NULL,
  tag                            VARCHAR(255) NULL,
 

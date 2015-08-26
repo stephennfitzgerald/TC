@@ -1,5 +1,38 @@
 /** views **/
 
+CREATE OR REPLACE VIEW expAlleleView AS
+ SELECT exp.id, 
+        std.name 'study name',
+        exp.name 'experiment name', 
+        group_concat(DISTINCT(alle.name) SEPARATOR ' :: ') alleles 
+ FROM experiment exp INNER JOIN rna_dilution_plate rdp 
+ ON rdp.experiment_id = exp.id INNER JOIN genotype gt 
+ ON gt.rna_dilution_plate_id = rdp.id INNER JOIN allele alle 
+ ON alle.id = gt.allele_id INNER JOIN study std 
+ ON std.id = exp.study_id 
+ GROUP BY exp.id;
+
+CREATE OR REPLACE VIEW AlleleOntologyView AS
+ SELECT exp.id exp_id,
+        exp.name exp_name,
+        gr.name genome_ref, 
+        alle.snp_id snp_id, 
+        alle.name allele_name, 
+        group_concat(DISTINCT(alle.gene_name) SEPARATOR ' :: ') gene_names, 
+        gt.name genotype,
+        zap.entity1 entity1,
+        zap.entity2 entity2,
+        zap.quality quality,
+        zap.tag tag
+ FROM experiment exp INNER JOIN genome_reference gr 
+ ON exp.genome_reference_id = gr.id INNER JOIN rna_dilution_plate rdp 
+ ON rdp.experiment_id = exp.id INNER JOIN genotype gt 
+ ON gt.rna_dilution_plate_id = rdp.id INNER JOIN allele alle 
+ ON alle.id = gt.allele_id LEFT OUTER JOIN zmp_allele_phenotype_eq zap 
+ ON alle.id = zap.allele_id
+ GROUP BY alle.name
+ ORDER BY exp.id, alle.snp_id;
+
 CREATE OR REPLACE VIEW genotAlleleView AS
  SELECT genot.rna_dilution_plate_id rna_well_id, 
         group_concat(alle.name,"::", alle.gene_name, "::", genot.name, "::", genot.sample_comment) AlleleGenotype 
