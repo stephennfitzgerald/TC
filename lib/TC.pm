@@ -1470,28 +1470,35 @@ get '/get_ontology_for_allele' => sub {
  $dbh = get_schema();
 
  my $exp_id = param('exp_id');
- my $exps;
- my $exp_sth = $dbh->prepare("SELECT *, '' FROM expAlleleView");
- my $ont_sth = $dbh->prepare("SELECT * FROM AlleleOntologyView WHERE exp_id = ?");
+ my $chosen_allele_id = param('chosen_allele_id');
+ my $term_depth = param('ont_term_depth');
+ my ($exps, $all_exp_allele_info);
+ my $exp_sth = $dbh->prepare("SELECT * FROM expAlleleView");
+ my $alle_sth = $dbh->prepare("SELECT * FROM alleleView WHERE exp_id = ?");
  if(! $exp_id ) {
   $exp_sth->execute;
   my $col_names = $exp_sth->{'NAME'};
-  splice@{ $col_names },-1,1,'max term depth';
   $exps = $exp_sth->fetchall_arrayref;
   unshift @{ $exps }, $col_names;
  }
- else {
-  $ont_sth->execute($exp_id);
-  my $col_names = $ont_sth->{'NAME'};
-  $all_exp_allele_info = $ont_sth->fetchall_arrayref; 
-  unshift @{ $all_exp_allele_info }, $col_names;
-}
+ elsif( $exp_id && ! $chosen_allele ) {
+  $alle_sth->execute($exp_id);
+  my $col_names = $alle_sth->{'NAME'};
+  $all_exp_allele_info = $alle_sth->fetchall_arrayref;
+  unshift @{ $all_exp_allele_info }, $col_names;  
+ }
+ elsif($chosen_allele_id) {
+#  $ont_sth->execute($exp_id);
+#  my $col_names = $ont_sth->{'NAME'};
+#  $all_exp_allele_info = $ont_sth->fetchall_arrayref; 
+#  unshift @{ $all_exp_allele_info }, $col_names;
+ }
 
  template 'get_ontology_for_allele',
   {
-    allele_info     => $all_exp_allele_info, 
-    exp_list        => $exps,
-      
+    'allele_info'     => $all_exp_allele_info, 
+    'exp_list'        => $exps,
+    'term_depth'      => $term_depth,
     'get_ontology_for_allele_url'  => uri_for('/get_ontology_for_allele'),
     'add_ontology_eq_terms_url'    => uri_for('/add_ontology_eq_terms'),
   };

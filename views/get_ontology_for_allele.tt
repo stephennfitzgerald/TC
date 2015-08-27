@@ -64,10 +64,8 @@ th,td {
               <form action="<% get_ontology_for_allele_url %>" method="get">
                <% field_num = 0 %>
                 <% FOREACH field in exp_std %>
-                 <% IF row_index > 1 && field_num == 0%> 
+                 <% IF row_index > 1 && field_num == 0 %> 
                   <td> <input type="radio" name="exp_id" value="<% field %>">  </td>
-                 <% ELSIF row_index > 1 && field_num == 4%> <!-- ontology term input -->
-                  <td> <input type="text" name="ont_term"> </td>
                  <% ELSIF field_num > 0 %>
                   <td><% field %></td>
                  <% ELSE %>
@@ -83,10 +81,11 @@ th,td {
                &nbsp;&nbsp;
               <input type="reset" value="Clear">
              </form>
-          <% ELSE %>
+          <% ELSIF allele_info %>
            <table> 
-            <h1>Add ontology terms to an allele</h1>
-            <% FOREACH exp IN allele_info %>
+            <h1>Choose an allele</h1>
+            <% row_index = 0 %>
+            <% FOREACH allele IN allele_info %>
               <% IF row_index % 2 %>
                <tr bgcolor='#CEECF5'>
               <% ELSE %>
@@ -94,33 +93,17 @@ th,td {
               <%END %>
               <form action="<% add_ontology_eq_terms_url %>" method="post">
                <% col_num = 0 %>
-               <% FOREACH col in exp %>
-                <% allele_name %> 
-                <td>
-                <% IF col %>
-                 <% col %>
-                 <% col_num = col_num + 1 %>
-                 <% IF col == 'snp_id' %>
-                  <p>eg.(Zv9:20:23870485)
-                 <% ELSIF col == 'entity1' %>
-                  <p>eg.(ZFA:0001094)
-                 <% ELSIF col == 'entity2' %>
-                  <p>eg.(BSPO:0000084)
-                 <% ELSIF col == 'quality' %>
-                  <p>eg.(PATO:0001997)
-                 <% ELSIF col == 'tag' %>
-                  <p>eg.(PATO:0000460)
-                 <% END %>
-                <% ELSIF col_num != 8 %>
-                 <% col_name = allele_info.0.$col_num _ "_" _ exp.3 %>
-                 <input type="text" name="<% col_name %>" required>
-                 <% col_num = col_num + 1 %>
-                <% ELSE %>
-                 <% col_name = allele_info.0.$col_num _ "_" _ exp.3 %>
-                 <input type="text" name="<% col_name %>">
-                 <% col_num = col_num + 1 %>
+               <% FOREACH col in allele %>
+                <% IF col_num > 1 %>
+                 <td>
+                  <% col %>
+                 </td>
+                <% ELSIF col_num == 1 && row_index == 0 %>
+                  <td>Select</td>
+                <% ELSIF col_num == 1 && row_index > 0 %>
+                  <td> <input type="radio" name="chosen_allele_id" value="<% allele.1 %>">  </td>
                 <% END %>
-                </td>
+                 <% col_num = col_num + 1 %>
               <% END %>
              </tr>
              <% row_index = row_index + 1 %>

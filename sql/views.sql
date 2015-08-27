@@ -12,7 +12,19 @@ CREATE OR REPLACE VIEW expAlleleView AS
  ON std.id = exp.study_id 
  GROUP BY exp.id;
 
-CREATE OR REPLACE VIEW AlleleOntologyView AS
+CREATE OR REPLACE VIEW alleleView AS
+ SELECT exp.id exp_id,
+        ale.id allele_id,
+        ale.name allele_name,
+        ale.snp_id
+ FROM allele ale INNER JOIN genotype gt
+ ON gt.allele_id = ale.id INNER JOIN rna_dilution_plate rdp
+ ON rdp.id = gt.rna_dilution_plate_id INNER JOIN experiment exp
+ ON exp.id = rdp.experiment_id
+ GROUP BY exp_id, allele_id
+ ORDER BY exp_id, allele_name;
+
+/** CREATE OR REPLACE VIEW AlleleOntologyView AS
  SELECT exp.id exp_id,
         exp.name exp_name,
         gr.name genome_ref, 
@@ -31,7 +43,7 @@ CREATE OR REPLACE VIEW AlleleOntologyView AS
  ON alle.id = gt.allele_id LEFT OUTER JOIN zmp_allele_phenotype_eq zap 
  ON alle.id = zap.allele_id
  GROUP BY alle.name
- ORDER BY exp.id, alle.snp_id;
+ ORDER BY exp.id, alle.snp_id; **/
 
 CREATE OR REPLACE VIEW genotAlleleView AS
  SELECT genot.rna_dilution_plate_id rna_well_id, 
