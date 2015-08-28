@@ -119,11 +119,10 @@ use constant HC => {
 };
 
 use constant ONT => { ## ontology information input by user to associate with an allele
-    snp_id   => undef,
-    entity1  => undef,
-    entity2  => undef,
-    quality  => undef,
-    tag      => undef,
+    1 => 'entity1',
+    2 => 'entity2',
+    3 => 'quality',
+    4 => 'tag',
 };
 
 my @EXCEL_FIELDS =
@@ -190,7 +189,7 @@ my $db_name = "zfish_sf5_tc4_test";
 my $exel_file_dir    = "./public/zmp_exel_files";       # need to change
 my $rna_dilution_dir = "./public/RNA_dilution_files";
 my $image_dir        = "./public/images";
-my ( @alleles, %rna_plate, %allele_combos, $dbh, $seq_plate_name, $all_exp_allele_info, $expAlleGeno );
+my ( @alleles, %rna_plate, %allele_combos, $dbh, $seq_plate_name, $expAlleGeno );
 my $schema_location = "images/schema_tables_zmp.png";
 
 get '/' => sub {
@@ -1471,66 +1470,75 @@ get '/get_ontology_for_allele' => sub {
 
  my $exp_id = param('exp_id');
  my $chosen_allele_id = param('chosen_allele_id');
- my $term_depth = param('ont_term_depth');
- my ($exps, $all_exp_allele_info);
+ my ($exps, $all_exp_allele_info, $term_depth);
  my $exp_sth = $dbh->prepare("SELECT * FROM expAlleleView");
- my $alle_sth = $dbh->prepare("SELECT * FROM alleleView WHERE exp_id = ?");
- if(! $exp_id ) {
+ my $alle_sth = $dbh->prepare("SELECT *,'' AS 'term_depth' FROM alleleView WHERE exp_id = ?");
+ my $ont_sth = $dbh->prepare("SELECT * FROM alleleOntologyView WHERE allele_id = ?");
+ if(! $exp_id && ! $chosen_allele_id) {
   $exp_sth->execute;
   my $col_names = $exp_sth->{'NAME'};
   $exps = $exp_sth->fetchall_arrayref;
   unshift @{ $exps }, $col_names;
  }
- elsif( $exp_id && ! $chosen_allele ) {
+ elsif( $exp_id && ! $chosen_allele_id ) {
   $alle_sth->execute($exp_id);
   my $col_names = $alle_sth->{'NAME'};
   $all_exp_allele_info = $alle_sth->fetchall_arrayref;
   unshift @{ $all_exp_allele_info }, $col_names;  
  }
  elsif($chosen_allele_id) {
-#  $ont_sth->execute($exp_id);
-#  my $col_names = $ont_sth->{'NAME'};
-#  $all_exp_allele_info = $ont_sth->fetchall_arrayref; 
-#  unshift @{ $all_exp_allele_info }, $col_names;
+  my $td_name = "TD::" . $chosen_allele_id;
+  $term_depth = param($td_name);
+  $ont_sth->execute($chosen_allele_id);
+  my $col_names = $ont_sth->{'NAME'};
+  $all_exp_allele_info = $ont_sth->fetchall_arrayref; 
+  unshift @{ $all_exp_allele_info }, $col_names;
  }
 
  template 'get_ontology_for_allele',
   {
-    'allele_info'     => $all_exp_allele_info, 
-    'exp_list'        => $exps,
-    'term_depth'      => $term_depth,
+    'allele_info'        => $all_exp_allele_info, 
+    'exp_list'           => $exps,
+    'term_depth'         => $term_depth,
+    'chosen_allele_id'   => $chosen_allele_id,
+
     'get_ontology_for_allele_url'  => uri_for('/get_ontology_for_allele'),
     'add_ontology_eq_terms_url'    => uri_for('/add_ontology_eq_terms'),
   };
 
 };
 
-post '/add_ontology_eq_terms' => sub {
+get '/add_ontology_eq_terms' => sub {
 
  $dbh = get_schema();
- shift @{ $all_exp_allele_info }; ## get rid of the header
- my @alleles;
- foreach my $rec( @{ $all_exp_allele_info } ) {
-  foreach my $ont_term(keys %{ +ONT }){
-   my $ont_key = $ont_term . q{_} . $rec->[3];
-   if(param("$ont_key")) {
-    my $ont_val = param("$ont_key");
-    print $ont_key, " ***** ", $ont_val, "\n";
-   }
-  }
- }
+ my $exp_sth = $dbh->prepare("SELECT * FROM expAlleleView");
+ $exp_sth->execute;
+ my $col_names = $exp_sth->{'NAME'};
+ my $exps = $exp_sth->fetchall_arrayref;
+ unshift @{ $exps }, $col_names;
+# shift @{ $all_exp_allele_info }; ## get rid of the header
+# my @alleles;
+# foreach my $rec( @{ $all_exp_allele_info } ) {
+#  foreach my $ont_term(keys %{ +ONT }){
+#   my $ont_key = $ont_term . q{_} . $rec->[3];
+#   if(param("$ont_key")) {
+#    my $ont_val = param("$ont_key");
+#    print $ont_key, " ***** ", $ont_val, "\n";
+#   }
+#  }
+# }
 
- my $ont_sth = $dbh->prepare("SELECT * FROM AlleleOntologyView");
- $ont_sth->execute;
- my $col_names = $ont_sth->{'NAME'};
- $all_exp_allele_info = $ont_sth->fetchall_arrayref;
- unshift @{ $all_exp_allele_info }, $col_names;
+# my $ont_sth = $dbh->prepare("SELECT * FROM AlleleOntologyView");
+# $ont_sth->execute;
+# my $col_names = $ont_sth->{'NAME'};
+# $all_exp_allele_info = $ont_sth->fetchall_arrayref;
+# unshift @{ $all_exp_allele_info }, $col_names;
  
  template 'get_ontology_for_allele',
   {
-    allele_info     => $all_exp_allele_info,
+    'exp_list'           => $exps,
    
-    'add_ontology_eq_terms_url'    => uri_for('/add_ontology_eq_terms'),
+    'get_ontology_for_allele_url'  => uri_for('/get_ontology_for_allele'),
   };
 };
 
