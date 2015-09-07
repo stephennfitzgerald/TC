@@ -1,40 +1,28 @@
 /** views **/
 
-CREATE OR REPLACE VIEW expAlleleView AS
- SELECT exp.id, 
-        std.name 'study name',
-        exp.name 'experiment name', 
-        group_concat(DISTINCT(alle.name) SEPARATOR ' :: ') alleles 
- FROM experiment exp INNER JOIN rna_dilution_plate rdp 
- ON rdp.experiment_id = exp.id INNER JOIN genotype gt 
- ON gt.rna_dilution_plate_id = rdp.id INNER JOIN allele alle 
- ON alle.id = gt.allele_id INNER JOIN study std 
- ON std.id = exp.study_id 
- GROUP BY exp.id;
-
 CREATE OR REPLACE VIEW alleleView AS
- SELECT exp.id exp_id,
-        ale.id allele_id,
+ SELECT ale.id allele_id,
         ale.name allele_name,
         ale.snp_id,
         group_concat(DISTINCT(ale.gene_name) SEPARATOR ' :: ') gene_name
- FROM allele ale INNER JOIN genotype gt
- ON gt.allele_id = ale.id INNER JOIN rna_dilution_plate rdp
- ON rdp.id = gt.rna_dilution_plate_id INNER JOIN experiment exp
- ON exp.id = rdp.experiment_id
- GROUP BY exp_id, allele_id
- ORDER BY exp_id, allele_name;
+ FROM allele ale 
+ GROUP BY allele_id
+ ORDER BY allele_name;
 
 CREATE OR REPLACE VIEW alleleOntologyView AS
- SELECT alle.id allele_id,
+ SELECT zap.id zap_id,
+        alle.id allele_id,
         alle.name allele_name, 
         alle.snp_id snp_id, 
+        avw.gene_name gene_name,
+        zap.stage stage,
         zap.entity1 entity1,
         zap.entity2 entity2,
         zap.quality quality,
         zap.tag tag
  FROM allele alle LEFT OUTER JOIN zmp_allele_phenotype_eq zap   
- ON alle.id = zap.allele_id
+ ON alle.id = zap.allele_id INNER JOIN alleleView avw 
+ ON alle.id = avw.allele_id
  ORDER BY alle.snp_id;
 
 CREATE OR REPLACE VIEW genotAlleleView AS

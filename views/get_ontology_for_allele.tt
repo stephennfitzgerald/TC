@@ -12,6 +12,38 @@ function goHome()
  {
    window.location = '/';   
  }
+
+function check_allele() {
+ var allele_name = document.getElementById("allele_name");
+ if(! allele_name.value ) {
+  alert("Please enter an allele name");
+  return false;
+ }
+ var ma1 = document.getElementById("mod_allele_1");
+ var ma2 = document.getElementById("mod_allele_2");
+ var ma3 = document.getElementById("mod_allele_3");
+ if(! ma1.checked && ! ma2.checked && ! ma3.checked) {
+  alert("Please select an option: Add, Delete or View");
+  return false;
+ }
+}
+
+function check_add_terms() {
+ var addterm = document.getElementById("add_terms"); 
+ if(! addterm.value ) {
+  alert("Please add at least one term");
+  return false;
+ }
+}
+
+function check_del_terms() {
+ var del_term = document.getElementById("del_terms");
+ if(! del_term.checked) {
+  alert("Please select at least one row");
+  return false;
+ } 
+}
+
 </script>
 
 
@@ -53,108 +85,126 @@ th,td {
            &nbsp;&nbsp;&nbsp;&nbsp;
           <button onclick="goBack()">Back</button>
          <p>
-          <table>
-           <% IF exp_list && ! chosen_allele_id %>
-            <% row_index = 1 %>
-            <h1>Choose an experiment</h1>
-            <% FOREACH exp_std IN exp_list %>
-             <% IF row_index % 2 %>
-              <tr bgcolor='#CEECF5'>
-             <% ELSE %>
-              <tr bgcolor='#FFFFFF'>
-             <% END %>
-              <form action="<% get_ontology_for_allele_url %>" method="get">
-               <% field_num = 0 %>
-                <% FOREACH field in exp_std %>
-                 <% IF row_index > 1 && field_num == 0 %> 
-                  <td> <input type="radio" name="exp_id" value="<% field %>">  </td>
-                 <% ELSIF field_num > 0 %>
-                  <td><% field %></td>
-                 <% ELSE %>
-                  <td> Select </td>
-                 <% END %>
-                  <% field_num = field_num + 1 %>
-                <% END %>
-               </tr>
-               <% row_index = row_index + 1 %> 
-              <% END %>
-              </table><p><p>
-              <input type="submit" value="Submit"> 
-               &nbsp;&nbsp;&nbsp;&nbsp;
-              <input type="reset" value="Clear">
-             </form>
-          <% ELSIF allele_info && ! chosen_allele_id %>
-           <table> 
-            <h1>Choose an allele</h1>
+          <% IF ! allele_info || ( mod_allele != 1 && mod_allele != 2 && mod_allele != 3 ) %>
+           <form action="<% get_ontology_for_allele_url %>" method="get" onsubmit="return check_allele();">
+            <table>
+             <h1>Find an allele</h1>
+              <tr><td> Allele name &nbsp;&nbsp;<input type="text" id="allele_name" name="allele_name"></td>
+              <td>Add &nbsp;&nbsp;<input type="radio" name="mod_allele" value=1 id="mod_allele_1"></td>
+              <td>Delete &nbsp;&nbsp;<input type="radio" name="mod_allele" value=2 id="mod_allele_2"></td>
+              <td>View &nbsp;&nbsp;<input type="radio" name="mod_allele" value=3 id="mod_allele_3"></td></tr>
+              
+            </table>
+            <p><p>
+             <input type="submit" value="Submit">
+              &nbsp;&nbsp;&nbsp;&nbsp;
+             <input type="reset" value="Clear">
+           </form>
+          <% ELSIF mod_allele == 1 %>
+           <h1>Add ontology terms</h1>
+            <table>
             <% row_index = 0 %>
-            <% FOREACH allele IN allele_info %>
+             <form action="<% add_ontology_eq_terms_url %>" method="get"  onsubmit="return check_add_terms();">
+               <% FOREACH rec in allele_info %>
+                <% col_num = 0 %>
+
+                <% IF row_index % 2 %>
+                 <tr bgcolor='#CEECF5'>
+                <% ELSE %>
+                 <tr bgcolor='#FFFFFF'>
+                <%END %>
+
+                 <% IF row_index == 0 %>
+                  <% FOREACH col in rec %>
+                   <td><% col %></td>
+                   <% col_num = col_num + 1 %>
+                  <% END %>
+                 </tr>
+                 <% ELSE %>
+                  <% FOREACH col in rec %>
+
+                   <% IF col_num > 3 %>
+                    <td><input type="text" name="<% allele_info.0.$col_num %>" id="add_terms"></td>
+                   <% ELSE %>
+                    <input type="hidden" name="<% allele_info.0.$col_num %>" value="<% col %>"> 
+                    <td><% col %></td>
+                   <% END %>
+                   <% col_num = col_num + 1 %>
+
+                 <% END %>
+                 <% END %> 
+                <% row_index = row_index + 1 %>
+               <% END %>
+            </table>
+            <p><p>
+           <input type="submit" value="Submit">
+           &nbsp;&nbsp;&nbsp;&nbsp;
+           <input type="reset" value="Clear">
+           </form> 
+           <% ELSIF mod_allele == 2 %>
+            <h1>Delete ontology terms</h1>
+             <table>
+            <% row_index = 0 %>
+             <form action="<% delete_ontology_eq_terms_url %>" method="get" onsubmit="return check_del_terms();">
+               <% FOREACH rec in allele_info %>
+                <% col_num = 0 %>
+                <% IF row_index % 2 %>
+                 <tr bgcolor='#CEECF5'>
+                <% ELSE %>
+                 <tr bgcolor='#FFFFFF'>
+                <%END %>
+                 <% IF row_index == 0 %>
+                  <% FOREACH col in rec %>
+                   <% IF col_num == 0 %>
+                    <td>Delete</td>
+                   <% ELSE %> 
+                    <td><% col %></td>
+                   <% END %>
+                   <% col_num = col_num + 1 %>
+                  <% END %>
+                 </tr>
+                 <% ELSE %>
+                  <% FOREACH col in rec %>
+                   <% IF col_num == 0 && col %>
+                    <% rad_name = "radio::" _ col %>
+                    <td><input type="radio" name="<% rad_name %>" value="<% col %>" id="del_terms"></td>
+                   <% ELSE %>
+                    <td><% col %></td>
+                   <% END %>  
+                  <% col_num = col_num + 1 %>
+                  <% END %>
+                 <% END %>
+                <% row_index = row_index + 1 %>
+              <% END %>
+            </table>
+            <p><p>
+           <input type="submit" value="Submit">
+           &nbsp;&nbsp;&nbsp;&nbsp;
+           <input type="reset" value="Clear">
+           </form> 
+          <% ELSIF mod_allele == 3 %>
+           <% row_index = 0 %>
+          
+           <table><tr>
+            <% FOREACH rec in allele_info %>
+             <% col_num = 0 %>
               <% IF row_index % 2 %>
                <tr bgcolor='#CEECF5'>
               <% ELSE %>
                <tr bgcolor='#FFFFFF'>
               <%END %>
-              <form action="<% get_ontology_for_allele_url %>" method="get">
-               <% col_num = 0 %>
-               <% FOREACH col in allele %>
-                <% IF col_num > 1 && col_num < 5%>
-                 <td>
-                  <% col %>
-                 </td>
-                <% ELSIF col_num == 1 && row_index == 0 %>
-                  <td>Select</td>
-                <% ELSIF col_num == 1 && row_index > 0 %>
-                  <td> <input type="radio" name="chosen_allele_id" value="<% allele.1 %>">  </td>
-                <% ELSIF col_num == 5 && row_index > 0 %>
-                  <% term_depth = "TD::" _ allele.1 %>
-                  <td> <input type="number" name="<% term_depth %>" min=1> </td> 
-                <% ELSIF col_num == 5 %>
-                 <td> <% col %> </td>
-                <% END %>
-                 <% col_num = col_num + 1 %>
+              <% FOREACH col in rec %>
+               <% IF col_num > 0 %>
+                <td><% col %></td>
+               <% END %>
+               <% col_num = col_num + 1 %>
               <% END %>
-             </tr>
-             <% row_index = row_index + 1 %>
-            <% END %>
-            </table>
-          <p><p>
-         <input type="submit" value="Submit">
-          &nbsp;&nbsp;&nbsp;&nbsp;
-         <input type="reset" value="Clear">
-         </form>
-        <% ELSIF chosen_allele_id %>
-         <table>
-          <h1>Add ontology terms</h1>
-          <% row_index = 0 %>
-          <form action="<% add_ontology_eq_terms_url %>" method="get">
-           <% col_num = 0 %>
-           <% FOREACH rec in allele_info %>
-            <% IF row_index % 2 %>
-              <tr bgcolor='#CEECF5'>
-            <% ELSE %>
-              <tr bgcolor='#FFFFFF'>
-            <%END %>
-            <% FOREACH col in rec %>
-             <td><% col %></td>
-            <% END %>
-           <% row_index = row_index + 1 %>
-          <% END %> 
-          <% WHILE term_depth %>
-           <tr><td><% allele_info.1.0 %></td><td><% allele_info.1.1 %></td><td><% allele_info.1.2 %></td>
-           <% input_cols = 4 %>
-            <% WHILE input_cols %>
-             <% cell_id = "CID::" _ term_depth _ "::" _ input_cols %>
-              <td><input type="text" name="<% cell_id %>"></td>
-              <% input_cols = input_cols - 1 %>
-            <% END %>
-           <% term_depth = term_depth - 1 %>
+              </tr>
+              <% row_index = row_index + 1 %>
+            <% END %> 
+           </table>
+
           <% END %>
-         </table>
-         <p><p>
-         <input type="submit" value="Submit">
-          &nbsp;&nbsp;&nbsp;&nbsp;
-         <input type="reset" value="Clear">
-        <% END %>
-        </form>
        </div>
      </div>
 </div>

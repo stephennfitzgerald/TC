@@ -15,10 +15,11 @@ use Data::Dumper;
 use Carp;
 use DBI;
 
-use constant INCR         => 3500;    ## increase the color $dec
-use constant MAX_WELL_COL => 12;
-use constant MAX_WELL_ROW => 8;
-use constant PLATE_SIZE   => 96;
+use constant INCR                  => 3500;    ## increase the color $dec
+use constant MAX_WELL_COL          => 12;
+use constant MAX_WELL_ROW          => 8;
+use constant PLATE_SIZE            => 96;
+use constant ADD_ONT_TERMS         => 5; ## max number of undef fields = ADD_ONT_TERMS - 1, for db insertion
 
 use constant GENOTYPES_C => {
     'Blank'    => 0,
@@ -119,10 +120,13 @@ use constant HC => {
 };
 
 use constant ONT => { ## ontology information input by user to associate with an allele
-    1 => 'entity1',
-    2 => 'entity2',
-    3 => 'quality',
-    4 => 'tag',
+    1 => 'snp_id',
+    2 => 'allele_id',
+    3 => 'stage',
+    4 => 'entity1',
+    5 => 'entity2',
+    6 => 'quality',
+    7 => 'tag',
 };
 
 my @EXCEL_FIELDS =
@@ -1007,7 +1011,7 @@ post '/combine_plate_data' => sub {
                     if( ! @{ $tag_seqs } ) { ## we have run out of tag seqs - delete exps from db and throw error
         	     roll_back(\%exp_ids);
                      die("tag off_set position ( $tag_offset_num ) is too large.\n" . 
-                     " ** All associated experiments have been deleted from the database **\n");
+                     " ** All associated experiments have been deleted from the database **\n$?");
                     }
                     else {
                      $tag_seq = shift @{$tag_seqs};
@@ -1468,80 +1472,125 @@ get '/get_ontology_for_allele' => sub {
  
  $dbh = get_schema();
 
- my $exp_id = param('exp_id');
- my $chosen_allele_id = param('chosen_allele_id');
- my ($exps, $all_exp_allele_info, $term_depth);
- my $exp_sth = $dbh->prepare("SELECT * FROM expAlleleView");
- my $alle_sth = $dbh->prepare("SELECT *,'' AS 'term_depth' FROM alleleView WHERE exp_id = ?");
- my $ont_sth = $dbh->prepare("SELECT * FROM alleleOntologyView WHERE allele_id = ?");
- if(! $exp_id && ! $chosen_allele_id) {
-  $exp_sth->execute;
-  my $col_names = $exp_sth->{'NAME'};
-  $exps = $exp_sth->fetchall_arrayref;
-  unshift @{ $exps }, $col_names;
+ my $allele_name = param('allele_name');
+ my $mod_allele = param('mod_allele');
+ $allele_name = trim($allele_name);
+ my ($allele_info, $all_allele_sth);
+ if($mod_allele && $mod_allele == 1) { ## add an entry
+  $all_allele_sth = $dbh->prepare(
+   "SELECT av.*, 'stage', 'entity1', 'entity2', 'quality', 'tag' FROM alleleView av WHERE av.allele_name = ?");
  }
- elsif( $exp_id && ! $chosen_allele_id ) {
-  $alle_sth->execute($exp_id);
-  my $col_names = $alle_sth->{'NAME'};
-  $all_exp_allele_info = $alle_sth->fetchall_arrayref;
-  unshift @{ $all_exp_allele_info }, $col_names;  
+ elsif($mod_allele && ($mod_allele == 2 || $mod_allele == 3)) { ## delete or view an entry
+  $all_allele_sth = $dbh->prepare("SELECT * FROM alleleOntologyView WHERE allele_name = ?");
  }
- elsif($chosen_allele_id) {
-  my $td_name = "TD::" . $chosen_allele_id;
-  $term_depth = param($td_name);
-  $ont_sth->execute($chosen_allele_id);
-  my $col_names = $ont_sth->{'NAME'};
-  $all_exp_allele_info = $ont_sth->fetchall_arrayref; 
-  unshift @{ $all_exp_allele_info }, $col_names;
+ if($all_allele_sth) {
+  $all_allele_sth->execute($allele_name);
+  my $col_names = $all_allele_sth->{'NAME'};
+  $allele_info = $all_allele_sth->fetchall_arrayref;
+  if(@{ $allele_info }) {
+   unshift @{ $allele_info }, $col_names;
+  }
+  else {
+   die "no allele with name \"$allele_name\" found in database\n$?";
+  }
  }
 
  template 'get_ontology_for_allele',
   {
-    'allele_info'        => $all_exp_allele_info, 
-    'exp_list'           => $exps,
-    'term_depth'         => $term_depth,
-    'chosen_allele_id'   => $chosen_allele_id,
+    'allele_info'        => $allele_info, 
+    'mod_allele'         => $mod_allele,
 
     'get_ontology_for_allele_url'  => uri_for('/get_ontology_for_allele'),
     'add_ontology_eq_terms_url'    => uri_for('/add_ontology_eq_terms'),
+    'delete_ontology_eq_terms_url' => uri_for('delete_ontology_eq_terms'),
   };
 
+};
+
+get '/delete_ontology_eq_terms' => sub {
+
+ $dbh = get_schema();
+ 
+ 
+ my $zap_alleles = $dbh->prepare("SELECT zap_id FROM alleleOntologyView WHERE zap_id");
+ $zap_alleles->execute;
+ foreach my $zap_id(@{ $zap_alleles->fetchall_arrayref }) {
+  my $zap_id_to_delete = 'radio::' . $zap_id->[0];
+  if(param($zap_id_to_delete)) {
+   my $zap2del_sth = $dbh->prepare("CALL delete_zap(?)");
+   $zap2del_sth->execute($zap_id->[0]);
+  }
+ }
+
+ template 'get_ontology_for_allele',
+  {
+    'get_ontology_for_allele_url'  => uri_for('/get_ontology_for_allele'),
+  };
 };
 
 get '/add_ontology_eq_terms' => sub {
 
  $dbh = get_schema();
- my $exp_sth = $dbh->prepare("SELECT * FROM expAlleleView");
- $exp_sth->execute;
- my $col_names = $exp_sth->{'NAME'};
- my $exps = $exp_sth->fetchall_arrayref;
- unshift @{ $exps }, $col_names;
-# shift @{ $all_exp_allele_info }; ## get rid of the header
-# my @alleles;
-# foreach my $rec( @{ $all_exp_allele_info } ) {
-#  foreach my $ont_term(keys %{ +ONT }){
-#   my $ont_key = $ont_term . q{_} . $rec->[3];
-#   if(param("$ont_key")) {
-#    my $ont_val = param("$ont_key");
-#    print $ont_key, " ***** ", $ont_val, "\n";
-#   }
-#  }
-# }
-
-# my $ont_sth = $dbh->prepare("SELECT * FROM AlleleOntologyView");
-# $ont_sth->execute;
-# my $col_names = $ont_sth->{'NAME'};
-# $all_exp_allele_info = $ont_sth->fetchall_arrayref;
-# unshift @{ $all_exp_allele_info }, $col_names;
+ my (@vals, @mod_vals, %K);
+ foreach my $ont_key(sort {$a <=> $b} keys %{ +ONT }){
+  my $ont_val = trim( ${ +ONT }{$ont_key} ); 
+  my $in_val = param("$ont_val"); # can be an array - if more than 1 db entry for a given allele name
+  if($in_val) {
+   push @vals, $in_val;
+  }
+  else {
+   push @vals, undef;
+  }
+ }
  
+ if(ref($vals[0]) eq 'ARRAY') {
+  for(my$i=0;$i<@{ $vals[0] };$i++) {
+   my $temp_arr;
+   for(my$j=0;$j<@vals;$j++) {
+    my $in_val = $vals[$j]->[$i] eq '' ? undef : $vals[$j]->[$i];
+    push@{ $temp_arr }, $in_val;
+   }
+   push@mod_vals, $temp_arr;
+  }
+ }
+ else {
+  push@mod_vals, [ @vals ];
+ }
+
+ for(my$i=0;$i<@mod_vals;$i++) {
+  for(my$j=0;$j<@{ $mod_vals[$i] };$j++) {
+   $K{$i} += $mod_vals[$i]->[$j] ? 0 : 1;
+  }
+ }
+
+ my @failed_inserts;
+ for(my$i=0;$i<@mod_vals;$i++) {
+  if( $K{$i} < ADD_ONT_TERMS ) { ## something to add
+   my $gen_ref_sth = $dbh->prepare("SELECT Genome_ref_id FROM SpView WHERE Genome_ref_name = ?");
+   my $gen_ref_name = ( split":",$mod_vals[$i]->[0] )[0];
+   $gen_ref_sth->execute($gen_ref_name);
+   unshift @{ $mod_vals[$i] }, @{ $gen_ref_sth->fetchrow_arrayref }[0];
+   my $zmp_alle_sth = $dbh->prepare("CALL insert_zmp_allele_phenotype_eq(?,?,?,?,?,?,?,?, \@insert_id)");
+   $zmp_alle_sth->execute( @{ $mod_vals[$i] } );
+   my ($insert_id) = $dbh->selectrow_array("SELECT \@insert_id");
+   if(! $insert_id) {
+    my $allele_name_sth = $dbh->prepare("SELECT allele_name FROM alleleView WHERE allele_id = ?");
+    $allele_name_sth->execute($mod_vals[$i]->[2]);
+    push @failed_inserts, @{ $allele_name_sth->fetchall_arrayref }[0]->[0];
+   }
+  }
+ }
+
+ if(scalar(@failed_inserts)) {
+  my $names = join(', ', @failed_inserts);
+  die("insertion into table zmp_allele_phenotype_eq failed for alleles: $names\n\n",$?);
+ }
+
  template 'get_ontology_for_allele',
   {
-    'exp_list'           => $exps,
-   
     'get_ontology_for_allele_url'  => uri_for('/get_ontology_for_allele'),
   };
 };
-
 
 sub overwrite_file {
     my ( $excel_file, $excel_data, $seq_plate ) = @_;
@@ -1730,7 +1779,7 @@ sub get_schema {
     my($host, $port)=($ENV{'TC_HOST'}, $ENV{'TC_PORT'});
     return DBI->connect( "DBI:mysql:$db_name;host=$host;port=$port",
         $ENV{'TC_USER'}, $ENV{'TC_PASS'} )
-      or die "Cannot connect to database\n";
+      or die "Cannot connect to database\n$?";
 }
 
 1;

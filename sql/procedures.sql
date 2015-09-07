@@ -1,5 +1,20 @@
 /** procedures **/
 
+/** delete entry from zmp_allele_phenotype_eq table **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS delete_zap$$
+
+CREATE PROCEDURE delete_zap (
+ IN zap_id_param INT(10)
+)
+BEGIN
+
+DELETE zap.* 
+FROM zmp_allele_phenotype_eq zap
+WHERE zap.id = zap_id_param;
+END$$
+DELIMITER ;
+
 /** delete experiment and rna_extraction record **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS delete_exp$$
@@ -71,6 +86,47 @@ VALUES (
  name_param,
  sample_comment_param
 );
+END$$
+DELIMITER ;
+
+/** zmp_allele_phenotype_eq **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS insert_zmp_allele_phenotype_eq$$
+
+CREATE PROCEDURE insert_zmp_allele_phenotype_eq (
+ IN genome_reference_id_param INT(10),
+ IN snp_id_param VARCHAR(255),
+ IN allele_id_param INT(10),
+ IN stage_param VARCHAR(255),
+ IN entity1_param VARCHAR(255),
+ IN entity2_param VARCHAR(255),
+ IN quality_param VARCHAR(255),
+ IN tag_param VARCHAR(255),
+ OUT insert_id int(10)
+)
+BEGIN
+
+INSERT INTO zmp_allele_phenotype_eq (
+ genome_reference_id,
+ snp_id,
+ allele_id,
+ stage,
+ entity1,
+ entity2,
+ quality,
+ tag
+) 
+VALUES (
+ genome_reference_id_param,
+ snp_id_param,
+ allele_id_param,
+ stage_param,
+ entity1_param,
+ entity2_param,
+ quality_param,
+ tag_param
+);
+SET insert_id = LAST_INSERT_ID();
 END$$
 DELIMITER ;
 
