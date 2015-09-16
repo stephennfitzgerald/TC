@@ -501,19 +501,19 @@ WHERE exp.id = exp_id_param;
 END$$
 DELIMITER ;
 
-/** updating sequence_plate cols sanger_tube_id and sanger_sample_id **/
+/** updating sequence_plate cols sanger_plate_id and sanger_sample_id **/
 DELIMITER $$
-DROP PROCEDURE IF EXISTS update_sanger_tube_and_sample$$
+DROP PROCEDURE IF EXISTS update_sanger_plate_and_sample$$
 
 CREATE PROCEDURE update_sanger_tube_and_sample (
- IN sanger_tube_id_param VARCHAR(255),
+ IN sanger_plate_id_param VARCHAR(255),
  IN sanger_sample_id_param VARCHAR(255),
  IN id_param INT(10)
 )
 BEGIN
 
  UPDATE sequence_plate  SET
-  sanger_tube_id = sanger_tube_id_param,
+  sanger_plate_id = sanger_plate_id_param,
   sanger_sample_id = sanger_sample_id_param
  WHERE id = id_param;
 

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+function goBack() 
+ {
+   window.history.back();
+ }
+
+function goHome()
+ {
+   window.location = '/';   
+ }
+
+var RadioValue = ''; // global - bit of a hack
+function check_selected_terms() {
+ if(! RadioValue) {
+  alert("Please select at least one row");
+  return false;
+ } 
+}
+
+</script>
+
+
+<head>
+<style>
+
+P {
+ font-size: 13px;
+ font-family:'Courier New';
+} 
+
+.view_info input[type="submit"] {
+ color: black;
+ background: #BDECB6;
+ display: inline;
+}
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+th,td {
+    padding: 15px;
+    text-align: center;
+}
+
+</style>
+</head>
+
+<body background="images/zmp.jpg">
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+         <p>
+          <button onclick="goHome()">Home</button>
+           &nbsp;&nbsp;&nbsp;&nbsp;
+          <button onclick="goBack()">Back</button>
+         <p>
+          <% IF ! zap_info.size %>
+            <table>
+             <h1>Choose an experiment</h1>
+            <% row_index = 0 %>
+             <form action="<% choose_a_tc_experiment_url %>" method="get" onsubmit="return check_selected_terms();">
+
+               <% FOREACH rec in std_exp %>
+                <% col_num = 0 %>
+    
+                 <% IF row_index % 2 %>
+                   <tr bgcolor='#CEECF5'>
+                 <% ELSE %>
+                   <tr bgcolor='#FFFFFF'>
+                 <%END %>
+       
+                 <% IF row_index == 0 %>
+                   <% FOREACH col in rec %>
+        
+                    <% IF col_num == 0 %>
+                     <td>Select</td>
+                    <% ELSE %> 
+                     <td><% col %></td>
+                    <% END %>
+        
+                    <% col_num = col_num + 1 %>
+                   <% END %>
+                  </tr>
+                 <% ELSE %>
+
+                  <% FOREACH col in rec %>
+                   <% IF col_num == 0 && col %>
+                    <% rad_name = 'radio::' _ col %>
+                     <% IF no_zap_info.exists(col) %>
+                      <td><input type="radio" name="<% rad_name %>" value="<% col %>" disabled></td>
+                     <% ELSE %>
+                      <td><input type="radio" name="<% rad_name %>" value="<% col %>" onClick="RadioValue = 1;"></td>
+                     <% END %>
+                    <% ELSE %>
+                     <td><% col %></td>
+                    <% END %>  
+                     <% col_num = col_num + 1 %>
+                   <% END %>
+
+                <% END %>
+                <% row_index = row_index + 1 %>
+
+               <% END %>
+               </tr></table>
+               <p>
+                <input type="submit" value="Submit">
+                 &nbsp;&nbsp;&nbsp;&nbsp;
+                <input type="reset" value="Clear">
+               </form>
+
+              <% ELSE %>
+               <table>
+               <% row_index = 0 %> 
+                <% FOREACH rec in zap_info %>
+
+                 <% IF row_index % 2 %>
+                  <tr bgcolor='#CEECF5'>
+                 <% ELSE %>
+                  <tr bgcolor='#FFFFFF'>
+                 <% END %>
+                  <% col_num = 0 %>
+                  <% FOREACH col in rec %>
+                   <% IF col_num > 0 %>
+                    <td><% col %></td>
+                   <% END %>
+                   <% col_num = col_num + 1 %>
+                  <% END %>
+		   <% row_index = row_index + 1 %>
+                   </tr>
+                 <% END %>
+             <% END %>
+            </table>
+            <p><p>
+       </div>
+     </div>
+</div>
+</body>
+</html>

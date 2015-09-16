@@ -88,11 +88,19 @@ body {
        <h2>Ontology terms</h2>
         <table style="float:left;"><tr>
          <td width=260px>Add terms to an allele</td>
+         <td>
           <form action="<% get_ontology_for_allele_url %>" method=get">
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
            <input type=submit value="&#8594;">
           </form>
          </td>
+         </tr><tr><tr>
+          <td width=260px>Choose an experiment</td>
+          <td>
+          <form action="<% choose_a_tc_experiment_url %>" method=get">
+           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <input type=submit value="&#8594;"> 
+         </form>
         </tr></table>
        </div>
       </div>

@@ -51,7 +51,7 @@ th,td {
          <p>
           <button onclick="goHome()">Home</button>
          </p><p>
-         </p><form action="http://gen1d.internal.sanger.ac.uk:5000/add_sequencing_plate_data" method="post" enctype="multipart/form-data">
+         </p><form action="<% add_sequencing_plate_data_url %>" method="post" enctype="multipart/form-data">
          <table><tbody><tr><td>
          <% IF exp_id %>
           <h2 style="display: inline;">Choose an experiment

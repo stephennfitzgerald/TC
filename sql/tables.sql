@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS sequence_plate (
  
  id					INT(10) NOT NULL AUTO_INCREMENT,
  plate_name				VARCHAR(255) NOT NULL,
- sanger_tube_id				VARCHAR(255) NULL,
+ sanger_plate_id			VARCHAR(255) NULL,
  sanger_sample_id			VARCHAR(255) NULL,
  sample_volume				FLOAT NOT NULL,
  sample_amount				FLOAT NOT NULL,

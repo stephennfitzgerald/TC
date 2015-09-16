@@ -58,56 +58,57 @@ use constant PHENOTYPE_DESCRIPTION => {
 use constant HEADER_ROW => 9;
 
 use constant SANGER_COLS => {
-    'SANGER TUBE ID'                                 => 'A',
-    'SANGER SAMPLE ID'                               => 'B',
-    'SUPPLIER SAMPLE NAME'                           => 'C',
-    'COHORT'                                         => 'D',
-    'VOLUME (ul)'                                    => 'E',
-    'CONC. (ng/ul)'                                  => 'F',
-    'GENDER'                                         => 'G',
-    'COUNTRY OF ORIGIN'                              => 'H',
-    'GEOGRAPHICAL REGION'                            => 'I',
-    'ETHNICITY'                                      => 'J',
-    'DNA SOURCE'                                     => 'K',
-    'DATE OF SAMPLE COLLECTION (MM/YY or YYYY only)' => 'L',
-    'DATE OF DNA EXTRACTION (MM/YY or YYYY only)'    => 'M',
-    'IS SAMPLE A CONTROL?'                           => 'N',
-    'IS RE-SUBMITTED SAMPLE?'                        => 'O',
-    'DNA EXTRACTION METHOD'                          => 'P',
-    'SAMPLE PURIFIED?'                               => 'Q',
-    'PURIFICATION METHOD'                            => 'R',
-    'CONCENTRATION DETERMINED BY'                    => 'S',
-    'DNA STORAGE CONDITIONS'                         => 'T',
-    'MOTHER (optional)'                              => 'U',
-    'FATHER (optional)'                              => 'V',
-    'SIBLING (optional)'                             => 'W',
-    'GC CONTENT'                                     => 'X',
-    'PUBLIC NAME'                                    => 'Y',
-    'TAXON ID'                                       => 'Z',
-    'COMMON NAME'                                    => 'AA',
-    'SAMPLE DESCRIPTION'                             => 'AB',
-    'STRAIN'                                         => 'AC',
-    'SAMPLE VISIBILITY'                              => 'AD',
-    'SAMPLE TYPE'                                    => 'AE',
-    'GENOTYPE'                                       => 'AF',
-    'PHENOTYPE (required for EGA)'                   => 'AG',
-    'AGE (with units)'                               => 'AH',
-    'Developmental stage'                            => 'AI',
-    'Cell Type'                                      => 'AJ',
-    'Disease State'                                  => 'AK',
-    'Compound'                                       => 'AL',
-    'Dose'                                           => 'AM',
-    'Immunoprecipitate'                              => 'AN',
-    'Growth condition'                               => 'AO',
-    'RNAi'                                           => 'AP',
+    'SANGER PLATE ID'                                => 'A',
+    'WELL'                                           => 'B',
+    'SANGER SAMPLE ID'                               => 'C',
+    'SUPPLIER SAMPLE NAME'                           => 'D',
+    'COHORT'                                         => 'E',
+    'VOLUME (ul)'                                    => 'F',
+    'CONC. (ng/ul)'                                  => 'G',
+    'GENDER'                                         => 'H',
+    'COUNTRY OF ORIGIN'                              => 'I',
+    'GEOGRAPHICAL REGION'                            => 'J',
+    'ETHNICITY'                                      => 'K',
+    'DNA SOURCE'                                     => 'L',
+    'DATE OF SAMPLE COLLECTION (MM/YY or YYYY only)' => 'M',
+    'DATE OF DNA EXTRACTION (MM/YY or YYYY only)'    => 'N',
+    'IS SAMPLE A CONTROL?'                           => 'O',
+    'IS RE-SUBMITTED SAMPLE?'                        => 'P',
+    'DNA EXTRACTION METHOD'                          => 'Q',
+    'SAMPLE PURIFIED?'                               => 'R',
+    'PURIFICATION METHOD'                            => 'S',
+    'CONCENTRATION DETERMINED BY'                    => 'T',
+    'DNA STORAGE CONDITIONS'                         => 'U',
+    'MOTHER (optional)'                              => 'V',
+    'FATHER (optional)'                              => 'W',
+    'SIBLING (optional)'                             => 'X',
+    'GC CONTENT'                                     => 'Y',
+    'PUBLIC NAME'                                    => 'Z',
+    'TAXON ID'                                       => 'AA',
+    'COMMON NAME'                                    => 'AB',
+    'SAMPLE DESCRIPTION'                             => 'AC',
+    'STRAIN'                                         => 'AD',
+    'SAMPLE VISIBILITY'                              => 'AE',
+    'SAMPLE TYPE'                                    => 'AF',
+    'GENOTYPE'                                       => 'AG',
+    'PHENOTYPE (required for EGA)'                   => 'AH',
+    'AGE (with units)'                               => 'AI',
+    'Developmental stage'                            => 'AJ',
+    'Cell Type'                                      => 'AK',
+    'Disease State'                                  => 'AL',
+    'Compound'                                       => 'AM',
+    'Dose'                                           => 'AN',
+    'Immunoprecipitate'                              => 'AO',
+    'Growth condition'                               => 'AP',
     'RNAi'                                           => 'AQ',
-    'Organism part'                                  => 'AR',
-    'Time Point'                                     => 'AS',
-    'Treatment'                                      => 'AT',
-    'Subject'                                        => 'AU',
-    'Disease'                                        => 'AV',
-    'SAMPLE ACCESSION NUMBER (optional)'             => 'AW',
-    'DONOR ID (required for cancer samples)'         => 'AX',
+    'RNAi'                                           => 'AR',
+    'Organism part'                                  => 'AS',
+    'Time Point'                                     => 'AT',
+    'Treatment'                                      => 'AU',
+    'Subject'                                        => 'AV',
+    'Disease'                                        => 'AW',
+    'SAMPLE ACCESSION NUMBER (optional)'             => 'AX',
+    'DONOR ID (required for cancer samples)'         => 'AY',
 };
 
 use constant HC => {
@@ -131,7 +132,8 @@ use constant ONT => { ## ontology information input by user to associate with an
 
 my @EXCEL_FIELDS =
   (    ## column names in the excel sheet - most are hard-coded (numbers)
-    [ 'SANGER TUBE ID',       undef ],
+    [ 'SANGER PLATE ID',      undef ],
+    [ 'WELL',                 'Well'],
     [ 'SANGER SAMPLE ID',     undef ],
     [ 'SUPPLIER SAMPLE NAME', 'Sample_Name' ],
     [ 'COHORT',               1 ],
@@ -188,7 +190,7 @@ my @EXCEL_FIELDS =
 
 our $VERSION = '0.1';
 
-my $db_name = "zfish_sf5_tc4_test";
+my $db_name = "zfish_sf5_tc1_test";
 #my $db_name          = "zfish_tilling_tc";
 my $exel_file_dir    = "./public/zmp_exel_files";       # need to change
 my $rna_dilution_dir = "./public/RNA_dilution_files";
@@ -214,6 +216,7 @@ get '/' => sub {
         'get_ontology_for_allele_url' => uri_for('/get_ontology_for_allele'),  
         'delete_experiment_url'     => uri_for('/delete_experiment'),
         'add_sequencing_plate_data_url' => uri_for('/add_sequencing_plate_data'),
+        'choose_a_tc_experiment_url'    => uri_for('/choose_a_tc_experiment'),
     };
 
 };
@@ -723,10 +726,10 @@ post '/get_sequencing_report' => sub {
             else {
                 my @sanger_samples;
                 my $row_value        = HEADER_ROW + 1;
-                my $sanger_tube_id   = SANGER_COLS->{'SANGER TUBE ID'};
+                my $sanger_plate_id  = SANGER_COLS->{'SANGER PLATE ID'};
                 my $sanger_sample_id = SANGER_COLS->{'SANGER SAMPLE ID'};
                 my ( $s_tube_cell, $s_sample_cell ) = (
-                    $sanger_tube_id . $row_value,
+                    $sanger_plate_id . $row_value,
                     $sanger_sample_id . $row_value
                 );
                 while ($workbook_r->[1]{$s_tube_cell}
@@ -739,7 +742,7 @@ post '/get_sequencing_report' => sub {
                       ];
                     $row_value++;
                     ( $s_tube_cell, $s_sample_cell ) = (
-                        $sanger_tube_id . $row_value,
+                        $sanger_plate_id . $row_value,
                         $sanger_sample_id . $row_value
                     );
                 }
@@ -761,12 +764,12 @@ post '/get_sequencing_report' => sub {
                     keys %{$sequence_plate}
                   )
                 {
-                    my ( $sanger_tube_id, $sanger_sample_id ) =
+                    my ( $sanger_plate_id, $sanger_sample_id ) =
                       map { $_->[0], $_->[1] } shift @sanger_samples;
-                    if ( $sanger_tube_id && $sanger_sample_id ) {
+                    if ( $sanger_plate_id && $sanger_sample_id ) {
                         foreach my $col (@EXCEL_FIELDS) {
-                            if ( $col->[0] eq 'SANGER TUBE ID' ) {
-                                push @{ $data[$row_index] }, $sanger_tube_id;
+                            if ( $col->[0] eq 'SANGER PLATE ID' ) {
+                                push @{ $data[$row_index] }, $sanger_plate_id;
                             }
                             elsif ( $col->[0] eq 'SANGER SAMPLE ID' ) {
                                 push @{ $data[$row_index] }, $sanger_sample_id;
@@ -854,7 +857,7 @@ post '/get_sequencing_report' => sub {
                             "Call update_sanger_tube_and_sample(?,?,?)");
                         my $seq_id =
                           $sequence_plate->{"$index_tag_id"}->{'seq_plate_id'};
-                        $sanger_info_sth->execute( $sanger_tube_id,
+                        $sanger_info_sth->execute( $sanger_plate_id,
                             $sanger_sample_id, $seq_id );
                     }
                 }
@@ -1511,7 +1514,6 @@ get '/delete_ontology_eq_terms' => sub {
 
  $dbh = get_schema();
  
- 
  my $zap_alleles = $dbh->prepare("SELECT zap_id FROM alleleOntologyView WHERE zap_id");
  $zap_alleles->execute;
  foreach my $zap_id(@{ $zap_alleles->fetchall_arrayref }) {
@@ -1528,9 +1530,64 @@ get '/delete_ontology_eq_terms' => sub {
   };
 };
 
+get '/choose_a_tc_experiment' => sub {
+
+ $dbh = get_schema();
+
+ my (@zap_info,%exp_ids,%no_zap_info);
+
+ my $exp_id = param('');
+ 
+ my $tc_exp_sth = $dbh->prepare("SELECT *, 'ontology_terms' FROM ExpStdNameView");
+ $tc_exp_sth->execute;
+ my $col_names = $tc_exp_sth->{'NAME'};
+ my $tc_exp_std = $tc_exp_sth->fetchall_arrayref;
+
+ my $exp_exists_sth = $dbh->prepare("SELECT 1 FROM DUAL WHERE NOT EXISTS(SELECT exp_id FROM ontologyTermsView WHERE exp_id = ?)");
+
+ foreach my $exp_std(@{ $tc_exp_std }) {
+  @{ $exp_std }[0,2] = @{ $exp_std }[2,0]; 
+  $exp_ids{ $exp_std->[0] }++;
+  $exp_exists_sth->execute($exp_std->[0]);
+  if( @{ $exp_exists_sth->fetchall_arrayref }[0] ) {
+   $no_zap_info{ $exp_std->[0] }++;
+   @{ $exp_std }[3] = 'No'; 
+  }
+  else {
+   @{ $exp_std }[3] = 'Yes';
+  }
+ }
+ unshift @{ $tc_exp_std }, [ @{ $col_names }[2,1,0,3] ]; # hack 
+
+ my $zap_col_names;
+ my $zap_sth = $dbh->prepare("SELECT * FROM ontologyTermsView WHERE exp_id = ?");
+ foreach my $exp_id(sort {$b <=> $a} keys %exp_ids) {
+  my $pkey = 'radio::' . $exp_id;
+  if(param("$pkey")){
+   $zap_sth->execute($exp_id);    
+   if(! $zap_col_names) {
+    $zap_col_names = $zap_sth->{'NAME'};
+   }
+   push@zap_info, @{ $zap_sth->fetchall_arrayref };
+  }
+ }
+ if($zap_col_names) {
+  unshift@zap_info, $zap_col_names;
+ }
+ 
+ template 'choose_a_tc_experiment',
+  {
+    'std_exp' => $tc_exp_std,
+    'zap_info' => \@zap_info,
+    'no_zap_info' => \%no_zap_info,
+    'choose_a_tc_experiment_url'    => uri_for('/choose_a_tc_experiment'), 
+  };
+};
+
 get '/add_ontology_eq_terms' => sub {
 
  $dbh = get_schema();
+
  my (@vals, @mod_vals, %K);
  foreach my $ont_key(sort {$a <=> $b} keys %{ +ONT }){
   my $ont_val = trim( ${ +ONT }{$ont_key} ); 

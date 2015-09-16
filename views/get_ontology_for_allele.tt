@@ -28,17 +28,17 @@ function check_allele() {
  }
 }
 
+var AddValue = ''; // global - bit of a hack
 function check_add_terms() {
- var addterm = document.getElementById("add_terms"); 
- if(! addterm.value ) {
+ if(! AddValue ) {
   alert("Please add at least one term");
   return false;
  }
 }
 
+var RadioValue = ''; // global - bit of a hack
 function check_del_terms() {
- var del_term = document.getElementById("del_terms");
- if(! del_term.checked) {
+ if(! RadioValue) {
   alert("Please select at least one row");
   return false;
  } 
@@ -104,7 +104,7 @@ th,td {
            <h1>Add ontology terms</h1>
             <table>
             <% row_index = 0 %>
-             <form action="<% add_ontology_eq_terms_url %>" method="get"  onsubmit="return check_add_terms();">
+             <form action="<% add_ontology_eq_terms_url %>" method="get"  id="add_ont_terms" onsubmit="return check_add_terms();">
                <% FOREACH rec in allele_info %>
                 <% col_num = 0 %>
 
@@ -124,7 +124,7 @@ th,td {
                   <% FOREACH col in rec %>
 
                    <% IF col_num > 3 %>
-                    <td><input type="text" name="<% allele_info.0.$col_num %>" id="add_terms"></td>
+                    <td><input type="text" name="<% allele_info.0.$col_num %>" id="<% allele_info.0.$col_num %>" oninput="AddValue = 1;"></td>
                    <% ELSE %>
                     <input type="hidden" name="<% allele_info.0.$col_num %>" value="<% col %>"> 
                     <td><% col %></td>
@@ -139,7 +139,7 @@ th,td {
             <p><p>
            <input type="submit" value="Submit">
            &nbsp;&nbsp;&nbsp;&nbsp;
-           <input type="reset" value="Clear">
+           <input type="reset" value="Clear" onClick="AddValue = '';">
            </form> 
            <% ELSIF mod_allele == 2 %>
             <h1>Delete ontology terms</h1>
@@ -167,7 +167,7 @@ th,td {
                   <% FOREACH col in rec %>
                    <% IF col_num == 0 && col %>
                     <% rad_name = "radio::" _ col %>
-                    <td><input type="radio" name="<% rad_name %>" value="<% col %>" id="del_terms"></td>
+                    <td><input type="radio" name="<% rad_name %>" value="<% col %>" onClick="RadioValue = 1;"></td>
                    <% ELSE %>
                     <td><% col %></td>
                    <% END %>  
@@ -180,7 +180,7 @@ th,td {
             <p><p>
            <input type="submit" value="Submit">
            &nbsp;&nbsp;&nbsp;&nbsp;
-           <input type="reset" value="Clear">
+           <input type="reset" value="Clear" onClick="RadioValue = '';">
            </form> 
           <% ELSIF mod_allele == 3 %>
            <% row_index = 0 %>

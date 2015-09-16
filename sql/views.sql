@@ -1,5 +1,26 @@
 /** views **/
 
+CREATE OR REPLACE VIEW ontologyTermsView AS
+ SELECT exp.id exp_id,
+        exp.name experiment_name,
+        std.name study_name,
+        seqp.sample_public_name, 
+        dev.zfs_id stage, 
+        zap.tag tag, 
+        zap.quality quality, 
+        zap.entity1 entity 
+ FROM experiment exp inner join study std 
+ ON exp.study_id = std.id INNER JOIN rna_dilution_plate rdp 
+ ON exp.id = rdp.experiment_id INNER JOIN sequence_plate seqp
+ ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN genotype gt  
+ ON gt.rna_dilution_plate_id = rdp.id INNER JOIN allele alle 
+ ON gt.allele_id = alle.id INNER JOIN zmp_allele_phenotype_eq zap 
+ ON zap.allele_id = alle.id INNER JOIN developmental_stage dev 
+ ON dev.zfs_id = zap.stage
+ WHERE seqp.selected = 1
+ ORDER BY exp_id DESC;
+
+
 CREATE OR REPLACE VIEW alleleView AS
  SELECT ale.id allele_id,
         ale.name allele_name,
@@ -119,7 +140,7 @@ CREATE OR REPLACE VIEW seqSampleView AS
  SELECT seq.selected Selected_for_sequencing,
         seq.sample_name Sample_name,
         seq.sample_public_name Sample_public_name,
-        seq.sanger_tube_id Sanger_tube_id,
+        seq.sanger_plate_id Sanger_plate_id,
         seq.sanger_sample_id Sanger_sample_id,
         seq.well_name Sequence_plate_well,
         rdp.well_name Collection_plate_well, 
@@ -207,6 +228,7 @@ CREATE OR REPLACE VIEW SeqReportView AS
         seq.plate_name "seq_plate_name",
         exp.name "zmp_name",
         rna_ext.library_tube_id "Library_Tube_ID",
+        seq.well_name "Well",
         seq.library_volume "Sample_Volume",
         seq.library_amount "Sample_Conc",
         EXTRACT(YEAR FROM exp.embryo_collection_date) "Embryo_Collection_Date",
