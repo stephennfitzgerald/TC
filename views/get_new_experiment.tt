@@ -174,11 +174,11 @@ th {
                 <input type="text" class="txt_box" name="<% table_res.0 %>" required></td>
                <td><% last_allele_name %></td>
 
-              <% CASE 'Phenotype_description' %>
+              <% CASE 'Collection_description' %>
                <td>Phenotypic or Blind</td><td>
                 <select class="dropdown"  name="<% table_res.0 %>">
-                 <% FOREACH pheno_des IN phenotype_description.keys.nsort %>
-                  <option value="<% pheno_des %>"><% phenotype_description.$pheno_des %></option>
+                 <% FOREACH pheno_des IN collection_description.keys.nsort %>
+                  <option value="<% pheno_des %>"><% collection_description.$pheno_des %></option>
                  <% END %>
                 </select></td>
                <td><% last_pheno_desc %></td>

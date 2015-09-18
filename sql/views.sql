@@ -20,7 +20,6 @@ CREATE OR REPLACE VIEW ontologyTermsView AS
  WHERE seqp.selected = 1
  ORDER BY exp_id DESC;
 
-
 CREATE OR REPLACE VIEW alleleView AS
  SELECT ale.id allele_id,
         ale.name allele_name,
@@ -29,6 +28,35 @@ CREATE OR REPLACE VIEW alleleView AS
  FROM allele ale 
  GROUP BY allele_id
  ORDER BY allele_name;
+
+CREATE OR REPLACE VIEW phenoCountView AS
+ SELECT exp.id, 
+        seq.phenotype, 
+        count(*) pheno_count 
+ FROM experiment exp INNER JOIN rna_dilution_plate rdp 
+ ON rdp.experiment_id = exp.id INNER JOIN sequence_plate seq 
+ ON seq.rna_dilution_plate_id = rdp.id 
+ WHERE seq.selected = 1
+ GROUP BY exp.id, seq.phenotype 
+ ORDER BY exp.id, seq.phenotype;
+
+CREATE OR REPLACE VIEW phenoView AS
+ SELECT exp.id exp_id, 
+        seqp.id seqp_id,
+        exp.name exp_name, 
+        std.name study_name, 
+        seqp.well_name, 
+        gav.AlleleGenotype genotype, 
+        seqp.phenotype 
+ FROM experiment exp INNER JOIN study std 
+ ON exp.study_id = std.id INNER JOIN rna_dilution_plate rdp 
+ ON rdp.experiment_id = exp.id INNER JOIN sequence_plate seqp 
+ ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN genotAlleleView gav 
+ ON gav.rna_well_id = rdp.id 
+ WHERE seqp.selected = 1
+ ORDER BY SUBSTR(seqp.well_name,1,1),
+          LENGTH(SUBSTR(seqp.well_name,2)),
+          SUBSTR(seqp.well_name,2);  
 
 CREATE OR REPLACE VIEW alleleOntologyView AS
  SELECT zap.id zap_id,
@@ -48,7 +76,7 @@ CREATE OR REPLACE VIEW alleleOntologyView AS
 
 CREATE OR REPLACE VIEW genotAlleleView AS
  SELECT genot.rna_dilution_plate_id rna_well_id, 
-        group_concat(alle.name,"::", alle.gene_name, "::", genot.name, "::", genot.sample_comment) AlleleGenotype 
+        group_concat(alle.name, '(', genot.name, ')') AlleleGenotype 
  FROM allele alle INNER JOIN genotype genot
         ON genot.allele_id = alle.id 
  GROUP BY genot.rna_dilution_plate_id;
@@ -221,7 +249,6 @@ CREATE OR REPLACE VIEW groupDevStageView AS
    ON exp.developmental_stage_id = dev.id
  GROUP BY exp.id;
 
-
 CREATE OR REPLACE VIEW SeqReportView AS
  SELECT ind_tag.id "index_tag_id",
         seq.id "seq_plate_id",
@@ -248,7 +275,7 @@ CREATE OR REPLACE VIEW SeqReportView AS
         ind_tag.tag_index_sequence "desc_tag_index_sequence",
         rdp.gender "Gender",
         exp.dna_source "DNA_Source",
-        exp.phenotype_description "Phenotype_Description",
+        exp.collection_description "Collection_Description",
         gr.name "Reference_Genome",
         array_exp.cell_type "Cell_type",
         array_exp.compound "Compound",
@@ -299,7 +326,7 @@ CREATE OR REPLACE VIEW ExpView AS
         rna.extraction_date RNA_extraction_date,
         rna.library_creation_date RNA_library_creation_date,
         rna.library_creation_protocol_version RNA_library_creation_protocol_version,
-        exp.phenotype_description Phenotype_description,
+        exp.collection_description Collection_description,
         exp.image Image, 
         exp.lines_crossed Lines_crossed, 
         exp.founder Founder, 
@@ -326,7 +353,7 @@ CREATE OR REPLACE VIEW ExpDisplayView AS
         exp.sample_visibility Sample_visibility,
         grf.name Genome_ref_name,
         exp.image Image, 
-        exp.phenotype_description Phenotype_description,
+        exp.collection_description Collection_description,
         count(rdp.id) Sequenced_samples,
         seqp.excel_report_created_date Excel_file_creation_date,
         seqp.excel_report_file_location Excel_file,

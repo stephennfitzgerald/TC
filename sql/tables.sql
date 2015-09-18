@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS experiment (
  founder				VARCHAR(255) NULL,
  strain_name                            VARCHAR(255) DEFAULT "Mixed" NOT NULL,
  developmental_stage_id    		INT(10) NOT NULL,
- phenotype_description			ENUM('Blind', 'Phenotypic') DEFAULT 'Blind' NOT NULL,
+ collection_description			ENUM('Blind', 'Phenotypic') DEFAULT 'Blind' NOT NULL,
  dna_source                             VARCHAR(255) DEFAULT 'Whole Genome' NOT NULL,
  image					VARCHAR(255) DEFAULT 'No image' NOT NULL,
  spike_mix				ENUM('0', '1', '2') DEFAULT '0' NOT NULL,
@@ -218,6 +218,7 @@ CREATE TABLE IF NOT EXISTS sequence_plate (
  library_volume				FLOAT NULL,
  library_qc				TINYINT(1) DEFAULT 1 NOT NULL,
  selected                               TINYINT(1) DEFAULT 1 NOT NULL,
+ phenotype                              ENUM('Phenotypic','Non-Phenotypic','Unknown') DEFAULT 'Unknown',
  
 
  PRIMARY 				KEY(id),

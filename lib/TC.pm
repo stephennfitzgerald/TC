@@ -46,13 +46,19 @@ use constant SPIKE_IDS => {
 };
 
 use constant VISIBILITY => {
-    1 => "Hold",
-    2 => "Public",
+    1 => 'Hold',
+    2 => 'Public',
 };
 
-use constant PHENOTYPE_DESCRIPTION => {
-    1 => "Blind",
-    2 => "Phenotypic",
+use constant COLLECTION_DESCRIPTION => {
+    1 => 'Blind',
+    2 => 'Phenotypic',
+};
+
+use constant PHENOTYPES => {
+    1 => 'Phenotypic',
+    2 => 'Non-Phenotypic',
+    3 => 'Unknown',
 };
 
 use constant HEADER_ROW => 9;
@@ -217,9 +223,100 @@ get '/' => sub {
         'delete_experiment_url'     => uri_for('/delete_experiment'),
         'add_sequencing_plate_data_url' => uri_for('/add_sequencing_plate_data'),
         'choose_a_tc_experiment_url'    => uri_for('/choose_a_tc_experiment'),
+        'update_a_phenotype_url'    => uri_for('/update_a_phenotype'),  
     };
 
 };
+
+get '/update_a_phenotype' => sub {
+
+ $dbh = get_schema();
+
+ my ($std_exp, @pheno_info, %exp_ids, $chosen_exp_id, $pheno_col_names);
+
+ my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
+ $exp_sth->execute;
+ my $col_names = $exp_sth->{'NAME'};
+ $std_exp = $exp_sth->fetchall_arrayref;
+
+ my $phenoct_sth = $dbh->prepare("SELECT * FROM phenoCountView WHERE id = ?");
+
+ foreach my $exp_std(@{ $std_exp }) {
+  @{ $exp_std }[0,2] = @{ $exp_std }[2,0];  
+  $phenoct_sth->execute($exp_std->[0]);
+  $exp_ids{ $exp_std->[0] }++;
+  my $pheno_ct_str;
+  foreach my $pct(@{ $phenoct_sth->fetchall_arrayref }) {
+   $pheno_ct_str .= $pct->[1] . '(' . $pct->[2] . ') ';
+  }
+  push@{ $exp_std }, $pheno_ct_str;
+ }
+ unshift @{ $std_exp }, [ @{ $col_names }[2,1,0], 'phenotypes' ];
+
+ my $pheno_sth = $dbh->prepare("SELECT * FROM phenoView WHERE exp_id = ?");
+ 
+ foreach my $exp_id(sort {$b <=> $a} keys %exp_ids) {
+  if(param('exp_id') ==  $exp_id){
+   $pheno_sth->execute($exp_id);    
+   $pheno_col_names = $pheno_sth->{'NAME'};
+   push @pheno_info, @{ $pheno_sth->fetchall_arrayref };
+   splice(@{ $pheno_col_names },1,1, 'Select');
+   unshift @pheno_info, $pheno_col_names;
+   $chosen_exp_id = $exp_id;
+  }
+ }
+ 
+ template 'update_a_phenotype', {
+  
+  std_exp           => $std_exp,
+  pheno_info        => \@pheno_info,
+  pheno_types       => PHENOTYPES,
+  chosen_exp_id     => $chosen_exp_id,
+ 
+  'add_phenotypes_to_db_url' => uri_for('/add_phenotypes_to_db'),
+ };
+
+};
+
+get '/add_phenotypes_to_db' => sub {
+
+ my $pheno_sth = $dbh->prepare("SELECT * FROM phenoView WHERE exp_id = ?");
+ my $chosen_exp_id = param('chosen_exp_id');
+ $pheno_sth->execute($chosen_exp_id);
+ my $pheno_col_names = $pheno_sth->{'NAME'};
+ 
+ my (@rows2update, @pheno_info);
+ foreach my $selected(@{ $pheno_sth->fetchall_arrayref }) {
+  my $pheno_id = "pheno::" . $selected->[1];
+  if(param("$pheno_id")) {
+   push @rows2update, $selected->[1];
+  }
+ }
+ 
+ my $chosen_pheno = param('chosen_pheno'); 
+
+ foreach my $row2update(@rows2update) {
+  my $update_pheno_sth = $dbh->prepare("CALL update_pheno(?,?)");
+  $update_pheno_sth->execute($row2update, $chosen_pheno);
+ }
+ 
+ $pheno_sth->execute($chosen_exp_id);
+ push @pheno_info, @{ $pheno_sth->fetchall_arrayref };
+ splice(@{ $pheno_col_names },1,1, 'Select');
+ unshift @pheno_info, $pheno_col_names;
+
+ template 'update_a_phenotype', {
+  
+  std_exp           => undef,
+  pheno_info        => \@pheno_info,
+  pheno_types       => PHENOTYPES,
+  chosen_exp_id     => $chosen_exp_id, 
+  
+  'add_phenotypes_to_db_url' => uri_for('/add_phenotypes_to_db'),
+ };
+
+};
+
 
 post '/add_sequencing_plate_data' => sub {
 
@@ -854,7 +951,7 @@ post '/get_sequencing_report' => sub {
                             }
                         }
                         my $sanger_info_sth = $dbh->prepare(
-                            "Call update_sanger_tube_and_sample(?,?,?)");
+                            "Call update_sanger_plate_and_sample(?,?,?)");
                         my $seq_id =
                           $sequence_plate->{"$index_tag_id"}->{'seq_plate_id'};
                         $sanger_info_sth->execute( $sanger_plate_id,
@@ -1147,13 +1244,13 @@ get '/get_new_experiment' => sub {
         last_library_tube_id               => $last_exp->[22],
         last_exp_desc                      => $last_exp->[23],
 
-        spike_ids             => SPIKE_IDS,
-        genref_names          => $genref_names,
-        table_schema          => $table_schema,
-        dev_stages            => $dev_stages,
-        visibility            => VISIBILITY,
-        phenotype_description => PHENOTYPE_DESCRIPTION,
-        study_names           => $std_names,
+        spike_ids                          => SPIKE_IDS,
+        genref_names                       => $genref_names,
+        table_schema                       => $table_schema,
+        dev_stages                         => $dev_stages,
+        visibility                         => VISIBILITY,
+        collection_description             => COLLECTION_DESCRIPTION,
+        study_names                        => $std_names,
 
         add_experiment_data_url => uri_for('/add_experiment_data'),
     };
@@ -1176,7 +1273,7 @@ post '/add_experiment_data' => sub {
         param('Embryos_collected_by'),
         param('Embryo_collection_date'),
         param('Number_of_embryos_collected'),
-        param('Phenotype_description'),
+        param('Collection_description'),
         param('Developmental_stage'),
         param('Experiment_description')
     ];
@@ -1557,7 +1654,7 @@ get '/choose_a_tc_experiment' => sub {
    @{ $exp_std }[3] = 'Yes';
   }
  }
- unshift @{ $tc_exp_std }, [ @{ $col_names }[2,1,0,3] ]; # hack 
+ unshift @{ $tc_exp_std }, [ @{ $col_names }[2,1,0,3] ]; # have to reorder the col names
 
  my $zap_col_names;
  my $zap_sth = $dbh->prepare("SELECT * FROM ontologyTermsView WHERE exp_id = ?");

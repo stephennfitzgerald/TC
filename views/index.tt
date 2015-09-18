@@ -221,10 +221,18 @@ body {
               <input type=submit value="&#8594;"> 
              </form>
             </td>
-          </tr><tr><tr>
+           </tr><tr><tr>
            <td width=260px>Add/update a phenotype image</td>
             <td>
              <form action="<% update_image_url %>" method="post">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr><tr><tr>
+           <td width=260px>Update a phenotype</td>
+            <td>
+             <form action="<% update_a_phenotype_url %>" method=get">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <input type=submit value="&#8594;"> 
              </form>

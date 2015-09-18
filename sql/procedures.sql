@@ -15,6 +15,22 @@ WHERE zap.id = zap_id_param;
 END$$
 DELIMITER ;
 
+/** update phenotype in sequence_plate table **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS update_pheno$$
+
+CREATE PROCEDURE update_pheno (
+ IN seqp_id_param INT(10),
+ IN pheno_param ENUM('Phenotypic','Non-Phenotypic','Unknown') 
+)
+BEGIN
+
+UPDATE sequence_plate 
+SET phenotype = pheno_param
+WHERE id = seqp_id_param;
+END$$
+DELIMITER ;
+
 /** delete experiment and rna_extraction record **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS delete_exp$$
@@ -349,7 +365,7 @@ CREATE PROCEDURE add_experiment_data (
  IN embryos_collected_by_param VARCHAR(255),
  IN embryo_collection_date_param DATE,
  IN number_of_embryos_collected_param INT(10),
- IN phenotype_description_param ENUM('Blind', 'Phenotypic'),
+ IN collection_description_param ENUM('Blind', 'Phenotypic'),
  IN developmental_stage_id_param INT(10),
  IN description_param MEDIUMTEXT, 
  OUT exp_id int(10)
@@ -371,7 +387,7 @@ INSERT INTO experiment (
  embryo_collected_by,
  embryo_collection_date,
  number_embryos_collected,
- phenotype_description,
+ collection_description,
  developmental_stage_id,
  description
 ) 
@@ -390,7 +406,7 @@ VALUES (
  embryos_collected_by_param,
  embryo_collection_date_param,
  number_of_embryos_collected_param,
- phenotype_description_param,
+ collection_description_param,
  developmental_stage_id_param,
  description_param
 );
@@ -505,7 +521,7 @@ DELIMITER ;
 DELIMITER $$
 DROP PROCEDURE IF EXISTS update_sanger_plate_and_sample$$
 
-CREATE PROCEDURE update_sanger_tube_and_sample (
+CREATE PROCEDURE update_sanger_plate_and_sample (
  IN sanger_plate_id_param VARCHAR(255),
  IN sanger_sample_id_param VARCHAR(255),
  IN id_param INT(10)
