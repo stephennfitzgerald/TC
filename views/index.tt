@@ -38,7 +38,7 @@ table, th, td {
 }
 .border2 {
  color: #B0B0B0;
- height: 190px;
+ height: 210px;
  width: 400px;
  border: dashed;
  padding: 25px;
@@ -233,6 +233,14 @@ body {
            <td width=260px>Update a phenotype</td>
             <td>
              <form action="<% update_a_phenotype_url %>" method=get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr><tr><tr>
+           <td width=260px>Update an ENA ID</td>
+            <td>
+             <form action="<% update_an_ena_id_url %>" method=get">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <input type=submit value="&#8594;"> 
              </form>

@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS sequence_plate (
  library_qc				TINYINT(1) DEFAULT 1 NOT NULL,
  selected                               TINYINT(1) DEFAULT 1 NOT NULL,
  phenotype                              ENUM('Phenotypic','Non-Phenotypic','Unknown') DEFAULT 'Unknown',
- 
+ ena_accession                          VARCHAR(255) NULL, 
 
  PRIMARY 				KEY(id),
  UNIQUE 				KEY(plate_name, well_name),

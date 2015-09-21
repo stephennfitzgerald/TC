@@ -1,5 +1,24 @@
 /** procedures **/
 
+/** update the ena accession number in the sequence_plate table with an ID from the warehouse db **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS updateENAid$$
+ 
+CREATE PROCEDURE updateENAid (
+ IN sample_name_param varchar(255),
+ IN ena_id_param varchar(255),
+ IN exp_id_param INT(10)
+)
+BEGIN
+
+ UPDATE sequence_plate seqp INNER JOIN rna_dilution_plate rdp 
+ ON rdp.id = seqp.rna_dilution_plate_id 
+ SET seqp.ena_accession = ena_id_param 
+ WHERE seqp.sample_public_name = sample_name_param 
+ AND rdp.experiment_id = exp_id_param;
+END$$
+DELIMITER ;
+
 /** delete entry from zmp_allele_phenotype_eq table **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS delete_zap$$

@@ -224,7 +224,50 @@ get '/' => sub {
         'add_sequencing_plate_data_url' => uri_for('/add_sequencing_plate_data'),
         'choose_a_tc_experiment_url'    => uri_for('/choose_a_tc_experiment'),
         'update_a_phenotype_url'    => uri_for('/update_a_phenotype'),  
+        'update_an_ena_id_url'      => uri_for('/update_an_ena_id'),
     };
+
+};
+
+get '/update_an_ena_id' => sub {
+
+ $dbh = get_schema();
+ my ($study_exp, $ena_res, $ena_upd);
+ if(my $exp_name_id = param('exp_to_check')) {
+  my($exp_name, $exp_id) = split'::', $exp_name_id;
+  my $wh_dbh = get_wh_schema(); 
+  my ($name_stem) = $exp_name=~/(\w*[-_]?\w*).*/xms;
+  my $ena_res_sth = $wh_dbh->prepare("SELECT name, 
+                                      accession_number 
+                                      FROM current_samples 
+                                      WHERE name LIKE ? 
+                                      AND accession_number 
+                                      IS NOT NULL GROUP BY name"); 
+
+  $ena_res_sth->execute("$name_stem" . '%');
+  $ena_res = $ena_res_sth->fetchall_arrayref;
+  my $ena_update_sth = $dbh->prepare("CALL updateENAid(?,?,?)");
+  foreach my $ena(@{ $ena_res }) {
+   $ena_update_sth->execute(@{ $ena }, $exp_id);
+  }
+  my $ena_upd_sth = $dbh->prepare("SELECT * FROM enaView WHERE exp_id = ?");
+  $ena_upd_sth->execute($exp_id);
+  my $col_names = $ena_upd_sth->{'NAME'};
+  $ena_upd = $ena_upd_sth->fetchall_arrayref;
+  unshift @{ $ena_upd }, $col_names;
+ }
+ my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
+ $exp_sth->execute;
+ $study_exp = $exp_sth->fetchall_arrayref;
+ unshift @{ $study_exp }, [ 'NullOption' ];
+
+ template 'update_an_ena_id', {
+  
+  'study_exp' => $study_exp,
+  'ena_upd'   => $ena_upd,
+ 
+  'update_an_ena_id_url'      => uri_for('/update_an_ena_id'),
+ };
 
 };
 
@@ -1930,10 +1973,17 @@ sub roll_back { # delete experiment(s) from the database
 }
 
 sub get_schema {
-    my($host, $port)=($ENV{'TC_HOST'}, $ENV{'TC_PORT'});
-    return DBI->connect( "DBI:mysql:$db_name;host=$host;port=$port",
-        $ENV{'TC_USER'}, $ENV{'TC_PASS'} )
-      or die "Cannot connect to database\n$?";
+  my($host, $port)=($ENV{'TC_HOST'}, $ENV{'TC_PORT'});
+  return DBI->connect( "DBI:mysql:$db_name;host=$host;port=$port",
+      $ENV{'TC_USER'}, $ENV{'TC_PASS'} )
+    or die "Cannot connect to database $db_name\n$?";
 }
+
+sub get_wh_schema {
+ my($host,$port,$user,$db_name) = ($ENV{'WH_HOST'}, $ENV{'WH_PORT'}, $ENV{'WH_USER'}, $ENV{'WH_DBNAME'});
+ return DBI->connect( "DBI:mysql:$db_name;host=$host;port=$port",$user) 
+  or die "Cannot connect to database $db_name\n$?";
+}
+  
 
 1;
