@@ -1,10 +1,29 @@
 /** views **/
 
+CREATE OR REPLACE VIEW enaView AS
+ SELECT rdp.experiment_id exp_id,
+        seqp.sample_public_name,
+        seqp.ena_accession
+ FROM sequence_plate seqp INNER JOIN rna_dilution_plate rdp
+ ON seqp.rna_dilution_plate_id = rdp.id
+ WHERE seqp.selected = 1
+ ORDER BY rdp.experiment_id, seqp.id;
+
+CREATE OR REPLACE VIEW alleleView AS
+ SELECT ale.id allele_id,
+        ale.name allele_name,
+        ale.snp_id,
+        group_concat(DISTINCT(ale.gene_name) SEPARATOR ' :: ') gene_name
+ FROM allele ale 
+ GROUP BY allele_id
+ ORDER BY allele_name;
+
 CREATE OR REPLACE VIEW ontologyTermsView AS
  SELECT exp.id exp_id,
         exp.name experiment_name,
         std.name study_name,
         seqp.sample_public_name, 
+        seqp.phenotype,
         dev.zfs_id stage, 
         zap.tag tag, 
         zap.quality quality, 
@@ -16,18 +35,9 @@ CREATE OR REPLACE VIEW ontologyTermsView AS
  ON gt.rna_dilution_plate_id = rdp.id INNER JOIN allele alle 
  ON gt.allele_id = alle.id INNER JOIN zmp_allele_phenotype_eq zap 
  ON zap.allele_id = alle.id INNER JOIN developmental_stage dev 
- ON dev.zfs_id = zap.stage
+ ON dev.zfs_id = zap.stage 
  WHERE seqp.selected = 1
  ORDER BY exp_id DESC;
-
-CREATE OR REPLACE VIEW alleleView AS
- SELECT ale.id allele_id,
-        ale.name allele_name,
-        ale.snp_id,
-        group_concat(DISTINCT(ale.gene_name) SEPARATOR ' :: ') gene_name
- FROM allele ale 
- GROUP BY allele_id
- ORDER BY allele_name;
 
 CREATE OR REPLACE VIEW phenoCountView AS
  SELECT exp.id, 
@@ -39,24 +49,6 @@ CREATE OR REPLACE VIEW phenoCountView AS
  WHERE seq.selected = 1
  GROUP BY exp.id, seq.phenotype 
  ORDER BY exp.id, seq.phenotype;
-
-CREATE OR REPLACE VIEW phenoView AS
- SELECT exp.id exp_id, 
-        seqp.id seqp_id,
-        exp.name exp_name, 
-        std.name study_name, 
-        seqp.well_name, 
-        gav.AlleleGenotype genotype, 
-        seqp.phenotype 
- FROM experiment exp INNER JOIN study std 
- ON exp.study_id = std.id INNER JOIN rna_dilution_plate rdp 
- ON rdp.experiment_id = exp.id INNER JOIN sequence_plate seqp 
- ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN genotAlleleView gav 
- ON gav.rna_well_id = rdp.id 
- WHERE seqp.selected = 1
- ORDER BY SUBSTR(seqp.well_name,1,1),
-          LENGTH(SUBSTR(seqp.well_name,2)),
-          SUBSTR(seqp.well_name,2);  
 
 CREATE OR REPLACE VIEW alleleOntologyView AS
  SELECT zap.id zap_id,
@@ -80,6 +72,24 @@ CREATE OR REPLACE VIEW genotAlleleView AS
  FROM allele alle INNER JOIN genotype genot
         ON genot.allele_id = alle.id 
  GROUP BY genot.rna_dilution_plate_id;
+
+CREATE OR REPLACE VIEW phenoView AS
+ SELECT exp.id exp_id, 
+        seqp.id seqp_id,
+        exp.name exp_name, 
+        std.name study_name, 
+        seqp.well_name, 
+        gav.AlleleGenotype genotype, 
+        seqp.phenotype 
+ FROM experiment exp INNER JOIN study std 
+ ON exp.study_id = std.id INNER JOIN rna_dilution_plate rdp 
+ ON rdp.experiment_id = exp.id INNER JOIN sequence_plate seqp 
+ ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN genotAlleleView gav 
+ ON gav.rna_well_id = rdp.id 
+ WHERE seqp.selected = 1
+ ORDER BY SUBSTR(seqp.well_name,1,1),
+          LENGTH(SUBSTR(seqp.well_name,2)),
+          SUBSTR(seqp.well_name,2);  
 
 CREATE OR REPLACE VIEW libSampleIdView AS 
  SELECT exp.id exp_id, seqp.id seq_id
