@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+function goBack() 
+ {
+   window.history.back();
+ }
+
+function goHome()
+ {
+   window.location = '/';   
+ }
+</script>
+
+
+<head>
+<style>
+
+P {
+ font-size: 13px;
+ font-family:'Courier New';
+} 
+
+.view_info input[type="submit"] {
+ color: black;
+ background: #BDECB6;
+ display: inline;
+}
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+th,td {
+    padding: 15px;
+    text-align: center;
+}
+
+.table2, th, td {
+    border: 1px solid white;
+}
+
+</style>
+</head>
+
+<body background="images/zmp.jpg">
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+         <p>
+          <button onclick="goHome()">Home</button>
+         <p>
+         <h1>Add a new allele</h1>
+          <form action="<% add_a_new_allele_url %>" method="get">
+           <p>
+           <table style="table2"><tr><td>
+           Add an allele_name </td><td> 
+           <input type="text" name="allele_name" required>
+           </td></tr>
+           <tr><td>
+           Add a gene_name </td><td>
+           <input type="text" name="gene_name">
+           </td></tr>
+           <tr><td>
+           Add a snp_id </td><td>
+           <input type="text" name="snp_id">
+           </td></tr>
+          </table>
+           <input type="submit" value="Submit">
+          </form>
+          <br></br>
+          <table>
+           <% row_index = 1 %>
+           <% FOREACH allele IN alleles %>
+            <% IF row_index % 2 %>
+             <tr bgcolor='#CEECF5'>
+            <% ELSE %>
+             <tr bgcolor='#FFFFFF'>
+            <%END %>
+            <% field_index = 1 %>
+             <% FOREACH attrib IN allele %>
+              <% IF field_index != 1 %>
+               <td><% attrib %>
+               </td>
+              <% ELSIF attrib == last_allele_id %>
+               <tr bgcolor='#F5A9F2'>
+              <% END %>
+               <% field_index = field_index + 1 %>
+             <% END %>
+             </tr>
+            <% row_index = row_index + 1 %>
+           <% END %>
+          </table>
+        </div>
+      </div>
+</div>
+</body>
+</html>

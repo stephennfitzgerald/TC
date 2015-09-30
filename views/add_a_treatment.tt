@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+function goBack() 
+ {
+   window.history.back();
+ }
+
+function goHome()
+ {
+   window.location = '/';   
+ }
+
+var RadioValue = ''; // global - bit of a hack
+function check_selected_terms() {
+ if(! RadioValue) {
+  alert("Please select at least one row");
+  return false;
+ } 
+}
+
+</script>
+
+
+<head>
+<style>
+
+P {
+ font-size: 13px;
+ font-family:'Courier New';
+} 
+
+.view_info input[type="submit"] {
+ color: black;
+ background: #BDECB6;
+ display: inline;
+}
+
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+th,td {
+    padding: 15px;
+    text-align: center;
+}
+
+</style>
+</head>
+
+<body background="images/zmp.jpg">
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+         <p>
+          <button onclick="goHome()">Home</button>
+           &nbsp;&nbsp;&nbsp;&nbsp;
+          <button onclick="goBack()">Back</button>
+         <p>
+          <% IF ! chosen_exp_id %>
+            <table>
+             <h1>Choose an experiment</h1>
+            <% row_index = 0 %>
+             <form action="<% add_a_treatment_url %>" method="get" onsubmit="return check_selected_terms();">
+               <% FOREACH rec in std_exp %>
+                <% col_num = 0 %>
+    
+                 <% IF row_index % 2 %>
+                   <tr bgcolor='#CEECF5'>
+                 <% ELSE %>
+                   <tr bgcolor='#FFFFFF'>
+                 <%END %>
+       
+                 <% IF row_index == 0 %>
+                   <% FOREACH col in rec %>
+        
+                    <% IF col_num == 0 %>
+                     <td>Select</td>
+                    <% ELSE %> 
+                     <td><% col %></td>
+                    <% END %>
+        
+                    <% col_num = col_num + 1 %>
+                   <% END %>
+                  </tr>
+                 <% ELSE %>
+
+                  <% FOREACH col in rec %>
+                   <% IF col_num == 0 && col %>
+                      <td><input type="radio" name="exp_id" value="<% col %>" onClick="RadioValue = 1;"></td>
+                    <% ELSE %>
+                     <td><% col %></td>
+                    <% END %>  
+                     <% col_num = col_num + 1 %>
+                   <% END %>
+
+                <% END %>
+                <% row_index = row_index + 1 %>
+
+               <% END %>
+               </tr></table>
+               <p>
+                <input type="submit" value="Submit">
+                 &nbsp;&nbsp;&nbsp;&nbsp;
+                <input type="reset" value="Clear" onClick="RadioValue = 0;">
+               </form>
+
+           <% ELSE %>
+            <form action="<% update_a_treatment_url %>" method="get" enctype="multipart/form-data" onsubmit="return check_selected_terms();">
+             <input type="hidden" name="add_a_treatment_url" value="<% add_a_treatment_url %>">
+             <input type="hidden" name="chosen_exp_id" value="<% chosen_exp_id %>">
+               <p><p>
+               <table>
+               <tr><td>
+                Choose a treatment
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <select class="dropdown" name="chosen_treatment">
+                 <% FOREACH treatment IN treatment_types.values.sort %>
+                  <% IF treatment %>
+                   <option value="<% treatment %>"><% treatment %></option>
+                  <% ELSE %>
+                   <option value disabled selected> -- select a treatment -- </option>
+                  <% END %>
+                 <% END %> 
+                </select></td>
+                <td> Add a description
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <input type="text" name="treatment_desc">
+                </td> 
+               </tr>
+               </table>
+               <p><p>
+               <table>
+               <% row_index = 0 %> 
+                <% FOREACH rec in treatments_info %>
+
+                 <% IF row_index % 2 %>
+                  <tr bgcolor='#CEECF5'>
+                 <% ELSE %>
+                  <tr bgcolor='#FFFFFF'>
+                 <% END %>
+                  <% col_num = 0 %>
+                  <% FOREACH col in rec %>
+                   <% IF col_num == 1 && row_index > 0 %>
+                    <% seqp_id = 'seqp::' _ col %>
+                    <td><input type="radio" name="<% seqp_id %>" value="<% col %>" onClick="RadioValue = 1;"></td>
+                   <% ELSIF col_num > 0 %>
+                    <td><% col %></td>
+                   <% END %>
+                   <% col_num = col_num + 1 %>
+                  <% END %>
+		   <% row_index = row_index + 1 %>
+                   </tr>
+                 <% END %>
+              <input type="submit" value="Submit">
+               &nbsp;&nbsp;&nbsp;&nbsp;
+              <input type="reset" value="Clear" onClick="RadioValue = 0;">
+              <p><p>
+             <% END %>
+            </table>
+            </form>
+            <p><p>
+       </div>
+     </div>
+</div>
+</body>
+</html>

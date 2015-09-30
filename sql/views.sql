@@ -16,7 +16,28 @@ CREATE OR REPLACE VIEW alleleView AS
         group_concat(DISTINCT(ale.gene_name) SEPARATOR ' :: ') gene_name
  FROM allele ale 
  GROUP BY allele_id
- ORDER BY allele_name;
+ ORDER BY allele_id DESC;
+
+CREATE OR REPLACE VIEW treatmentView AS
+ SELECT rdp.experiment_id,
+        seqp.id well_id,
+        seqp.well_name,
+        GROUP_CONCAT(DISTINCT(seqp.phenotype)) phenotypes,
+        GROUP_CONCAT(DISTINCT(gt.name)) genotypes,
+        GROUP_CONCAT(DISTINCT(av.allele_name)) allele_names,
+        GROUP_CONCAT(DISTINCT(av.gene_name)) gene_names,
+        GROUP_CONCAT(tm.treatment_type SEPARATOR ', ') treatment_types,
+        GROUP_CONCAT(tm.treatment_description SEPARATOR ' ') treatment_descriptions
+ FROM sequence_plate seqp INNER JOIN rna_dilution_plate rdp 
+ ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN genotype gt
+ ON gt.rna_dilution_plate_id = rdp.id INNER JOIN alleleView av
+ ON av.allele_id = gt.allele_id LEFT OUTER JOIN treatment tm
+ ON seqp.id = tm.sequence_plate_id
+ WHERE seqp.selected = 1
+ GROUP BY rdp.experiment_id, seqp.id
+ ORDER BY SUBSTR(seqp.well_name,1,1),
+          LENGTH(SUBSTR(seqp.well_name,2)),
+          SUBSTR(seqp.well_name,2);  
 
 CREATE OR REPLACE VIEW ontologyTermsView AS
  SELECT exp.id exp_id,

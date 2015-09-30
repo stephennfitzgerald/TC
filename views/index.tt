@@ -5,7 +5,7 @@
 
 function openWin(img){
    var path = "images/";
-   window.open(path+img,"mywin","menubar=0,resizable=0,width=200,height=200");
+   window.open(path+img,"mywin","menubar=0,resizable=0,width=210,height=210");
 }
 
 function goBack() 
@@ -38,7 +38,7 @@ table, th, td {
 }
 .border2 {
  color: #B0B0B0;
- height: 210px;
+ height: 280px;
  width: 400px;
  border: dashed;
  padding: 25px;
@@ -83,24 +83,74 @@ body {
     <p><p>
 
     <div id="section" style="float:right;">
-     <div class="border1">
+     <div class="border2">
       <div class="txt" style="float:left;">
-       <h2>Ontology terms</h2>
+       <h2>Update tables</h2>
         <table style="float:left;"><tr>
-         <td width=260px>Add terms to an allele</td>
-         <td>
-          <form action="<% get_ontology_for_allele_url %>" method=get">
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-           <input type=submit value="&#8594;">
-          </form>
-         </td>
-         </tr><tr><tr>
-          <td width=260px>Choose an experiment</td>
-          <td>
-          <form action="<% choose_a_tc_experiment_url %>" method=get">
-           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          <input type=submit value="&#8594;"> 
-         </form>
+          <td width=260px>Add a new study</td> 
+           <td>
+            <form action="<% add_a_new_study_url %>" method="get">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <input type=submit value="&#8594;">
+            </form>
+           </td>
+          </tr><tr><tr>
+           <td width=260px>Add a new assembly</td>
+            <td>
+             <form action="<% add_a_new_assembly_url %>" method="get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr><tr><tr>
+           <td width=260px>Add a new developmental stage</td>
+            <td>
+             <form action="<% add_a_new_dev_stage_url %>" method="get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr><tr><tr>
+           <td width=260px>Add/update a phenotype image</td>
+            <td>
+             <form action="<% update_image_url %>" method="post">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr><tr><tr>
+           <td width=260px>Update a phenotype</td>
+            <td>
+             <form action="<% update_a_phenotype_url %>" method="get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr><tr><tr>
+           <td width=260px>Update an ENA ID</td>
+            <td>
+             <form action="<% update_an_ena_id_url %>" method="get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr><tr><tr>
+           <td width=260px>Add a treatment</td>
+            <td>
+             <form action="<% add_a_treatment_url %>" method="get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr><tr><tr>
+           <td width=260px>Add a new allele</td>
+            <td>
+             <form action="<% add_a_new_allele_url %>" method="get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr>
         </tr></table>
        </div>
       </div>
@@ -112,7 +162,7 @@ body {
          <table><tr>
           <td width=260px>Add a new experiment</td> 
            <td>
-            <form action="<% get_new_experiment_url %>" method=get">
+            <form action="<% get_new_experiment_url %>" method="get">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
              <input type=submit value="&#8594;">
             </form>
@@ -120,7 +170,7 @@ body {
           </tr><tr><tr>
            <td width=260px>Make a sequencing plate</td>
             <td>
-             <form action="<% make_sequencing_plate_url %>" method=get">
+             <form action="<% make_sequencing_plate_url %>" method="get">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <input type=submit value="&#8594;"> 
              </form>
@@ -138,7 +188,7 @@ body {
           </tr><tr><tr>
            <td width=260px>Make a sequencing form</td>
            <td>
-            <form action="<% make_sequencing_form_url %>" method=get">
+            <form action="<% make_sequencing_form_url %>" method="get">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
              <input type=submit value="&#8594;">
             </form>
@@ -147,7 +197,16 @@ body {
           </tr><tr><tr>
            <td width=260px><font color="red">Delete an Experiment</font></td>
            <td>
-            <form action="<% delete_experiment_url %>" method=get">
+            <form action="<% delete_experiment_url %>" method="get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <input type=submit value="&#8594;">
+            </form>
+           </td>
+           </tr>
+          </tr><tr><tr>
+           <td width=260px><font color="red">Modify a KlusterCaller plate</font></td>
+           <td>
+            <form action="<% modify_a_kc_plate_url %>" method="post">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
              <input type=submit value="&#8594;">
             </form>
@@ -166,7 +225,7 @@ body {
          <table><tr>
           <td width=260px>View experiments</td> 
            <td>
-            <form action="<% get_all_experiments_url %>" method=get">
+            <form action="<% get_all_experiments_url %>" method="get">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
              <input type=submit value="&#8594;">
             </form>
@@ -174,7 +233,7 @@ body {
           </tr><tr><tr>
            <td width=260px>View sequencing plates</td>
             <td>
-             <form action="<% get_all_sequencing_plates_url %>" method=get">
+             <form action="<% get_all_sequencing_plates_url %>" method="get">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <input type=submit value="&#8594;"> 
              </form>
@@ -194,58 +253,24 @@ body {
    </div>
     <p></p>
     <div id="section">
-     <div class="border2">
+     <div class="border1">
        <div class="txt">
-        <h2>Update tables</h2>
+        <h2>Ontology terms</h2>
          <table><tr>
-          <td width=260px>Add a new study</td> 
-           <td>
-            <form action="<% add_a_new_study_url %>" method=get">
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-             <input type=submit value="&#8594;">
-            </form>
-           </td>
-          </tr><tr><tr>
-           <td width=260px>Add a new assembly</td>
-            <td>
-             <form action="<% add_a_new_assembly_url %>" method=get">
-             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <input type=submit value="&#8594;"> 
-             </form>
-            </td>
-           </tr><tr><tr>
-           <td width=260px>Add a new developmental stage</td>
-            <td>
-             <form action="<% add_a_new_dev_stage_url %>" method=get">
-             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <input type=submit value="&#8594;"> 
-             </form>
-            </td>
-           </tr><tr><tr>
-           <td width=260px>Add/update a phenotype image</td>
-            <td>
-             <form action="<% update_image_url %>" method="post">
-             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <input type=submit value="&#8594;"> 
-             </form>
-            </td>
-           </tr><tr><tr>
-           <td width=260px>Update a phenotype</td>
-            <td>
-             <form action="<% update_a_phenotype_url %>" method=get">
-             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <input type=submit value="&#8594;"> 
-             </form>
-            </td>
-           </tr><tr><tr>
-           <td width=260px>Update an ENA ID</td>
-            <td>
-             <form action="<% update_an_ena_id_url %>" method=get">
-             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <input type=submit value="&#8594;"> 
-             </form>
-            </td>
-           </tr>
+         <td width=260px>Add terms to an allele</td>
+         <td>
+          <form action="<% get_ontology_for_allele_url %>" method="get">
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+           <input type=submit value="&#8594;">
+          </form>
+         </td>
+         </tr><tr><tr>
+          <td width=260px>Choose an experiment</td>
+          <td>
+          <form action="<% choose_a_tc_experiment_url %>" method="get">
+           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <input type=submit value="&#8594;"> 
+         </form>
           </table>
          </div>
         </div>

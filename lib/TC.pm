@@ -55,6 +55,14 @@ use constant COLLECTION_DESCRIPTION => {
     2 => 'Phenotypic',
 };
 
+use constant TREATMENT_TYPES => {
+    1 => undef, 
+    2 => 'No treatment',
+    3 => 'Infection challenge',
+    4 => 'Gene knockout',
+    5 => 'Small molecule screen',
+};
+
 use constant PHENOTYPES => {
     1 => 'Phenotypic',
     2 => 'Non-Phenotypic',
@@ -64,58 +72,57 @@ use constant PHENOTYPES => {
 use constant HEADER_ROW => 9;
 
 use constant SANGER_COLS => {
-    'SANGER PLATE ID'                                => 'A',
-    'WELL'                                           => 'B',
-    'SANGER SAMPLE ID'                               => 'C',
-    'SUPPLIER SAMPLE NAME'                           => 'D',
-    'COHORT'                                         => 'E',
-    'VOLUME (ul)'                                    => 'F',
-    'CONC. (ng/ul)'                                  => 'G',
-    'GENDER'                                         => 'H',
-    'COUNTRY OF ORIGIN'                              => 'I',
-    'GEOGRAPHICAL REGION'                            => 'J',
-    'ETHNICITY'                                      => 'K',
-    'DNA SOURCE'                                     => 'L',
-    'DATE OF SAMPLE COLLECTION (MM/YY or YYYY only)' => 'M',
-    'DATE OF DNA EXTRACTION (MM/YY or YYYY only)'    => 'N',
-    'IS SAMPLE A CONTROL?'                           => 'O',
-    'IS RE-SUBMITTED SAMPLE?'                        => 'P',
-    'DNA EXTRACTION METHOD'                          => 'Q',
-    'SAMPLE PURIFIED?'                               => 'R',
-    'PURIFICATION METHOD'                            => 'S',
-    'CONCENTRATION DETERMINED BY'                    => 'T',
-    'DNA STORAGE CONDITIONS'                         => 'U',
-    'MOTHER (optional)'                              => 'V',
-    'FATHER (optional)'                              => 'W',
-    'SIBLING (optional)'                             => 'X',
-    'GC CONTENT'                                     => 'Y',
-    'PUBLIC NAME'                                    => 'Z',
-    'TAXON ID'                                       => 'AA',
-    'COMMON NAME'                                    => 'AB',
-    'SAMPLE DESCRIPTION'                             => 'AC',
-    'STRAIN'                                         => 'AD',
-    'SAMPLE VISIBILITY'                              => 'AE',
-    'SAMPLE TYPE'                                    => 'AF',
-    'GENOTYPE'                                       => 'AG',
-    'PHENOTYPE (required for EGA)'                   => 'AH',
-    'AGE (with units)'                               => 'AI',
-    'Developmental stage'                            => 'AJ',
-    'Cell Type'                                      => 'AK',
-    'Disease State'                                  => 'AL',
-    'Compound'                                       => 'AM',
-    'Dose'                                           => 'AN',
-    'Immunoprecipitate'                              => 'AO',
-    'Growth condition'                               => 'AP',
+    'SANGER TUBE ID'                                => 'A',    
+    'SANGER SAMPLE ID'                               => 'B',
+    'SUPPLIER SAMPLE NAME'                           => 'C',
+    'COHORT'                                         => 'D',
+    'VOLUME (ul)'                                    => 'E',
+    'CONC. (ng/ul)'                                  => 'F',
+    'GENDER'                                         => 'G',
+    'COUNTRY OF ORIGIN'                              => 'H',
+    'GEOGRAPHICAL REGION'                            => 'I',
+    'ETHNICITY'                                      => 'J',
+    'DNA SOURCE'                                     => 'K',
+    'DATE OF SAMPLE COLLECTION (MM/YY or YYYY only)' => 'L',
+    'DATE OF DNA EXTRACTION (MM/YY or YYYY only)'    => 'M',
+    'IS SAMPLE A CONTROL?'                           => 'N',
+    'IS RE-SUBMITTED SAMPLE?'                        => 'O',
+    'DNA EXTRACTION METHOD'                          => 'P',
+    'SAMPLE PURIFIED?'                               => 'Q',
+    'PURIFICATION METHOD'                            => 'R',
+    'CONCENTRATION DETERMINED BY'                    => 'S',
+    'DNA STORAGE CONDITIONS'                         => 'T',
+    'MOTHER (optional)'                              => 'U',
+    'FATHER (optional)'                              => 'V',
+    'SIBLING (optional)'                             => 'W',
+    'GC CONTENT'                                     => 'X',
+    'PUBLIC NAME'                                    => 'Y',
+    'TAXON ID'                                       => 'Z',
+    'COMMON NAME'                                    => 'AA',
+    'SAMPLE DESCRIPTION'                             => 'AB',
+    'STRAIN'                                         => 'AC',
+    'SAMPLE VISIBILITY'                              => 'AD',
+    'SAMPLE TYPE'                                    => 'AE',
+    'GENOTYPE'                                       => 'AF',
+    'PHENOTYPE (required for EGA)'                   => 'AG',
+    'AGE (with units)'                               => 'AH',
+    'Developmental stage'                            => 'AI',
+    'Cell Type'                                      => 'AJ',
+    'Disease State'                                  => 'AK',
+    'Compound'                                       => 'AL',
+    'Dose'                                           => 'AM',
+    'Immunoprecipitate'                              => 'AN',
+    'Growth condition'                               => 'AO',
+    'RNAi'                                           => 'AP',
     'RNAi'                                           => 'AQ',
-    'RNAi'                                           => 'AR',
-    'Organism part'                                  => 'AS',
-    'Time Point'                                     => 'AT',
-    'Treatment'                                      => 'AU',
-    'Subject'                                        => 'AV',
-    'Disease'                                        => 'AW',
-    'SAMPLE ACCESSION NUMBER (optional)'             => 'AX',
-    'DONOR ID (required for cancer samples)'         => 'AY',
-};
+    'Organism part'                                  => 'AR',
+    'Time Point'                                     => 'AS',
+    'Treatment'                                      => 'AT',
+    'Subject'                                        => 'AU',
+    'Disease'                                        => 'AV',
+    'SAMPLE ACCESSION NUMBER (optional)'             => 'AW',
+    'DONOR ID (required for cancer samples)'         => 'AX',
+}; 
 
 use constant HC => {
     1 => undef,
@@ -138,8 +145,7 @@ use constant ONT => { ## ontology information input by user to associate with an
 
 my @EXCEL_FIELDS =
   (    ## column names in the excel sheet - most are hard-coded (numbers)
-    [ 'SANGER PLATE ID',      undef ],
-    [ 'WELL',                 'Well'],
+    [ 'SANGER TUBE ID',      undef ],
     [ 'SANGER SAMPLE ID',     undef ],
     [ 'SUPPLIER SAMPLE NAME', 'Sample_Name' ],
     [ 'COHORT',               1 ],
@@ -196,11 +202,12 @@ my @EXCEL_FIELDS =
 
 our $VERSION = '0.1';
 
-my $db_name = "zfish_sf5_tc1_test";
+my $db_name = "zfish_sf5_tc5_test";
 #my $db_name          = "zfish_tilling_tc";
-my $exel_file_dir    = "./public/zmp_exel_files";       # need to change
+my $exel_file_dir    = "./public/zmp_exel_files";
 my $rna_dilution_dir = "./public/RNA_dilution_files";
 my $image_dir        = "./public/images";
+my $kc_file_dir     = "./public/kc_files";
 my ( @alleles, %rna_plate, %allele_combos, $dbh, $seq_plate_name, $expAlleGeno );
 my $schema_location = "images/schema_tables_zmp.png";
 
@@ -225,6 +232,9 @@ get '/' => sub {
         'choose_a_tc_experiment_url'    => uri_for('/choose_a_tc_experiment'),
         'update_a_phenotype_url'    => uri_for('/update_a_phenotype'),  
         'update_an_ena_id_url'      => uri_for('/update_an_ena_id'),
+        'add_a_treatment_url'       => uri_for('/add_a_treatment'),
+        'add_a_new_allele_url'      => uri_for('/add_a_new_allele'),
+        'modify_a_kc_plate_url'     => uri_for('/modify_a_kc_plate'),
     };
 
 };
@@ -241,8 +251,8 @@ get '/update_an_ena_id' => sub {
                                       accession_number 
                                       FROM current_samples 
                                       WHERE name LIKE ? 
-                                      AND accession_number 
-                                      IS NOT NULL GROUP BY name"); 
+                                      AND accession_number IS NOT NULL 
+                                      GROUP BY name"); 
 
   $ena_res_sth->execute("$name_stem" . '%');
   $ena_res = $ena_res_sth->fetchall_arrayref;
@@ -267,6 +277,71 @@ get '/update_an_ena_id' => sub {
   'ena_upd'   => $ena_upd,
  
   'update_an_ena_id_url'      => uri_for('/update_an_ena_id'),
+ };
+
+};
+
+get '/add_a_treatment' => sub {
+ 
+ $dbh = get_schema();
+ my ($treatments_info, $std_exp);
+ my $chosen_exp_id = param('exp_id');
+
+ if(! $chosen_exp_id) {
+  my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
+  $exp_sth->execute;
+  my $col_names = $exp_sth->{'NAME'};
+  $std_exp = $exp_sth->fetchall_arrayref;
+  unshift @$std_exp, $col_names;
+  foreach (@$std_exp) { @{ $_ }[0,2] = @{ $_ }[2,0]; }
+  $chosen_exp_id = param('exp_id');
+ }
+ else{
+  my $treatment_sth = $dbh->prepare("SELECT * FROM treatmentView WHERE experiment_id = ?");
+  $treatment_sth->execute($chosen_exp_id);
+  my $col_names = $treatment_sth->{'NAME'};
+  $treatments_info = $treatment_sth->fetchall_arrayref;
+  unshift @{ $treatments_info }, $col_names; 
+ }
+
+ template 'add_a_treatment', {
+
+  'std_exp'                 => $std_exp,
+  'treatment_types'         => TREATMENT_TYPES,
+  'treatments_info'         => $treatments_info,
+
+  'chosen_exp_id'           => $chosen_exp_id,
+  'add_a_treatment_url'     => uri_for('/add_a_treatment'),
+  'update_a_treatment_url'  => uri_for('/update_a_treatment'),
+ };
+};
+
+get '/update_a_treatment' => sub {
+
+ $dbh = get_schema();
+ my $chosen_exp_id = param('chosen_exp_id'); 
+ my $treatment_sth = $dbh->prepare("SELECT * FROM treatmentView WHERE experiment_id = ?");
+ $treatment_sth->execute($chosen_exp_id);
+ my $col_names = $treatment_sth->{'NAME'};
+ my $treatments_info = $treatment_sth->fetchall_arrayref;
+ my $add_treatment_sth = $dbh->prepare("CALL addTreatment(?,?,?)");
+ foreach my $seqp(@{ $treatments_info }){
+  my $seqp_id = 'seqp::' . $seqp->[1];
+  if(my $selected = param("$seqp_id")) {
+   $add_treatment_sth->execute($seqp->[1], param('chosen_treatment'), param('treatment_desc'));
+  }
+ }
+ $treatment_sth->execute($chosen_exp_id);
+ $treatments_info = $treatment_sth->fetchall_arrayref;
+ unshift @{ $treatments_info }, $col_names;
+
+ template 'add_a_treatment', {
+
+  'treatments_info'         => $treatments_info,
+  'treatment_types'         => TREATMENT_TYPES,
+  'chosen_exp_id'           => $chosen_exp_id,
+
+  'add_a_treatment_url'     => uri_for('/add_a_treatment'),
  };
 
 };
@@ -299,7 +374,7 @@ get '/update_a_phenotype' => sub {
  my $pheno_sth = $dbh->prepare("SELECT * FROM phenoView WHERE exp_id = ?");
  
  foreach my $exp_id(sort {$b <=> $a} keys %exp_ids) {
-  if(param('exp_id') ==  $exp_id){
+  if(param('exp_id') && param('exp_id') ==  $exp_id){
    $pheno_sth->execute($exp_id);    
    $pheno_col_names = $pheno_sth->{'NAME'};
    push @pheno_info, @{ $pheno_sth->fetchall_arrayref };
@@ -360,6 +435,63 @@ get '/add_phenotypes_to_db' => sub {
 
 };
 
+post '/modify_a_kc_plate' => sub {
+ 
+ my @a2h = 'A'..'H';
+ unshift @a2h, 0;
+ my @one2twelve = 0..MAX_WELL_COL;
+ my $mod_content;
+ 
+ if ( my $kc_file = upload('kc_file') ) {
+  my $kcf_content = $kc_file->content;
+  
+  my @wells2keep;
+  my $from_well = param('from_well');
+  my ($fwa,$fwn) = $from_well=~/([[:alpha:]]):([[:digit:]]+)/xms;
+  my $to_well = param('to_well');
+  my ($twa,$twn) = $to_well=~/([[:alpha:]]):([[:digit:]]+)/xms;
+  my @alpha=$fwa..$twa;
+ 
+  for(my$i=0;$i<@alpha;$i++){
+   my $j = $i == 0 ? $fwn : 1;
+   my $k = $i == $#alpha ? $twn : MAX_WELL_COL;
+   for(;$j<=$k;$j++){
+    my $jpad = $j < 10 ? '0'.$j : $j; 
+    my $well = $alpha[$i] . $jpad;
+    my ($cwell) = $kcf_content=~/(^$well[^\n]+)/xms;
+    $cwell=~s/\s+//xmsg;
+    push @wells2keep, $cwell;
+   }
+  }
+  
+  my %kc_ind;
+  my $acc = 0;
+  my@kc_num=('01','02','03','04','05','06','07','08','09','10','11','12');
+  for(my$i=1;$i<@a2h;$i++) {
+   for(my$j=0;$j<@kc_num;$j++) {
+    $kc_ind{ $acc } = $a2h[$i] . $kc_num[$j];
+    $acc++;
+   }
+  }
+
+  for(my$i=0;$i<@wells2keep;$i++) {
+   my $subs = $kc_ind{ $i };
+   $wells2keep[$i]=~s/^\w+/$subs/;
+  }
+
+  ($mod_content) = $kcf_content=~/(.*\[wells\])/xms;
+  $mod_content .= "\n" . join "\n", @wells2keep;
+ } 
+
+ template 'modify_a_kc_plate', {
+  
+  'a2h'         => \@a2h,
+  'one2twelve'  => \@one2twelve,
+  'mod_content' => $mod_content,
+
+ };
+
+};
 
 post '/add_sequencing_plate_data' => sub {
 
@@ -630,38 +762,76 @@ get '/add_a_new_devstage' => sub {
 
 };
 
-get '/add_a_new_assembly' => sub {
+get '/add_a_new_devstage' => sub {
 
     $dbh = get_schema();
-    my $assembly_id;
-    my ( $species_id, $assembly_name, $gc_content ) =
-      ( param('species_id'), param('assembly_name'), param('gc_content') );
+    my $dev_id;
+    my ( $period, $stage, $begins, $landmarks, $zfs_id ) = (
+        param('period'), param('stage'),
+        param('begins'), param('landmarks'),
+        param('zfs_id')
+    );
 
-    if ( $species_id and $assembly_name and $gc_content ) {
-        $species_id    = trim($species_id);
-        $assembly_name = trim($assembly_name);
-        $gc_content    = trim($gc_content);
-        my $new_assembly_sth =
-          $dbh->prepare("CALL add_new_assembly(?,?,?, \@ass_id)");
-        $new_assembly_sth->execute( $assembly_name, $species_id, $gc_content );
-        ($assembly_id) = $dbh->selectrow_array("SELECT \@ass_id");
+    if ( $period and $stage and $begins and $landmarks and $zfs_id ) {
+        $period    = trim($period);
+        $stage     = trim($stage);
+        $begins    = trim($begins);
+        $landmarks = trim($landmarks);
+        $zfs_id    = trim($zfs_id);
+        my $new_devstage_sth =
+          $dbh->prepare("CALL add_new_devstage(?,?,?,?,?, \@dev_id)");
+        $new_devstage_sth->execute( $period, $stage, $begins, $landmarks,
+            $zfs_id );
+        ($dev_id) = $dbh->selectrow_array("SELECT \@dev_id");
     }
 
-    my $assembly_sth = $dbh->prepare("SELECT * FROM SpView");
-    $assembly_sth->execute;
-    my $col_names  = $assembly_sth->{'NAME'};
-    my $assemblies = $assembly_sth->fetchall_arrayref();
-    unshift @{$assemblies}, $col_names;
+    my $dev_sth = $dbh->prepare("SELECT * FROM devView");
+    $dev_sth->execute;
+    my $col_names      = $dev_sth->{'NAME'};
+    my $all_dev_stages = $dev_sth->fetchall_arrayref();
+    unshift @{$all_dev_stages}, $col_names;
 
-    my $species_sth = $dbh->prepare("SELECT * FROM SpeciesView");
-    $species_sth->execute;
+    template 'new_dev_stage', {
+        'dev_stages' => $all_dev_stages,
+        'new_dev_id' => $dev_id,
 
-    template 'new_assembly', {
-        'assemblies'      => $assemblies,
-        'new_assembly_id' => $assembly_id,
-        'species'         => $species_sth->fetchall_arrayref,
+        'add_a_new_dev_stage_url' => uri_for('/add_a_new_devstage'),
+    };
 
-        'add_a_new_assembly_url' => uri_for('/add_a_new_assembly'),
+};
+
+get '/add_a_new_allele' => sub {
+
+    $dbh = get_schema();
+    my $last_allele_id;
+    my ( $allele_name, $gene_name, $snp_id ) =
+      ( param('allele_name'), param('gene_name'), param('snp_id') );
+
+    if ( $allele_name ) {
+        $allele_name = trim($allele_name);
+        if( $gene_name ) {
+          $gene_name = trim($gene_name);
+        }
+        if( $snp_id ) {
+          $snp_id = trim($snp_id) if($snp_id);
+        }
+        my $new_allele_sth =
+          $dbh->prepare("CALL add_a_new_allele(?,?,?, \@allele_id)");
+        $new_allele_sth->execute( $allele_name, $gene_name, $snp_id );
+       ($last_allele_id) = $dbh->selectrow_array("SELECT \@allele_id");
+    }
+
+    my $allele_sth = $dbh->prepare("SELECT * FROM alleleView LIMIT 10");
+    $allele_sth->execute;
+    my $col_names  = $allele_sth->{'NAME'};
+    my $alleles = $allele_sth->fetchall_arrayref();
+    unshift @{$alleles}, $col_names;
+
+    template 'new_allele', {
+        'alleles'         => $alleles,
+        'last_allele_id'  => $last_allele_id,
+
+        'add_a_new_allele_url' => uri_for('/add_a_new_allele'),
     };
 
 };
@@ -866,7 +1036,7 @@ post '/get_sequencing_report' => sub {
             else {
                 my @sanger_samples;
                 my $row_value        = HEADER_ROW + 1;
-                my $sanger_plate_id  = SANGER_COLS->{'SANGER PLATE ID'};
+                my $sanger_plate_id  = SANGER_COLS->{'SANGER TUBE ID'};
                 my $sanger_sample_id = SANGER_COLS->{'SANGER SAMPLE ID'};
                 my ( $s_tube_cell, $s_sample_cell ) = (
                     $sanger_plate_id . $row_value,
@@ -908,7 +1078,7 @@ post '/get_sequencing_report' => sub {
                       map { $_->[0], $_->[1] } shift @sanger_samples;
                     if ( $sanger_plate_id && $sanger_sample_id ) {
                         foreach my $col (@EXCEL_FIELDS) {
-                            if ( $col->[0] eq 'SANGER PLATE ID' ) {
+                            if ( $col->[0] eq 'SANGER TUBE ID' ) {
                                 push @{ $data[$row_index] }, $sanger_plate_id;
                             }
                             elsif ( $col->[0] eq 'SANGER SAMPLE ID' ) {
@@ -1363,7 +1533,7 @@ post '/add_experiment_data' => sub {
 
     ## copy the image file
     my $image;
-    if ( param('Image') ne 'No image' ) {
+    if ( param('Image') && param('Image') ne 'No image' ) {
         my $image_file = upload('Image');
         if ($image_file) {
             $image_file->copy_to("$image_dir");
@@ -1374,6 +1544,7 @@ post '/add_experiment_data' => sub {
             $image = 'No image';
         }
     }
+
     my @rna_extraction_data = (
         param('RNA_extracted_by'),
         param('RNA_extraction_protocol_version'),
@@ -1972,7 +2143,7 @@ sub roll_back { # delete experiment(s) from the database
  } 
 }
 
-sub get_schema {
+sub get_schema { ## export $ENV{...} values in your .bashrc
   my($host, $port)=($ENV{'TC_HOST'}, $ENV{'TC_PORT'});
   return DBI->connect( "DBI:mysql:$db_name;host=$host;port=$port",
       $ENV{'TC_USER'}, $ENV{'TC_PASS'} )

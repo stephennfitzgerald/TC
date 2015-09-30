@@ -25,7 +25,7 @@ DROP TABLE IF EXISTS `species`;
 CREATE TABLE `species` (
   `id` int(10) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL DEFAULT 'zebrafish',
-  `binomial_name` varchar(255) NOT NULL DEFAULT 'Danio rerio',
+  `binomial_name` varchar(255) NOT NULL DEFAULT 'Danio_rerio',
   `taxon_id` int(10) NOT NULL DEFAULT '7955',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=latin1;
@@ -37,7 +37,7 @@ CREATE TABLE `species` (
 
 LOCK TABLES `species` WRITE;
 /*!40000 ALTER TABLE `species` DISABLE KEYS */;
-INSERT INTO `species` VALUES (1,'human','homo_sapiens',9606),(2,'mouse','mus_musculus',10090),(3,'zebrafish','danio_rerio',7955);
+INSERT INTO `species` VALUES (1,'human','Homo_sapiens',9606),(2,'mouse','Mus_musculus',10090),(3,'zebrafish','Danio_rerio',7955);
 /*!40000 ALTER TABLE `species` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

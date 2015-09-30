@@ -124,6 +124,56 @@ VALUES (
 END$$
 DELIMITER ;
 
+/** insert a new allele **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS add_a_new_allele$$
+
+CREATE PROCEDURE add_a_new_allele (
+ IN allele_name_param VARCHAR(255),
+ IN gene_name_param VARCHAR(255),
+ IN snp_id_param VARCHAR(255),
+ OUT insert_id int(10)
+)
+BEGIN
+
+INSERT INTO allele (
+ name,
+ gene_name,
+ snp_id
+)
+VALUES (
+ allele_name_param,
+ IFNULL(gene_name_param, DEFAULT(gene_name)),
+ IFNULL(snp_id_param, DEFAULT(snp_id))
+);
+SET insert_id = LAST_INSERT_ID();
+END$$
+DELIMITER ;
+
+/** insert a treatment **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS addTreatment$$
+
+CREATE PROCEDURE addTreatment (
+ IN seqp_id_param INT(10),
+ IN treatment_type_param ENUM('Small molecule screen','Infection challenge','Gene knockout','No treatment'),
+ IN treatment_description_param MEDIUMTEXT 
+)
+BEGIN
+
+REPLACE INTO treatment (
+ sequence_plate_id,
+ treatment_type,
+ treatment_description
+)
+VALUES (
+ seqp_id_param,
+ IFNULL(treatment_type_param, DEFAULT(treatment_type)),
+ IFNULL(treatment_description_param, DEFAULT(treatment_description))
+);
+END$$
+DELIMITER ;
+
 /** zmp_allele_phenotype_eq **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS insert_zmp_allele_phenotype_eq$$

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+
+<script>
+
+function goBack() 
+ {
+   window.history.back();
+ }
+
+function goHome()
+ {
+   window.location = '/';   
+ }
+</script>
+
+
+
+<style>
+
+P {
+ font-size: 13px;
+ font-family:'Courier New';
+} 
+
+.view_info input[type="submit"] {
+ color: black;
+ background: #BDECB6;
+ display: inline;
+}
+
+table, th, td {
+    border-collapse: collapse;
+}
+th,td {
+    padding: 30px;
+    text-align: left;
+}
+
+</style>
+
+
+
+<body background="images/zmp.jpg">
+<div id="page">
+      <div id="sidebar">
+      </div>
+
+      <div id="content">
+        <div id="header">
+         <p>
+          <button onclick="goHome()">Home</button>
+         </p><p>
+         </p><form action="<% modify_a_kc_plate_url %>" method="post" enctype="multipart/form-data">
+         <table><tbody><tr><td>
+          <h2 style="display: inline;">Modify a KlusterCaller file
+          </h2></td><td>
+           <input type="file" class="button" name="kc_file" required>
+          </tbody></table>
+          <table><tr><td>
+           Wells to keep: 
+          </td><td>
+           From &nbsp;&nbsp;   
+           <select class="dropdown" name="from_well" required>
+            <% FOREACH row IN a2h %>
+             <% FOREACH col IN one2twelve %>
+              <% IF row == 0 && col == 0 %>
+               <option value disabled selected> --- </option>
+              <% ELSIF row != 0 && col != 0  %>
+               <% from_name = row _ ':' _ col %>
+                <option value="<% from_name %>"><% from_name %></option>
+              <% END %>
+             <% END %>
+            <% END %>
+           </select></td><td>
+           To &nbsp;&nbsp;
+           <select class="dropdown" name="to_well" required>
+            <% FOREACH row IN a2h %>
+             <% FOREACH col IN one2twelve %>
+              <% IF row == 0 && col == 0 %>
+                <option value disabled selected> --- </option>
+              <% ELSIF row != 0 && col != 0 %>
+               <% to_name = row _ ':' _ col %>
+                <option value="<% to_name %>"><% to_name %></option>
+              <% END %> 
+             <% END %>
+            <% END %>
+           </select></td>
+           </tr></table>
+           <input type="submit" value="Submit">
+           </form>
+          <% IF mod_content %>
+           <pre><% mod_content %></pre>
+          <% END %>
+         </div>
+       </div>
+     </div>
+
+<div id="footer">
+</div>
+
+</body></html>

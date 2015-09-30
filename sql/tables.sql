@@ -130,9 +130,9 @@ CREATE TABLE IF NOT EXISTS rna_extraction (
  id					INT(10) NOT NULL AUTO_INCREMENT,
  extracted_by				VARCHAR(255) DEFAULT "Neha" NOT NULL,
  extraction_protocol_version		VARCHAR(255) DEFAULT 'V3' NOT NULL,
- extraction_date			DATE DEFAULT '0000-00-00' NOT NULL,
- library_creation_date			DATE DEFAULT '0000-00-00' NOT NULL,
- library_creation_protocol_version      VARCHAR(255) DEFAULT 'V7.5' NOT NULL,
+ extraction_date			DATE DEFAULT '00-00-0000' NOT NULL,
+ library_creation_date			DATE DEFAULT '00-00-0000' NOT NULL,
+ library_creation_protocol_version      VARCHAR(255) DEFAULT 'V7.6' NOT NULL,
  library_tube_id			VARCHAR(255) NULL,
 
  PRIMARY				KEY(id)
@@ -141,7 +141,6 @@ CREATE TABLE IF NOT EXISTS rna_extraction (
 
 
 CREATE TABLE IF NOT EXISTS experiment (
-
  id					INT(10) AUTO_INCREMENT,
  name					VARCHAR(255) NOT NULL,
  genome_reference_id			INT(10) NOT NULL,
@@ -151,14 +150,14 @@ CREATE TABLE IF NOT EXISTS experiment (
  developmental_stage_id    		INT(10) NOT NULL,
  collection_description			ENUM('Blind', 'Phenotypic') DEFAULT 'Blind' NOT NULL,
  dna_source                             VARCHAR(255) DEFAULT 'Whole Genome' NOT NULL,
- image					VARCHAR(255) DEFAULT 'No image' NOT NULL,
+ image					VARCHAR(255) DEFAULT 'No image' NULL,
  spike_mix				ENUM('0', '1', '2') DEFAULT '0' NOT NULL,
  spike_dilution				VARCHAR(255) NOT NULL DEFAULT 0,
  spike_volume				FLOAT NOT NULL DEFAULT 0.0,
  study_id				INT(10) NOT NULL, 
  embryo_collection_method		VARCHAR(255) DEFAULT "2ml assay block" NOT NULL,
  embryo_collected_by			VARCHAR(255) DEFAULT "Neha" NOT NULL,
- embryo_collection_date			DATE DEFAULT '0000-00-00' NOT NULL, 
+ embryo_collection_date			DATE DEFAULT '00-00-0000' NOT NULL, 
  number_embryos_collected		INT(10) NULL,
  sample_visibility			ENUM('Hold', 'Public') DEFAULT 'Hold' NOT NULL,	 
  rna_extraction_id			INT(10) NULL,
@@ -198,7 +197,6 @@ CREATE TABLE IF NOT EXISTS rna_dilution_plate (
 
 
 CREATE TABLE IF NOT EXISTS sequence_plate (
- 
  id					INT(10) NOT NULL AUTO_INCREMENT,
  plate_name				VARCHAR(255) NOT NULL,
  sanger_plate_id			VARCHAR(255) NULL,
@@ -229,9 +227,18 @@ CREATE TABLE IF NOT EXISTS sequence_plate (
 
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS treatment (
+ sequence_plate_id                      INT(10) NOT NULL,
+ treatment_type                         ENUM('Small molecule screen','Infection challenge','Gene knockout','No treatment') DEFAULT 'No treatment',
+ treatment_description                  MEDIUMTEXT NULL,
+
+ FOREIGN                                KEY(sequence_plate_id) REFERENCES sequence_plate(id),
+ UNIQUE                                 KEY(sequence_plate_id,treatment_type)
+
+) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
+
 
 CREATE TABLE IF NOT EXISTS genotype (
- 
  id					INT(10) NOT NULL AUTO_INCREMENT,
  allele_id				INT(10) NOT NULL,
  rna_dilution_plate_id			INT(10) NOT NULL,
