@@ -231,6 +231,8 @@ CREATE TABLE IF NOT EXISTS treatment (
  sequence_plate_id                      INT(10) NOT NULL,
  treatment_type                         ENUM('Small molecule screen','Infection challenge','Gene knockout','No treatment') DEFAULT 'No treatment',
  treatment_description                  MEDIUMTEXT NULL,
+ compound				MEDIUMTEXT NULL, /** should be populated only when the treatment_type = 'Small molecule screen' **/
+ dose					MEDIUMTEXT NULL, /** should be populated only when the treatment_type = 'Small molecule screen' **/
 
  FOREIGN                                KEY(sequence_plate_id) REFERENCES sequence_plate(id),
  UNIQUE                                 KEY(sequence_plate_id,treatment_type)

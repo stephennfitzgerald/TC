@@ -39,6 +39,26 @@ CREATE OR REPLACE VIEW treatmentView AS
           LENGTH(SUBSTR(seqp.well_name,2)),
           SUBSTR(seqp.well_name,2);  
 
+CREATE OR REPLACE VIEW compoundView AS 
+ SELECT rdp.experiment_id,
+        seqp.id well_id,
+        seqp.well_name,
+        tm.treatment_type,
+        tm.treatment_description,
+        tm.compound,
+        tm.dose
+ FROM sequence_plate seqp INNER JOIN rna_dilution_plate rdp
+ ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN genotype gt
+ ON gt.rna_dilution_plate_id = rdp.id INNER JOIN alleleView av
+ ON av.allele_id = gt.allele_id LEFT OUTER JOIN treatment tm
+ ON seqp.id = tm.sequence_plate_id
+ WHERE seqp.selected = 1
+ AND tm.treatment_type = 'Small molecule screen'
+ GROUP BY rdp.experiment_id, seqp.id
+ ORDER BY SUBSTR(seqp.well_name,1,1),
+          LENGTH(SUBSTR(seqp.well_name,2)),
+          SUBSTR(seqp.well_name,2);
+
 CREATE OR REPLACE VIEW ontologyTermsView AS
  SELECT exp.id exp_id,
         exp.name experiment_name,

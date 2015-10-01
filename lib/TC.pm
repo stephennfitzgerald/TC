@@ -233,6 +233,7 @@ get '/' => sub {
         'update_a_phenotype_url'    => uri_for('/update_a_phenotype'),  
         'update_an_ena_id_url'      => uri_for('/update_an_ena_id'),
         'add_a_treatment_url'       => uri_for('/add_a_treatment'),
+        'add_a_compound_url'        => uri_for('/add_a_compound'),
         'add_a_new_allele_url'      => uri_for('/add_a_new_allele'),
         'modify_a_kc_plate_url'     => uri_for('/modify_a_kc_plate'),
     };
@@ -281,6 +282,74 @@ get '/update_an_ena_id' => sub {
 
 };
 
+get '/add_a_compound' => sub {
+
+ $dbh = get_schema();
+ my ($cmp_exp, $std_exp);
+ my $chosen_exp_id = param('exp_id');
+
+ if(! $chosen_exp_id) {
+  my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
+  $exp_sth->execute;
+  my $col_names = $exp_sth->{'NAME'}; 
+  $std_exp = $exp_sth->fetchall_arrayref;
+  unshift @$std_exp, $col_names;
+  foreach (@$std_exp) { @{ $_ }[0,2] = @{ $_ }[2,0]; }
+  $chosen_exp_id = param('exp_id');
+ }
+ else {
+  my $cmp_sth = $dbh->prepare("SELECT * FROM compoundView");
+  $cmp_sth->execute;
+  my $col_names = $cmp_sth->{'NAME'};
+  $cmp_exp = $cmp_sth->fetchall_arrayref;
+  unshift @$cmp_exp, $col_names;
+ }
+
+ template 'add_a_compound', {
+
+   'std_exp'       => $std_exp, 
+   'cmp_exp'       => $cmp_exp,
+   'chosen_exp_id' => $chosen_exp_id,
+
+   'add_a_compound_url' => uri_for('/add_a_compound'),
+   'update_a_compound_url' => uri_for('/update_a_compound'),
+ };
+
+};
+
+get '/update_a_compound' => sub {
+
+ $dbh = get_schema();
+ my($compound_name, $compound_dose) = (param('compound_name'), param('compound_dose'));
+ my $chosen_exp_id = param('chosen_exp_id');
+ my $cmp_sth = $dbh->prepare("SELECT * FROM compoundView WHERE experiment_id = ?");
+ $cmp_sth->execute($chosen_exp_id);
+ my $col_names = $cmp_sth->{'NAME'};
+ my $compound_info = $cmp_sth->fetchall_arrayref;
+ my $update_cmp_sth = $dbh->prepare("CALL addCompound(?,?,?)"); 
+ foreach my $seqp(@{ $compound_info }){
+  my $seqp_id = 'seqp::' . $seqp->[1];
+  if(my $selected = param("$seqp_id")) {
+   $update_cmp_sth->execute($seqp->[1], $compound_name, $compound_dose);
+  }
+ }
+ $cmp_sth->execute($chosen_exp_id);
+ $compound_info = $cmp_sth->fetchall_arrayref;
+ unshift @{ $compound_info }, $col_names;
+
+ template 'add_a_compound', {
+ 
+   'chosen_exp_id' => $chosen_exp_id,
+   'cmp_exp'       => $compound_info,
+    
+   'add_a_compound_url' => uri_for('/add_a_compound'),
+   'update_a_compound_url' => uri_for('/update_a_compound'),
+   
+ };
+
+};
+
+
 get '/add_a_treatment' => sub {
  
  $dbh = get_schema();
@@ -296,7 +365,7 @@ get '/add_a_treatment' => sub {
   foreach (@$std_exp) { @{ $_ }[0,2] = @{ $_ }[2,0]; }
   $chosen_exp_id = param('exp_id');
  }
- else{
+ else {
   my $treatment_sth = $dbh->prepare("SELECT * FROM treatmentView WHERE experiment_id = ?");
   $treatment_sth->execute($chosen_exp_id);
   my $col_names = $treatment_sth->{'NAME'};

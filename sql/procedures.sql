@@ -150,6 +150,25 @@ SET insert_id = LAST_INSERT_ID();
 END$$
 DELIMITER ;
 
+/** update a treatment with a compound and dose **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS addCompound$$
+
+CREATE PROCEDURE addCompound (
+ IN seqp_id_param INT(10),
+ IN compound_param  MEDIUMTEXT,
+ IN dose_param MEDIUMTEXT
+)
+BEGIN
+
+UPDATE treatment 
+SET compound = compound_param,
+    dose = dose_param
+WHERE sequence_plate_id = seqp_id_param
+AND treatment_type = 'Small molecule screen';
+END$$
+DELIMITER $$ 
+
 /** insert a treatment **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS addTreatment$$

@@ -143,6 +143,14 @@ body {
              </form>
             </td>
            </tr><tr><tr>
+           <td width=260px>Add a compound</td>
+            <td>
+             <form action="<% add_a_compound_url %>" method="get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type=submit value="&#8594;"> 
+             </form>
+            </td>
+           </tr><tr><tr>
            <td width=260px>Add a new allele</td>
             <td>
              <form action="<% add_a_new_allele_url %>" method="get">
