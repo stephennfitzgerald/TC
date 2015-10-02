@@ -185,15 +185,15 @@ my @EXCEL_FIELDS =
     [ 'Developmental stage',                         'Developmental_Stage' ],
     [ 'Cell Type',                                   1 ],
     [ 'Disease State',                               1 ],
-    [ 'Compound',                                    1 ],
-    [ 'Dose',                                        1 ],
+    [ 'Compound',                                    'Compound' ],
+    [ 'Dose',                                        'Dose' ],
     [ 'Immunoprecipitate',                           1 ],
     [ 'Growth condition',                            1 ],
     [ 'RNAi',                                        1 ],
     [ 'RNAi',                                        1 ],
     [ 'Organism part',                               'Organism_Part' ],
     [ 'Time Point',                                  1 ],
-    [ 'Treatment',                                   1 ],
+    [ 'Treatment',                                   'Treatment' ],
     [ 'Subject',                                     1 ],
     [ 'Disease',                                     1 ],
     [ 'SAMPLE ACCESSION NUMBER (optional)',          1 ],
@@ -298,8 +298,8 @@ get '/add_a_compound' => sub {
   $chosen_exp_id = param('exp_id');
  }
  else {
-  my $cmp_sth = $dbh->prepare("SELECT * FROM compoundView");
-  $cmp_sth->execute;
+  my $cmp_sth = $dbh->prepare("SELECT * FROM compoundView WHERE experiment_id = ?");
+  $cmp_sth->execute($chosen_exp_id);
   my $col_names = $cmp_sth->{'NAME'};
   $cmp_exp = $cmp_sth->fetchall_arrayref;
   unshift @$cmp_exp, $col_names;
@@ -349,7 +349,6 @@ get '/update_a_compound' => sub {
 
 };
 
-
 get '/add_a_treatment' => sub {
  
  $dbh = get_schema();
@@ -383,6 +382,7 @@ get '/add_a_treatment' => sub {
   'add_a_treatment_url'     => uri_for('/add_a_treatment'),
   'update_a_treatment_url'  => uri_for('/update_a_treatment'),
  };
+
 };
 
 get '/update_a_treatment' => sub {
@@ -1170,13 +1170,17 @@ post '/get_sequencing_report' => sub {
                                     $sequence_plate->{"$index_tag_id"}
                                     ->{'AlleleGenotype'} )
                                 {
-                                    my ( $allele, $gene, $genotype, $samp_comment ) =
+                                    my ( $allele, $genotype, $gene, $samp_comment ) =
                                       split '::', $alle_genotype;
+
+                                    $samp_comment = $samp_comment ? $samp_comment : '';
+                                    $gene = $gene ? $gene : '';
                                     $alle_geno{$genotype}
                                       {"$gene allele $allele"} = $samp_comment;
                                 }
                                 my $description =
 "3' end enriched mRNA from a single genotyped embryo ";
+
                                 foreach my $geno ( sort keys %alle_geno ) {
                                     $description .=
                                       GENOTYPES_C->{$geno} . " for ";

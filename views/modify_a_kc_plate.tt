@@ -88,6 +88,8 @@ th,td {
            </select></td>
            </tr></table>
            <input type="submit" value="Submit">
+            &nbsp;&nbsp;&nbsp;&nbsp;
+           <input type="reset" value="Clear" onClick="RadioValue = '';">
            </form>
           <% IF mod_content %>
            <pre><% mod_content %></pre>

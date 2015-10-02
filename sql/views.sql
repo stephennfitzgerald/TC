@@ -26,8 +26,8 @@ CREATE OR REPLACE VIEW treatmentView AS
         GROUP_CONCAT(DISTINCT(gt.name)) genotypes,
         GROUP_CONCAT(DISTINCT(av.allele_name)) allele_names,
         GROUP_CONCAT(DISTINCT(av.gene_name)) gene_names,
-        GROUP_CONCAT(tm.treatment_type SEPARATOR ', ') treatment_types,
-        GROUP_CONCAT(tm.treatment_description SEPARATOR ' ') treatment_descriptions
+        GROUP_CONCAT(DISTINCT(tm.treatment_type) SEPARATOR ', ') treatment_types,
+        GROUP_CONCAT(DISTINCT(tm.treatment_description) SEPARATOR ' ') treatment_descriptions
  FROM sequence_plate seqp INNER JOIN rna_dilution_plate rdp 
  ON seqp.rna_dilution_plate_id = rdp.id INNER JOIN genotype gt
  ON gt.rna_dilution_plate_id = rdp.id INNER JOIN alleleView av
@@ -109,7 +109,7 @@ CREATE OR REPLACE VIEW alleleOntologyView AS
 
 CREATE OR REPLACE VIEW genotAlleleView AS
  SELECT genot.rna_dilution_plate_id rna_well_id, 
-        group_concat(alle.name, '(', genot.name, ')') AlleleGenotype 
+        group_concat(alle.name, '::', genot.name, '::', alle.gene_name, '::', genot.sample_comment) AlleleGenotype 
  FROM allele alle INNER JOIN genotype genot
         ON genot.allele_id = alle.id 
  GROUP BY genot.rna_dilution_plate_id;
@@ -120,7 +120,7 @@ CREATE OR REPLACE VIEW phenoView AS
         exp.name exp_name, 
         std.name study_name, 
         seqp.well_name, 
-        gav.AlleleGenotype genotype, 
+        gav.AlleleGenotype 'genotype (allele::genotype::gene::comment)', 
         seqp.phenotype 
  FROM experiment exp INNER JOIN study std 
  ON exp.study_id = std.id INNER JOIN rna_dilution_plate rdp 
@@ -329,19 +329,19 @@ CREATE OR REPLACE VIEW SeqReportView AS
         exp.collection_description "Collection_Description",
         gr.name "Reference_Genome",
         array_exp.cell_type "Cell_type",
-        array_exp.compound "Compound",
+        tmt.compound "Compound",
         dev.dev_stage "Developmental_Stage",
         REPLACE(dev_s.begins, "_", " ") "Age",
         array_exp.disease "Disease",
         array_exp.disease_state "Disease_State",
-        array_exp.dose "Dose",
+        tmt.dose "Dose",
         array_exp.genotype "Genotype",
         array_exp.growth_condition "Growth_Condition",
         array_exp.immunoprecipitate "Immunoprecipitate",
         array_exp.organism_part "Organism_Part",
         array_exp.phenotype "Phenotype",
         array_exp.time_point "Time_Point",
-        array_exp.treatment "Treatment",
+        GROUP_CONCAT(DISTINCT(tmt.treatment_type) SEPARATOR ' ') "Treatment",
         array_exp.donor_id "Donor_ID",
         exp.description 'experiment_description'
  FROM experiment exp INNER JOIN array_express_data array_exp 
@@ -354,8 +354,10 @@ CREATE OR REPLACE VIEW SeqReportView AS
         ON dev.experiment_id = exp.id INNER JOIN genotAlleleView gav
         ON gav.rna_well_id = rdp.id LEFT OUTER JOIN rna_extraction rna_ext
         ON exp.rna_extraction_id = rna_ext.id INNER JOIN developmental_stage dev_s
-        ON dev_s.id = exp.developmental_stage_id 
+        ON dev_s.id = exp.developmental_stage_id LEFT OUTER JOIN treatment tmt 
+        ON tmt.sequence_plate_id = seq.id
  WHERE seq.selected = 1
+ GROUP BY seq.id
  ORDER BY seq.plate_name, exp.id, ind_tag.id;
 
 CREATE OR REPLACE VIEW ExpView AS

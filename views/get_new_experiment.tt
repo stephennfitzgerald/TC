@@ -151,7 +151,7 @@ th {
                 <td><% last_visable %></td>
 
               <% CASE 'Embryo_collection_date' %>
-               <td><% table_res.0 %>&nbsp;&nbsp;(dd-mm-yyyy)</td><td>
+               <td><% table_res.0 %>&nbsp;&nbsp;(yyyy-mm-dd)</td><td>
                 <input type="date" value="00-00-0000" class="txt_box" name="<% table_res.0 %>" id="ec_date" required></td>
                <td><% last_ec_date %></td>
 
@@ -239,12 +239,12 @@ th {
                <td><% last_rna_ext_prot_version %></td>
  
               <% CASE 'RNA_extraction_date' %>
-               <td><% table_res.0 %>&nbsp;&nbsp;(dd-mm-yyyy)</td><td>
+               <td><% table_res.0 %>&nbsp;&nbsp;(yyyy-mm-dd)</td><td>
                 <input type="date" class="txt_box" name="<% table_res.0 %>" value="00-00-0000" id="rna_ext_date" required></td>
                <td><% last_rna_ext_date %></td>
 
               <% CASE 'RNA_library_creation_date' %>
-               <td><% table_res.0 %>&nbsp;&nbsp;(dd-mm-yyyy)</td><td>
+               <td><% table_res.0 %>&nbsp;&nbsp;(yyyy-mm-dd)</td><td>
                 <input type="date" class="txt_box" name="<% table_res.0 %>" value="<% table_res.4 %>" id="lib_date" required></td>
                <td><% last_library_creation_date %></td>
 
