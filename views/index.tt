@@ -38,7 +38,7 @@ table, th, td {
 }
 .border2 {
  color: #B0B0B0;
- height: 300px;
+ height: 320px;
  width: 400px;
  border: dashed;
  padding: 25px;

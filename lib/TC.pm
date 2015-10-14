@@ -19,8 +19,9 @@ use constant INCR         => 3500;    ## increase the color $dec
 use constant MAX_WELL_COL => 12;
 use constant MAX_WELL_ROW => 8;
 use constant PLATE_SIZE   => 96;
-use constant ADD_ONT_TERMS => 5;    ## max number of undef fields = ADD_ONT_TERMS - 1, 
-                                    ## for db insertion
+use constant ADD_ONT_TERMS =>
+  5;    ## max number of undef fields = ADD_ONT_TERMS - 1,
+## for db insertion
 
 use constant GENOTYPES_C => {
     'Blank'    => 0,
@@ -750,25 +751,29 @@ get '/update_study_name' => sub {
 
     $dbh = get_schema();
 
-    if(my $new_study_name = param('new_std_name')) {
-     if(my $std_exp = param('exp_to_update')) {
-      my($std_name, $exp_id) = split'::',$std_exp;
-      my $ck_std_sth = $dbh->prepare("SELECT EXISTS(SELECT * FROM study WHERE name = ?)");
-      $ck_std_sth->execute("$new_study_name");
-      if(@{ $ck_std_sth->fetchrow_arrayref }[0]) {
-       my $upd_exp_std_sth = $dbh->prepare("CALL updateExpStdName(?,?)");
-       $upd_exp_std_sth->execute("$new_study_name", $exp_id);
-      } 
-      else {
-       my $std_id;
-       $new_study_name = trim($new_study_name);
-       my $new_std_sth = $dbh->prepare("CALL add_new_study(?, \@std_id)");
-       $new_std_sth->execute($new_study_name);
-       ($std_id) = $dbh->selectrow_array("SELECT \@std_id");
-       my $upd_exp_std_sth = $dbh->prepare("CALL updateExpStdName(?,?)");
-       $upd_exp_std_sth->execute("$new_study_name", $exp_id);
-      }
-     }
+    if ( my $new_study_name = param('new_std_name') ) {
+        if ( my $std_exp = param('exp_to_update') ) {
+            my ( $std_name, $exp_id ) = split '::', $std_exp;
+            my $ck_std_sth = $dbh->prepare(
+                "SELECT EXISTS(SELECT * FROM study WHERE name = ?)");
+            $ck_std_sth->execute("$new_study_name");
+            if ( @{ $ck_std_sth->fetchrow_arrayref }[0] ) {
+                my $upd_exp_std_sth =
+                  $dbh->prepare("CALL updateExpStdName(?,?)");
+                $upd_exp_std_sth->execute( "$new_study_name", $exp_id );
+            }
+            else {
+                my $std_id;
+                $new_study_name = trim($new_study_name);
+                my $new_std_sth =
+                  $dbh->prepare("CALL add_new_study(?, \@std_id)");
+                $new_std_sth->execute($new_study_name);
+                ($std_id) = $dbh->selectrow_array("SELECT \@std_id");
+                my $upd_exp_std_sth =
+                  $dbh->prepare("CALL updateExpStdName(?,?)");
+                $upd_exp_std_sth->execute( "$new_study_name", $exp_id );
+            }
+        }
     }
 
     my $exp_sth = $dbh->prepare("SELECT * FROM TmExpStdNameView");
@@ -787,40 +792,40 @@ get '/update_study_name' => sub {
 get '/delete_study' => sub {
 
     $dbh = get_schema();
-    if(my $std_id = param('study_to_delete')) {
-     my $std_del_sth = $dbh->prepare("CALL delStd(?)");
-     $std_del_sth->execute($std_id); 
+    if ( my $std_id = param('study_to_delete') ) {
+        my $std_del_sth = $dbh->prepare("CALL delStd(?)");
+        $std_del_sth->execute($std_id);
     }
     my $exp_sth = $dbh->prepare("SELECT * FROM delStdView");
     $exp_sth->execute;
     my $study_ids = $exp_sth->fetchall_arrayref;
-    unshift @{ $study_ids }, [ 'NullOption' ];
+    unshift @{$study_ids}, ['NullOption'];
 
     template 'delete_study', {
- 
-    'study_ids' => $study_ids,
-    
-    'delete_study_url'     => uri_for('/delete_study'),
+
+        'study_ids' => $study_ids,
+
+        'delete_study_url' => uri_for('/delete_study'),
     };
 };
 
 get '/delete_experiment' => sub {
 
     $dbh = get_schema();
-    if(my $exp_id = param('exp_to_delete')) {
-      roll_back({ $exp_id => undef });
+    if ( my $exp_id = param('exp_to_delete') ) {
+        roll_back( { $exp_id => undef } );
     }
 
     my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
     $exp_sth->execute;
     my $study_exp = $exp_sth->fetchall_arrayref;
-    unshift @{ $study_exp }, [ 'NullOption' ];
+    unshift @{$study_exp}, ['NullOption'];
 
     template 'delete_experiment', {
- 
-    'study_exp' => $study_exp,
-    
-    'delete_experiment_url'     => uri_for('/delete_experiment'),
+
+        'study_exp' => $study_exp,
+
+        'delete_experiment_url' => uri_for('/delete_experiment'),
     };
 
 };
