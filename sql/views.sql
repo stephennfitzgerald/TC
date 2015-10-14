@@ -1,5 +1,19 @@
 /** views **/
 
+CREATE OR REPLACE VIEW nullStdView AS 
+  SELECT NULLIF( 
+                exp.id, 
+                std.id
+               ) exp_id, std.id std_id 
+  FROM study std LEFT OUTER JOIN experiment exp 
+  ON exp.study_id = std.id;
+
+CREATE OR REPLACE VIEW delStdView AS 
+ SELECT study0.std_id, study1.name 
+ FROM nullStdView study0 INNER JOIN study study1
+ ON study0.std_id = study1.id
+ WHERE study0.exp_id IS NULL;
+
 CREATE OR REPLACE VIEW enaView AS
  SELECT rdp.experiment_id exp_id,
         seqp.sample_public_name,
@@ -268,6 +282,16 @@ CREATE OR REPLACE VIEW ExpStdNameView AS
         exp.id exp_id
  FROM study std INNER JOIN experiment exp 
    ON std.id = exp.study_id
+ ORDER BY exp_id DESC;
+
+CREATE OR REPLACE VIEW TmExpStdNameView AS
+ SELECT std.name study_name, 
+        exp.name exp_name, 
+        exp.id exp_id
+ FROM study std INNER JOIN experiment exp 
+   ON std.id = exp.study_id INNER JOIN rna_dilution_plate rdp
+   ON rdp.experiment_id = exp.id
+ GROUP BY std.name, exp.name
  ORDER BY exp_id DESC;
 
 CREATE OR REPLACE VIEW ImageView AS

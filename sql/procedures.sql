@@ -19,6 +19,56 @@ BEGIN
 END$$
 DELIMITER ;
 
+/** update a study name for an experiment **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS updateExpStdName$$
+
+CREATE PROCEDURE updateExpStdName (
+ IN study_name_param varchar(255),
+ IN exp_id_param INT(10)
+)
+BEGIN
+
+ UPDATE experiment exp SET exp.study_id = 
+  (
+   SELECT id 
+   FROM study std
+   WHERE std.name = study_name_param 
+  ) 
+ WHERE exp.id = exp_id_param;
+END$$
+DELIMITER ;
+
+/** delete entries from rna_extraction table - if experiment data was not successfully entered **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS del_rna_data$$
+
+CREATE PROCEDURE del_rna_data (
+ IN rna_exp_id_param INT(10)
+)
+BEGIN
+
+DELETE rnaext.*
+FROM rna_extraction rnaext
+WHERE id = rna_exp_id_param;
+END$$
+DELIMITER ;
+
+/** delete a study **/
+DELIMITER $$
+DROP PROCEDURE IF EXISTS delStd$$
+
+CREATE PROCEDURE delStd (
+ IN std_id_param INT(10)
+)
+BEGIN
+
+DELETE std.* 
+FROM study std
+WHERE id = std_id_param;
+END$$
+DELIMITER ;
+
 /** delete entry from zmp_allele_phenotype_eq table **/
 DELIMITER $$
 DROP PROCEDURE IF EXISTS delete_zap$$

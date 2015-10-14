@@ -262,4 +262,4 @@ INSERT IGNORE INTO array_express_data
     organism_part,phenotype,time_point,treatment,donor_id) 
 VALUES (
     1,"N/A","N/A","N/A","N/A","N/A","N/A","N/A","N/A","N/A",
-    'Whole Embryo',"N/A","N/A","N/A","N/A");
+    'Whole organism',"N/A","N/A","N/A","N/A");

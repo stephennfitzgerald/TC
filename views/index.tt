@@ -38,7 +38,7 @@ table, th, td {
 }
 .border2 {
  color: #B0B0B0;
- height: 280px;
+ height: 300px;
  width: 400px;
  border: dashed;
  padding: 25px;
@@ -69,7 +69,7 @@ body {
     background-image: url("images/zmp_index.jpg");
     background-repeat: no-repeat;
     background-size: cover;
-    background-size:100% 100%;
+    background-size:100% 200%;
     background-position: center;
 }
 
@@ -158,6 +158,15 @@ body {
               <input type=submit value="&#8594;"> 
              </form>
             </td>
+          </tr><tr><tr>
+           <td width=260px>Update a Study name</td>
+           <td>
+            <form action="<% update_study_name_url %>" method="get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <input type=submit value="&#8594;">
+            </form>
+           </td>
+           </tr>
            </tr>
         </tr></table>
        </div>
@@ -212,7 +221,16 @@ body {
            </td>
            </tr>
           </tr><tr><tr>
-           <td width=260px><font color="red">Modify a KlusterCaller plate</font></td>
+           <td width=260px><font color="red">Delete a Study</font></td>
+           <td>
+            <form action="<% delete_study_url %>" method="get">
+             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+             <input type=submit value="&#8594;">
+            </form>
+           </td>
+           </tr>
+          </tr><tr><tr>
+           <td width=260px>Modify a KlusterCaller plate</td>
            <td>
             <form action="<% modify_a_kc_plate_url %>" method="post">
              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;

@@ -15,11 +15,12 @@ use Data::Dumper;
 use Carp;
 use DBI;
 
-use constant INCR                  => 3500;    ## increase the color $dec
-use constant MAX_WELL_COL          => 12;
-use constant MAX_WELL_ROW          => 8;
-use constant PLATE_SIZE            => 96;
-use constant ADD_ONT_TERMS         => 5; ## max number of undef fields = ADD_ONT_TERMS - 1, for db insertion
+use constant INCR         => 3500;    ## increase the color $dec
+use constant MAX_WELL_COL => 12;
+use constant MAX_WELL_ROW => 8;
+use constant PLATE_SIZE   => 96;
+use constant ADD_ONT_TERMS => 5;    ## max number of undef fields = ADD_ONT_TERMS - 1, 
+                                    ## for db insertion
 
 use constant GENOTYPES_C => {
     'Blank'    => 0,
@@ -56,7 +57,7 @@ use constant COLLECTION_DESCRIPTION => {
 };
 
 use constant TREATMENT_TYPES => {
-    1 => undef, 
+    1 => undef,
     2 => 'No treatment',
     3 => 'Infection challenge',
     4 => 'Gene knockout',
@@ -72,7 +73,7 @@ use constant PHENOTYPES => {
 use constant HEADER_ROW => 9;
 
 use constant SANGER_COLS => {
-    'SANGER TUBE ID'                                => 'A',    
+    'SANGER TUBE ID'                                 => 'A',
     'SANGER SAMPLE ID'                               => 'B',
     'SUPPLIER SAMPLE NAME'                           => 'C',
     'COHORT'                                         => 'D',
@@ -122,7 +123,7 @@ use constant SANGER_COLS => {
     'Disease'                                        => 'AV',
     'SAMPLE ACCESSION NUMBER (optional)'             => 'AW',
     'DONOR ID (required for cancer samples)'         => 'AX',
-}; 
+};
 
 use constant HC => {
     1 => undef,
@@ -133,7 +134,8 @@ use constant HC => {
     6 => 'Library',
 };
 
-use constant ONT => { ## ontology information input by user to associate with an allele
+use constant ONT =>
+  {    ## ontology information input by user to associate with an allele
     1 => 'snp_id',
     2 => 'allele_id',
     3 => 'stage',
@@ -141,11 +143,11 @@ use constant ONT => { ## ontology information input by user to associate with an
     5 => 'entity2',
     6 => 'quality',
     7 => 'tag',
-};
+  };
 
 my @EXCEL_FIELDS =
   (    ## column names in the excel sheet - most are hard-coded (numbers)
-    [ 'SANGER TUBE ID',      undef ],
+    [ 'SANGER TUBE ID',       undef ],
     [ 'SANGER SAMPLE ID',     undef ],
     [ 'SUPPLIER SAMPLE NAME', 'Sample_Name' ],
     [ 'COHORT',               1 ],
@@ -202,12 +204,13 @@ my @EXCEL_FIELDS =
 
 our $VERSION = '0.1';
 
-my $db_name = "zfish_sf5_tc1_test";
+my $db_name          = "zfish_sf5_tc1_test";
 my $exel_file_dir    = "./public/zmp_exel_files";
 my $rna_dilution_dir = "./public/RNA_dilution_files";
 my $image_dir        = "./public/images";
-my $kc_file_dir     = "./public/kc_files";
-my ( @alleles, %rna_plate, %allele_combos, $dbh, $seq_plate_name, $expAlleGeno );
+my $kc_file_dir      = "./public/kc_files";
+my ( @alleles, %rna_plate, %allele_combos, $dbh, $seq_plate_name,
+    $expAlleGeno );
 my $schema_location = "images/schema_tables_zmp.png";
 
 get '/' => sub {
@@ -224,484 +227,508 @@ get '/' => sub {
         'make_sequencing_plate_url' => uri_for('/get_sequencing_info'),
         'get_all_sequencing_plates_url' =>
           uri_for('/get_all_sequencing_plates'),
-        'get_all_experiments_url' => uri_for('/get_all_experiments'),
-        'get_ontology_for_allele_url' => uri_for('/get_ontology_for_allele'),  
-        'delete_experiment_url'     => uri_for('/delete_experiment'),
-        'add_sequencing_plate_data_url' => uri_for('/add_sequencing_plate_data'),
-        'choose_a_tc_experiment_url'    => uri_for('/choose_a_tc_experiment'),
-        'update_a_phenotype_url'    => uri_for('/update_a_phenotype'),  
-        'update_an_ena_id_url'      => uri_for('/update_an_ena_id'),
-        'add_a_treatment_url'       => uri_for('/add_a_treatment'),
-        'add_a_compound_url'        => uri_for('/add_a_compound'),
-        'add_a_new_allele_url'      => uri_for('/add_a_new_allele'),
-        'modify_a_kc_plate_url'     => uri_for('/modify_a_kc_plate'),
+        'get_all_experiments_url'     => uri_for('/get_all_experiments'),
+        'get_ontology_for_allele_url' => uri_for('/get_ontology_for_allele'),
+        'delete_experiment_url'       => uri_for('/delete_experiment'),
+        'delete_study_url'            => uri_for('/delete_study'),
+        'update_study_name_url'       => uri_for('/update_study_name'),
+        'add_sequencing_plate_data_url' =>
+          uri_for('/add_sequencing_plate_data'),
+        'choose_a_tc_experiment_url' => uri_for('/choose_a_tc_experiment'),
+        'update_a_phenotype_url'     => uri_for('/update_a_phenotype'),
+        'update_an_ena_id_url'       => uri_for('/update_an_ena_id'),
+        'add_a_treatment_url'        => uri_for('/add_a_treatment'),
+        'add_a_compound_url'         => uri_for('/add_a_compound'),
+        'add_a_new_allele_url'       => uri_for('/add_a_new_allele'),
+        'modify_a_kc_plate_url'      => uri_for('/modify_a_kc_plate'),
     };
 
 };
 
 get '/update_an_ena_id' => sub {
 
- $dbh = get_schema();
- my ($study_exp, $ena_res, $ena_upd);
- if(my $exp_name_id = param('exp_to_check')) {
-  my($exp_name, $exp_id) = split'::', $exp_name_id;
-  my $wh_dbh = get_wh_schema(); 
-  my ($name_stem) = $exp_name=~/(\w*[-_]?\w*).*/xms;
-  my $ena_res_sth = $wh_dbh->prepare("SELECT name, 
+    $dbh = get_schema();
+    my ( $study_exp, $ena_res, $ena_upd );
+    if ( my $exp_name_id = param('exp_to_check') ) {
+        my ( $exp_name, $exp_id ) = split '::', $exp_name_id;
+        my $wh_dbh      = get_wh_schema();
+        my ($name_stem) = $exp_name =~ /(\w*[-_]?\w*).*/xms;
+        my $ena_res_sth = $wh_dbh->prepare(
+            "SELECT name, 
                                       accession_number 
                                       FROM current_samples 
                                       WHERE name LIKE ? 
                                       AND accession_number IS NOT NULL 
-                                      GROUP BY name"); 
+                                      GROUP BY name"
+        );
 
-  $ena_res_sth->execute("$name_stem" . '%');
-  $ena_res = $ena_res_sth->fetchall_arrayref;
-  my $ena_update_sth = $dbh->prepare("CALL updateENAid(?,?,?)");
-  foreach my $ena(@{ $ena_res }) {
-   $ena_update_sth->execute(@{ $ena }, $exp_id);
-  }
-  my $ena_upd_sth = $dbh->prepare("SELECT * FROM enaView WHERE exp_id = ?");
-  $ena_upd_sth->execute($exp_id);
-  my $col_names = $ena_upd_sth->{'NAME'};
-  $ena_upd = $ena_upd_sth->fetchall_arrayref;
-  unshift @{ $ena_upd }, $col_names;
- }
- my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
- $exp_sth->execute;
- $study_exp = $exp_sth->fetchall_arrayref;
- unshift @{ $study_exp }, [ 'NullOption' ];
+        $ena_res_sth->execute( "$name_stem" . '%' );
+        $ena_res = $ena_res_sth->fetchall_arrayref;
+        my $ena_update_sth = $dbh->prepare("CALL updateENAid(?,?,?)");
+        foreach my $ena ( @{$ena_res} ) {
+            $ena_update_sth->execute( @{$ena}, $exp_id );
+        }
+        my $ena_upd_sth =
+          $dbh->prepare("SELECT * FROM enaView WHERE exp_id = ?");
+        $ena_upd_sth->execute($exp_id);
+        my $col_names = $ena_upd_sth->{'NAME'};
+        $ena_upd = $ena_upd_sth->fetchall_arrayref;
+        unshift @{$ena_upd}, $col_names;
+    }
+    my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
+    $exp_sth->execute;
+    $study_exp = $exp_sth->fetchall_arrayref;
+    unshift @{$study_exp}, ['NullOption'];
 
- template 'update_an_ena_id', {
-  
-  'study_exp' => $study_exp,
-  'ena_upd'   => $ena_upd,
- 
-  'update_an_ena_id_url'      => uri_for('/update_an_ena_id'),
- };
+    template 'update_an_ena_id', {
+
+        'study_exp' => $study_exp,
+        'ena_upd'   => $ena_upd,
+
+        'update_an_ena_id_url' => uri_for('/update_an_ena_id'),
+    };
 
 };
 
 get '/add_a_compound' => sub {
 
- $dbh = get_schema();
- my ($cmp_exp, $std_exp);
- my $chosen_exp_id = param('exp_id');
+    $dbh = get_schema();
+    my ( $cmp_exp, $std_exp );
+    my $chosen_exp_id = param('exp_id');
 
- if(! $chosen_exp_id) {
-  my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
-  $exp_sth->execute;
-  my $col_names = $exp_sth->{'NAME'}; 
-  $std_exp = $exp_sth->fetchall_arrayref;
-  unshift @$std_exp, $col_names;
-  foreach (@$std_exp) { @{ $_ }[0,2] = @{ $_ }[2,0]; }
-  $chosen_exp_id = param('exp_id');
- }
- else {
-  my $cmp_sth = $dbh->prepare("SELECT * FROM compoundView WHERE experiment_id = ?");
-  $cmp_sth->execute($chosen_exp_id);
-  my $col_names = $cmp_sth->{'NAME'};
-  $cmp_exp = $cmp_sth->fetchall_arrayref;
-  unshift @$cmp_exp, $col_names;
- }
+    if ( !$chosen_exp_id ) {
+        my $exp_sth = $dbh->prepare("SELECT * FROM TmExpStdNameView");
+        $exp_sth->execute;
+        my $col_names = $exp_sth->{'NAME'};
+        $std_exp = $exp_sth->fetchall_arrayref;
+        unshift @$std_exp, $col_names;
+        foreach (@$std_exp) { @{$_}[ 0, 2 ] = @{$_}[ 2, 0 ]; }
+        $chosen_exp_id = param('exp_id');
+    }
+    else {
+        my $cmp_sth =
+          $dbh->prepare("SELECT * FROM compoundView WHERE experiment_id = ?");
+        $cmp_sth->execute($chosen_exp_id);
+        my $col_names = $cmp_sth->{'NAME'};
+        $cmp_exp = $cmp_sth->fetchall_arrayref;
+        unshift @$cmp_exp, $col_names;
+    }
 
- template 'add_a_compound', {
+    template 'add_a_compound', {
 
-   'std_exp'       => $std_exp, 
-   'cmp_exp'       => $cmp_exp,
-   'chosen_exp_id' => $chosen_exp_id,
+        'std_exp'       => $std_exp,
+        'cmp_exp'       => $cmp_exp,
+        'chosen_exp_id' => $chosen_exp_id,
 
-   'add_a_compound_url' => uri_for('/add_a_compound'),
-   'update_a_compound_url' => uri_for('/update_a_compound'),
- };
+        'add_a_compound_url'    => uri_for('/add_a_compound'),
+        'update_a_compound_url' => uri_for('/update_a_compound'),
+    };
 
 };
 
 get '/update_a_compound' => sub {
 
- $dbh = get_schema();
- my($compound_name, $compound_dose) = (param('compound_name'), param('compound_dose'));
- my $chosen_exp_id = param('chosen_exp_id');
- my $cmp_sth = $dbh->prepare("SELECT * FROM compoundView WHERE experiment_id = ?");
- $cmp_sth->execute($chosen_exp_id);
- my $col_names = $cmp_sth->{'NAME'};
- my $compound_info = $cmp_sth->fetchall_arrayref;
- my $update_cmp_sth = $dbh->prepare("CALL addCompound(?,?,?)"); 
- foreach my $seqp(@{ $compound_info }){
-  my $seqp_id = 'seqp::' . $seqp->[1];
-  if(my $selected = param("$seqp_id")) {
-   $update_cmp_sth->execute($seqp->[1], $compound_name, $compound_dose);
-  }
- }
- $cmp_sth->execute($chosen_exp_id);
- $compound_info = $cmp_sth->fetchall_arrayref;
- unshift @{ $compound_info }, $col_names;
+    $dbh = get_schema();
+    my ( $compound_name, $compound_dose ) =
+      ( param('compound_name'), param('compound_dose') );
+    my $chosen_exp_id = param('chosen_exp_id');
+    my $cmp_sth =
+      $dbh->prepare("SELECT * FROM compoundView WHERE experiment_id = ?");
+    $cmp_sth->execute($chosen_exp_id);
+    my $col_names      = $cmp_sth->{'NAME'};
+    my $compound_info  = $cmp_sth->fetchall_arrayref;
+    my $update_cmp_sth = $dbh->prepare("CALL addCompound(?,?,?)");
+    foreach my $seqp ( @{$compound_info} ) {
+        my $seqp_id = 'seqp::' . $seqp->[1];
+        if ( my $selected = param("$seqp_id") ) {
+            $update_cmp_sth->execute( $seqp->[1], $compound_name,
+                $compound_dose );
+        }
+    }
+    $cmp_sth->execute($chosen_exp_id);
+    $compound_info = $cmp_sth->fetchall_arrayref;
+    unshift @{$compound_info}, $col_names;
 
- template 'add_a_compound', {
- 
-   'chosen_exp_id' => $chosen_exp_id,
-   'cmp_exp'       => $compound_info,
-    
-   'add_a_compound_url' => uri_for('/add_a_compound'),
-   'update_a_compound_url' => uri_for('/update_a_compound'),
-   
- };
+    template 'add_a_compound', {
+
+        'chosen_exp_id' => $chosen_exp_id,
+        'cmp_exp'       => $compound_info,
+
+        'add_a_compound_url'    => uri_for('/add_a_compound'),
+        'update_a_compound_url' => uri_for('/update_a_compound'),
+    };
 
 };
 
 get '/add_a_treatment' => sub {
- 
- $dbh = get_schema();
- my ($treatments_info, $std_exp);
- my $chosen_exp_id = param('exp_id');
 
- if(! $chosen_exp_id) {
-  my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
-  $exp_sth->execute;
-  my $col_names = $exp_sth->{'NAME'};
-  $std_exp = $exp_sth->fetchall_arrayref;
-  unshift @$std_exp, $col_names;
-  foreach (@$std_exp) { @{ $_ }[0,2] = @{ $_ }[2,0]; }
-  $chosen_exp_id = param('exp_id');
- }
- else {
-  my $treatment_sth = $dbh->prepare("SELECT * FROM treatmentView WHERE experiment_id = ?");
-  $treatment_sth->execute($chosen_exp_id);
-  my $col_names = $treatment_sth->{'NAME'};
-  $treatments_info = $treatment_sth->fetchall_arrayref;
-  unshift @{ $treatments_info }, $col_names; 
- }
+    $dbh = get_schema();
+    my ( $treatments_info, $std_exp );
+    my $chosen_exp_id = param('exp_id');
 
- template 'add_a_treatment', {
+    if ( !$chosen_exp_id ) {
+        my $exp_sth = $dbh->prepare("SELECT * FROM TmExpStdNameView");
+        $exp_sth->execute;
+        my $col_names = $exp_sth->{'NAME'};
+        $std_exp = $exp_sth->fetchall_arrayref;
+        unshift @$std_exp, $col_names;
+        foreach (@$std_exp) { @{$_}[ 0, 2 ] = @{$_}[ 2, 0 ]; }
+        $chosen_exp_id = param('exp_id');
+    }
+    else {
+        my $treatment_sth =
+          $dbh->prepare("SELECT * FROM treatmentView WHERE experiment_id = ?");
+        $treatment_sth->execute($chosen_exp_id);
+        my $col_names = $treatment_sth->{'NAME'};
+        $treatments_info = $treatment_sth->fetchall_arrayref;
+        unshift @{$treatments_info}, $col_names;
+    }
 
-  'std_exp'                 => $std_exp,
-  'treatment_types'         => TREATMENT_TYPES,
-  'treatments_info'         => $treatments_info,
+    template 'add_a_treatment', {
 
-  'chosen_exp_id'           => $chosen_exp_id,
-  'add_a_treatment_url'     => uri_for('/add_a_treatment'),
-  'update_a_treatment_url'  => uri_for('/update_a_treatment'),
- };
+        'std_exp'         => $std_exp,
+        'treatment_types' => TREATMENT_TYPES,
+        'treatments_info' => $treatments_info,
+
+        'chosen_exp_id'          => $chosen_exp_id,
+        'add_a_treatment_url'    => uri_for('/add_a_treatment'),
+        'update_a_treatment_url' => uri_for('/update_a_treatment'),
+    };
 
 };
 
 get '/update_a_treatment' => sub {
 
- $dbh = get_schema();
- my $chosen_exp_id = param('chosen_exp_id'); 
- my $treatment_sth = $dbh->prepare("SELECT * FROM treatmentView WHERE experiment_id = ?");
- $treatment_sth->execute($chosen_exp_id);
- my $col_names = $treatment_sth->{'NAME'};
- my $treatments_info = $treatment_sth->fetchall_arrayref;
- my $add_treatment_sth = $dbh->prepare("CALL addTreatment(?,?,?)");
- foreach my $seqp(@{ $treatments_info }){
-  my $seqp_id = 'seqp::' . $seqp->[1];
-  if(my $selected = param("$seqp_id")) {
-   $add_treatment_sth->execute($seqp->[1], param('chosen_treatment'), param('treatment_desc'));
-  }
- }
- $treatment_sth->execute($chosen_exp_id);
- $treatments_info = $treatment_sth->fetchall_arrayref;
- unshift @{ $treatments_info }, $col_names;
+    $dbh = get_schema();
+    my $chosen_exp_id = param('chosen_exp_id');
+    my $treatment_sth =
+      $dbh->prepare("SELECT * FROM treatmentView WHERE experiment_id = ?");
+    $treatment_sth->execute($chosen_exp_id);
+    my $col_names         = $treatment_sth->{'NAME'};
+    my $treatments_info   = $treatment_sth->fetchall_arrayref;
+    my $add_treatment_sth = $dbh->prepare("CALL addTreatment(?,?,?)");
+    foreach my $seqp ( @{$treatments_info} ) {
+        my $seqp_id = 'seqp::' . $seqp->[1];
+        if ( my $selected = param("$seqp_id") ) {
+            $add_treatment_sth->execute( $seqp->[1], param('chosen_treatment'),
+                param('treatment_desc') );
+        }
+    }
+    $treatment_sth->execute($chosen_exp_id);
+    $treatments_info = $treatment_sth->fetchall_arrayref;
+    unshift @{$treatments_info}, $col_names;
 
- template 'add_a_treatment', {
+    template 'add_a_treatment', {
 
-  'treatments_info'         => $treatments_info,
-  'treatment_types'         => TREATMENT_TYPES,
-  'chosen_exp_id'           => $chosen_exp_id,
+        'treatments_info' => $treatments_info,
+        'treatment_types' => TREATMENT_TYPES,
+        'chosen_exp_id'   => $chosen_exp_id,
 
-  'add_a_treatment_url'     => uri_for('/add_a_treatment'),
- };
+        'add_a_treatment_url' => uri_for('/add_a_treatment'),
+    };
 
 };
 
 get '/update_a_phenotype' => sub {
 
- $dbh = get_schema();
+    $dbh = get_schema();
 
- my ($std_exp, @pheno_info, %exp_ids, $chosen_exp_id, $pheno_col_names);
+    my ( $std_exp, @pheno_info, %exp_ids, $chosen_exp_id, $pheno_col_names );
 
- my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
- $exp_sth->execute;
- my $col_names = $exp_sth->{'NAME'};
- $std_exp = $exp_sth->fetchall_arrayref;
+    my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
+    $exp_sth->execute;
+    my $col_names = $exp_sth->{'NAME'};
+    $std_exp = $exp_sth->fetchall_arrayref;
 
- my $phenoct_sth = $dbh->prepare("SELECT * FROM phenoCountView WHERE id = ?");
+    my $phenoct_sth =
+      $dbh->prepare("SELECT * FROM phenoCountView WHERE id = ?");
 
- foreach my $exp_std(@{ $std_exp }) {
-  @{ $exp_std }[0,2] = @{ $exp_std }[2,0];  
-  $phenoct_sth->execute($exp_std->[0]);
-  $exp_ids{ $exp_std->[0] }++;
-  my $pheno_ct_str;
-  foreach my $pct(@{ $phenoct_sth->fetchall_arrayref }) {
-   $pheno_ct_str .= $pct->[1] . '(' . $pct->[2] . ') ';
-  }
-  push@{ $exp_std }, $pheno_ct_str;
- }
- unshift @{ $std_exp }, [ @{ $col_names }[2,1,0], 'phenotypes' ];
+    foreach my $exp_std ( @{$std_exp} ) {
+        @{$exp_std}[ 0, 2 ] = @{$exp_std}[ 2, 0 ];
+        $phenoct_sth->execute( $exp_std->[0] );
+        $exp_ids{ $exp_std->[0] }++;
+        my $pheno_ct_str;
+        foreach my $pct ( @{ $phenoct_sth->fetchall_arrayref } ) {
+            $pheno_ct_str .= $pct->[1] . '(' . $pct->[2] . ') ';
+        }
+        push @{$exp_std}, $pheno_ct_str;
+    }
+    unshift @{$std_exp}, [ @{$col_names}[ 2, 1, 0 ], 'phenotypes' ];
 
- my $pheno_sth = $dbh->prepare("SELECT * FROM phenoView WHERE exp_id = ?");
- 
- foreach my $exp_id(sort {$b <=> $a} keys %exp_ids) {
-  if(param('exp_id') && param('exp_id') ==  $exp_id){
-   $pheno_sth->execute($exp_id);    
-   $pheno_col_names = $pheno_sth->{'NAME'};
-   push @pheno_info, @{ $pheno_sth->fetchall_arrayref };
-   splice(@{ $pheno_col_names },1,1, 'Select');
-   unshift @pheno_info, $pheno_col_names;
-   $chosen_exp_id = $exp_id;
-  }
- }
- 
- template 'update_a_phenotype', {
-  
-  std_exp           => $std_exp,
-  pheno_info        => \@pheno_info,
-  pheno_types       => PHENOTYPES,
-  chosen_exp_id     => $chosen_exp_id,
- 
-  'add_phenotypes_to_db_url' => uri_for('/add_phenotypes_to_db'),
- };
+    my $pheno_sth = $dbh->prepare("SELECT * FROM phenoView WHERE exp_id = ?");
+
+    foreach my $exp_id ( sort { $b <=> $a } keys %exp_ids ) {
+        if ( param('exp_id') && param('exp_id') == $exp_id ) {
+            $pheno_sth->execute($exp_id);
+            $pheno_col_names = $pheno_sth->{'NAME'};
+            push @pheno_info, @{ $pheno_sth->fetchall_arrayref };
+            splice( @{$pheno_col_names}, 1, 1, 'Select' );
+            unshift @pheno_info, $pheno_col_names;
+            $chosen_exp_id = $exp_id;
+        }
+    }
+
+    template 'update_a_phenotype', {
+
+        std_exp       => $std_exp,
+        pheno_info    => \@pheno_info,
+        pheno_types   => PHENOTYPES,
+        chosen_exp_id => $chosen_exp_id,
+
+        'add_phenotypes_to_db_url' => uri_for('/add_phenotypes_to_db'),
+    };
 
 };
 
 get '/add_phenotypes_to_db' => sub {
 
- my $pheno_sth = $dbh->prepare("SELECT * FROM phenoView WHERE exp_id = ?");
- my $chosen_exp_id = param('chosen_exp_id');
- $pheno_sth->execute($chosen_exp_id);
- my $pheno_col_names = $pheno_sth->{'NAME'};
- 
- my (@rows2update, @pheno_info);
- foreach my $selected(@{ $pheno_sth->fetchall_arrayref }) {
-  my $pheno_id = "pheno::" . $selected->[1];
-  if(param("$pheno_id")) {
-   push @rows2update, $selected->[1];
-  }
- }
- 
- my $chosen_pheno = param('chosen_pheno'); 
+    my $pheno_sth = $dbh->prepare("SELECT * FROM phenoView WHERE exp_id = ?");
+    my $chosen_exp_id = param('chosen_exp_id');
+    $pheno_sth->execute($chosen_exp_id);
+    my $pheno_col_names = $pheno_sth->{'NAME'};
 
- foreach my $row2update(@rows2update) {
-  my $update_pheno_sth = $dbh->prepare("CALL update_pheno(?,?)");
-  $update_pheno_sth->execute($row2update, $chosen_pheno);
- }
- 
- $pheno_sth->execute($chosen_exp_id);
- push @pheno_info, @{ $pheno_sth->fetchall_arrayref };
- splice(@{ $pheno_col_names },1,1, 'Select');
- unshift @pheno_info, $pheno_col_names;
+    my ( @rows2update, @pheno_info );
+    foreach my $selected ( @{ $pheno_sth->fetchall_arrayref } ) {
+        my $pheno_id = "pheno::" . $selected->[1];
+        if ( param("$pheno_id") ) {
+            push @rows2update, $selected->[1];
+        }
+    }
 
- template 'update_a_phenotype', {
-  
-  std_exp           => undef,
-  pheno_info        => \@pheno_info,
-  pheno_types       => PHENOTYPES,
-  chosen_exp_id     => $chosen_exp_id, 
-  
-  'add_phenotypes_to_db_url' => uri_for('/add_phenotypes_to_db'),
- };
+    my $chosen_pheno = param('chosen_pheno');
+
+    foreach my $row2update (@rows2update) {
+        my $update_pheno_sth = $dbh->prepare("CALL update_pheno(?,?)");
+        $update_pheno_sth->execute( $row2update, $chosen_pheno );
+    }
+
+    $pheno_sth->execute($chosen_exp_id);
+    push @pheno_info, @{ $pheno_sth->fetchall_arrayref };
+    splice( @{$pheno_col_names}, 1, 1, 'Select' );
+    unshift @pheno_info, $pheno_col_names;
+
+    template 'update_a_phenotype', {
+
+        std_exp       => undef,
+        pheno_info    => \@pheno_info,
+        pheno_types   => PHENOTYPES,
+        chosen_exp_id => $chosen_exp_id,
+
+        'add_phenotypes_to_db_url' => uri_for('/add_phenotypes_to_db'),
+    };
 
 };
 
 post '/modify_a_kc_plate' => sub {
- 
- my @a2h = 'A'..'H';
- unshift @a2h, 0;
- my @one2twelve = 0..MAX_WELL_COL;
- my $mod_content;
- 
- if ( my $kc_file = upload('kc_file') ) {
-  my $kcf_content = $kc_file->content;
-  
-  my @wells2keep;
-  my $from_well = param('from_well');
-  my ($fwa,$fwn) = $from_well=~/([[:alpha:]]):([[:digit:]]+)/xms;
-  my $to_well = param('to_well');
-  my ($twa,$twn) = $to_well=~/([[:alpha:]]):([[:digit:]]+)/xms;
-  my @alpha=$fwa..$twa;
- 
-  for(my$i=0;$i<@alpha;$i++){
-   my $j = $i == 0 ? $fwn : 1;
-   my $k = $i == $#alpha ? $twn : MAX_WELL_COL;
-   for(;$j<=$k;$j++){
-    my $jpad = $j < 10 ? '0'.$j : $j; 
-    my $well = $alpha[$i] . $jpad;
-    my ($cwell) = $kcf_content=~/(^$well[^\n]+)/xms;
-    $cwell=~s/\s+//xmsg;
-    push @wells2keep, $cwell;
-   }
-  }
-  
-  my %kc_ind;
-  my $acc = 0;
-  my@kc_num=('01','02','03','04','05','06','07','08','09','10','11','12');
-  for(my$i=1;$i<@a2h;$i++) {
-   for(my$j=0;$j<@kc_num;$j++) {
-    $kc_ind{ $acc } = $a2h[$i] . $kc_num[$j];
-    $acc++;
-   }
-  }
 
-  for(my$i=0;$i<@wells2keep;$i++) {
-   my $subs = $kc_ind{ $i };
-   $wells2keep[$i]=~s/^\w+/$subs/;
-  }
+    my @a2h = 'A' .. 'H';
+    unshift @a2h, 0;
+    my @one2twelve = 0 .. MAX_WELL_COL;
+    my $mod_content;
 
-  ($mod_content) = $kcf_content=~/(.*\[wells\])/xms;
-  $mod_content .= "\n" . join "\n", @wells2keep;
- } 
+    if ( my $kc_file = upload('kc_file') ) {
+        my $kcf_content = $kc_file->content;
 
- template 'modify_a_kc_plate', {
-  
-  'a2h'         => \@a2h,
-  'one2twelve'  => \@one2twelve,
-  'mod_content' => $mod_content,
+        my @wells2keep;
+        my $from_well = param('from_well');
+        my ( $fwa, $fwn ) = $from_well =~ /([[:alpha:]]):([[:digit:]]+)/xms;
+        my $to_well = param('to_well');
+        my ( $twa, $twn ) = $to_well =~ /([[:alpha:]]):([[:digit:]]+)/xms;
+        my @alpha = $fwa .. $twa;
 
- };
+        for ( my $i = 0 ; $i < @alpha ; $i++ ) {
+            my $j = $i == 0       ? $fwn : 1;
+            my $k = $i == $#alpha ? $twn : MAX_WELL_COL;
+            for ( ; $j <= $k ; $j++ ) {
+                my $jpad    = $j < 10 ? '0' . $j : $j;
+                my $well    = $alpha[$i] . $jpad;
+                my ($cwell) = $kcf_content =~ /(^$well[^\n]+)/xms;
+                $cwell =~ s/\s+//xmsg;
+                push @wells2keep, $cwell;
+            }
+        }
+
+        my %kc_ind;
+        my $acc    = 0;
+        my @kc_num = (
+            '01', '02', '03', '04', '05', '06',
+            '07', '08', '09', '10', '11', '12'
+        );
+        for ( my $i = 1 ; $i < @a2h ; $i++ ) {
+            for ( my $j = 0 ; $j < @kc_num ; $j++ ) {
+                $kc_ind{$acc} = $a2h[$i] . $kc_num[$j];
+                $acc++;
+            }
+        }
+
+        for ( my $i = 0 ; $i < @wells2keep ; $i++ ) {
+            my $subs = $kc_ind{$i};
+            $wells2keep[$i] =~ s/^\w+/$subs/;
+        }
+
+        ($mod_content) = $kcf_content =~ /(.*\[wells\])/xms;
+        $mod_content .= "\n" . join "\n", @wells2keep;
+    }
+
+    template 'modify_a_kc_plate', {
+
+        'a2h'         => \@a2h,
+        'one2twelve'  => \@one2twelve,
+        'mod_content' => $mod_content,
+
+    };
 
 };
 
 post '/add_sequencing_plate_data' => sub {
 
 ## adds library conc values and comments to alleles + genotypes
-  $dbh = get_schema();
-  my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
-  $exp_sth->execute;
-  my $study_exp = $exp_sth->fetchall_arrayref;
-  unshift @{ $study_exp }, [ 'NullOption' ];
+    $dbh = get_schema();
+    my $exp_sth = $dbh->prepare("SELECT * FROM ExpStdNameView");
+    $exp_sth->execute;
+    my $study_exp = $exp_sth->fetchall_arrayref;
+    unshift @{$study_exp}, ['NullOption'];
 
-  my $exp_id = param('exp_to_update');
-  my $lib_con_file = param('library_conc_file');
-  my $template = 'add_sequencing_plate_data';
-  my $lib_samples;
-  if($exp_id && $exp_id=~/\d+/ && ! $lib_con_file) {
-   $expAlleGeno = undef;
-   my $ag_sth = $dbh->prepare("SELECT * FROM expAlleGeno");
-   $ag_sth->execute;
-   foreach my $row(@{ $ag_sth->fetchall_arrayref }) {
-    my($exp,$allele,$genot,$genot_id) = split'::',$row->[0];
-    if($exp == $exp_id) {
-     push@{ $expAlleGeno }, [$exp, $allele, $genot];
-    }
-   }
-  }
-  elsif($lib_con_file) {
-   if ( my $lib_conc_file = upload('library_conc_file') ) {
-    my $rec_library_amount = param('rec_library_amount');
-    my $lib_resusp_vol =param('resusp_library_vol');
-    my $copy_dir = make_file_path( "$exel_file_dir", 'library_dir' );
-    my $library_file_name = $lib_conc_file->tempname;
-    $library_file_name =~ s/.*\///xms;
-    $lib_conc_file->copy_to("$copy_dir");
-    my $xlf = "$copy_dir/$library_file_name";
-
-    ## read in the file for the library concentrations
-    my $workbook = ReadData( "$xlf", strip => 3 );
-    my %lib_plate;
-    foreach my $row ( 1 .. MAX_WELL_ROW ) {
-        foreach my $col ( "A" .. "L" ) {
-            my $index = $col . $row;
-            if ( defined( $workbook->[1]{$index} ) ) {
-                my $lib_amount = $workbook->[1]{$index};
-                my $sw_index =
-                  switch_cols_rows($index);    ## need to switch rows and cols
-                $lib_plate{$sw_index}{'lib_amt'} = $lib_amount;
-                if($lib_amount != 0) {
-                 my $lib_vol = sprintf "%.2f", $rec_library_amount / $lib_amount;
-                 $lib_plate{$sw_index}{'lib_vol'} = $lib_vol;
-                 if($lib_vol >= $lib_resusp_vol) { ## not enough library 
-                   $lib_plate{$sw_index}{'lib_qc_fail'} = 1;
-                 }
-                 else {
-                  $lib_plate{$sw_index}{'lib_qc_fail'} = 0;
-                 }
-                }
-                else { ## little or no library 
-                 $lib_plate{$sw_index}{'lib_amt'} = 0;
-                 $lib_plate{$sw_index}{'lib_vol'} = undef;
-                 $lib_plate{$sw_index}{'lib_qc_fail'} = 1;
-                }
+    my $exp_id       = param('exp_to_update');
+    my $lib_con_file = param('library_conc_file');
+    my $template     = 'add_sequencing_plate_data';
+    my $lib_samples;
+    if ( $exp_id && $exp_id =~ /\d+/ && !$lib_con_file ) {
+        $expAlleGeno = undef;
+        my $ag_sth = $dbh->prepare("SELECT * FROM expAlleGeno");
+        $ag_sth->execute;
+        foreach my $row ( @{ $ag_sth->fetchall_arrayref } ) {
+            my ( $exp, $allele, $genot, $genot_id ) = split '::', $row->[0];
+            if ( $exp == $exp_id ) {
+                push @{$expAlleGeno}, [ $exp, $allele, $genot ];
             }
         }
     }
-    my $addLibFile_sth = $dbh->prepare("CALL addLibFile(?,?)");
-    $addLibFile_sth->execute($exp_id, $xlf);
-    my $addLibAmts_sth = $dbh->prepare("CALL addLibAmts(?,?,?,?,?)");
-    foreach my $well_id(keys %lib_plate){
-     my $lib_qc = $lib_plate{$well_id}{'lib_qc_fail'};
-     $lib_qc = $lib_qc ? 0 : 1;
-     $addLibAmts_sth->execute($exp_id, $well_id, 
-                 $lib_plate{$well_id}{'lib_amt'},
-                 $lib_plate{$well_id}{'lib_vol'},
-                 $lib_qc);
+    elsif ($lib_con_file) {
+        if ( my $lib_conc_file = upload('library_conc_file') ) {
+            my $rec_library_amount = param('rec_library_amount');
+            my $lib_resusp_vol     = param('resusp_library_vol');
+            my $copy_dir = make_file_path( "$exel_file_dir", 'library_dir' );
+            my $library_file_name = $lib_conc_file->tempname;
+            $library_file_name =~ s/.*\///xms;
+            $lib_conc_file->copy_to("$copy_dir");
+            my $xlf = "$copy_dir/$library_file_name";
+
+            ## read in the file for the library concentrations
+            my $workbook = ReadData( "$xlf", strip => 3 );
+            my %lib_plate;
+            foreach my $row ( 1 .. MAX_WELL_ROW ) {
+                foreach my $col ( "A" .. "L" ) {
+                    my $index = $col . $row;
+                    if ( defined( $workbook->[1]{$index} ) ) {
+                        my $lib_amount = $workbook->[1]{$index};
+                        my $sw_index =
+                          switch_cols_rows($index)
+                          ;    ## need to switch rows and cols
+                        $lib_plate{$sw_index}{'lib_amt'} = $lib_amount;
+                        if ( $lib_amount != 0 ) {
+                            my $lib_vol = sprintf "%.2f",
+                              $rec_library_amount / $lib_amount;
+                            $lib_plate{$sw_index}{'lib_vol'} = $lib_vol;
+                            if ( $lib_vol >= $lib_resusp_vol )
+                            {    ## not enough library
+                                $lib_plate{$sw_index}{'lib_qc_fail'} = 1;
+                            }
+                            else {
+                                $lib_plate{$sw_index}{'lib_qc_fail'} = 0;
+                            }
+                        }
+                        else {    ## little or no library
+                            $lib_plate{$sw_index}{'lib_amt'}     = 0;
+                            $lib_plate{$sw_index}{'lib_vol'}     = undef;
+                            $lib_plate{$sw_index}{'lib_qc_fail'} = 1;
+                        }
+                    }
+                }
+            }
+            my $addLibFile_sth = $dbh->prepare("CALL addLibFile(?,?)");
+            $addLibFile_sth->execute( $exp_id, $xlf );
+            my $addLibAmts_sth = $dbh->prepare("CALL addLibAmts(?,?,?,?,?)");
+            foreach my $well_id ( keys %lib_plate ) {
+                my $lib_qc = $lib_plate{$well_id}{'lib_qc_fail'};
+                $lib_qc = $lib_qc ? 0 : 1;
+                $addLibAmts_sth->execute(
+                    $exp_id, $well_id,
+                    $lib_plate{$well_id}{'lib_amt'},
+                    $lib_plate{$well_id}{'lib_vol'}, $lib_qc
+                );
+            }
+        }
+
+        # reset all the allele-genotype comments to null
+        my $reset_comment_sth = $dbh->prepare("CALL resetGenotComments(?)");
+        $reset_comment_sth->execute($exp_id);
+        my $add_comment_sth = $dbh->prepare("CALL addGenotComments(?,?,?,?)");
+        foreach my $allele_geno ( @{$expAlleGeno} ) {
+            my $ag_name = join '::', @{$allele_geno};
+            if ( my $comment = param($ag_name) ) {
+                $add_comment_sth->execute( @{$allele_geno}, $comment );
+            }
+        }
+        my $lib_samples_sth =
+          $dbh->prepare("SELECT * FROM libSamplesView WHERE exp_id = ?");
+        $lib_samples_sth->execute($exp_id);
+        my $col_names = $lib_samples_sth->{'NAME'};
+        $lib_samples = $lib_samples_sth->fetchall_arrayref();
+        unshift @{$lib_samples}, $col_names;
+
+        if ( @{$lib_samples} ) {
+            $template = 'check_library_wells';
+        }
     }
-   }
-   # reset all the allele-genotype comments to null 
-   my $reset_comment_sth = $dbh->prepare("CALL resetGenotComments(?)");
-   $reset_comment_sth->execute($exp_id);
-   my $add_comment_sth = $dbh->prepare("CALL addGenotComments(?,?,?,?)");
-   foreach my $allele_geno ( @{ $expAlleGeno } ) {
-    my $ag_name = join'::',@{ $allele_geno };
-    if(my $comment = param($ag_name)) {
-     $add_comment_sth->execute(@{ $allele_geno }, $comment);
-    }
-   }
-   my $lib_samples_sth = $dbh->prepare("SELECT * FROM libSamplesView WHERE exp_id = ?");
-   $lib_samples_sth->execute($exp_id);
-   my $col_names  = $lib_samples_sth->{'NAME'};   
-   $lib_samples = $lib_samples_sth->fetchall_arrayref();
-   unshift @{$lib_samples}, $col_names;
-   
-   if(@{ $lib_samples }){ 
-    $template = 'check_library_wells';
-   } 
-  }
-  
-  template "$template", {
-   
-   'study_exp' => $study_exp,
-   'exp_id'    => $exp_id,
-   'alle_geno' => $expAlleGeno,
-   'lib_samples' => $lib_samples,
-   
-   'add_sequencing_plate_data_url' => uri_for('/add_sequencing_plate_data'),
-   'update_sequence_plate_url'     => uri_for('/update_sequence_plate'),
-  };
+
+    template "$template", {
+
+        'study_exp'   => $study_exp,
+        'exp_id'      => $exp_id,
+        'alle_geno'   => $expAlleGeno,
+        'lib_samples' => $lib_samples,
+
+        'add_sequencing_plate_data_url' =>
+          uri_for('/add_sequencing_plate_data'),
+        'update_sequence_plate_url' => uri_for('/update_sequence_plate'),
+    };
 
 };
 
 get '/update_sequence_plate' => sub {
 
-  my $dbh = get_schema();
-  my $exp_id = param('exp_id');
-  my $seqp_view_sth = $dbh->prepare("SELECT * FROM libSampleIdView WHERE exp_id = ?"); 
-  $seqp_view_sth->execute($exp_id);
-  ## reset all wells to selected (set to 1)
-  my $reset_seqp_sth = $dbh->prepare("CALL resetSeqPlateSel(?)");
-  $reset_seqp_sth->execute($exp_id);
-  ## de-select chosen wells (set to 0)
-  my $upd_seqp_sth = $dbh->prepare("CALL updateSeqPlateSel(?)");
-  
-  foreach my $seqp(@{ $seqp_view_sth->fetchall_arrayref }) {
-   my $name = 'SEQID:' . $seqp->[1];
-   if(param($name)) {
-    $upd_seqp_sth->execute( $seqp->[1] );
-   }
-  }
-  my $lib_samples_sth = $dbh->prepare("SELECT * FROM libSamplesView WHERE exp_id = ?");
-  $lib_samples_sth->execute($exp_id);
-  my $col_names  = $lib_samples_sth->{'NAME'};   
-  my $lib_samples = $lib_samples_sth->fetchall_arrayref();
-  unshift @{$lib_samples}, $col_names;
- 
-  template 'check_library_wells', {
+    my $dbh    = get_schema();
+    my $exp_id = param('exp_id');
+    my $seqp_view_sth =
+      $dbh->prepare("SELECT * FROM libSampleIdView WHERE exp_id = ?");
+    $seqp_view_sth->execute($exp_id);
+    ## reset all wells to selected (set to 1)
+    my $reset_seqp_sth = $dbh->prepare("CALL resetSeqPlateSel(?)");
+    $reset_seqp_sth->execute($exp_id);
+    ## de-select chosen wells (set to 0)
+    my $upd_seqp_sth = $dbh->prepare("CALL updateSeqPlateSel(?)");
 
-   'exp_id'    => $exp_id,
-   'lib_samples' => $lib_samples,
-  };
+    foreach my $seqp ( @{ $seqp_view_sth->fetchall_arrayref } ) {
+        my $name = 'SEQID:' . $seqp->[1];
+        if ( param($name) ) {
+            $upd_seqp_sth->execute( $seqp->[1] );
+        }
+    }
+    my $lib_samples_sth =
+      $dbh->prepare("SELECT * FROM libSamplesView WHERE exp_id = ?");
+    $lib_samples_sth->execute($exp_id);
+    my $col_names   = $lib_samples_sth->{'NAME'};
+    my $lib_samples = $lib_samples_sth->fetchall_arrayref();
+    unshift @{$lib_samples}, $col_names;
+
+    template 'check_library_wells', {
+
+        'exp_id'      => $exp_id,
+        'lib_samples' => $lib_samples,
+    };
 
 };
-
 
 get '/make_sequencing_form' => sub {
 
@@ -717,6 +744,64 @@ get '/make_sequencing_form' => sub {
         'get_sequencing_report_url' => uri_for('/get_sequencing_report'),
     };
 
+};
+
+get '/update_study_name' => sub {
+
+    $dbh = get_schema();
+
+    if(my $new_study_name = param('new_std_name')) {
+     if(my $std_exp = param('exp_to_update')) {
+      my($std_name, $exp_id) = split'::',$std_exp;
+      my $ck_std_sth = $dbh->prepare("SELECT EXISTS(SELECT * FROM study WHERE name = ?)");
+      $ck_std_sth->execute("$new_study_name");
+      if(@{ $ck_std_sth->fetchrow_arrayref }[0]) {
+       my $upd_exp_std_sth = $dbh->prepare("CALL updateExpStdName(?,?)");
+       $upd_exp_std_sth->execute("$new_study_name", $exp_id);
+      } 
+      else {
+       my $std_id;
+       $new_study_name = trim($new_study_name);
+       my $new_std_sth = $dbh->prepare("CALL add_new_study(?, \@std_id)");
+       $new_std_sth->execute($new_study_name);
+       ($std_id) = $dbh->selectrow_array("SELECT \@std_id");
+       my $upd_exp_std_sth = $dbh->prepare("CALL updateExpStdName(?,?)");
+       $upd_exp_std_sth->execute("$new_study_name", $exp_id);
+      }
+     }
+    }
+
+    my $exp_sth = $dbh->prepare("SELECT * FROM TmExpStdNameView");
+    $exp_sth->execute;
+    my $study_exp = $exp_sth->fetchall_arrayref;
+    unshift @{$study_exp}, ['NullOption'];
+
+    template 'update_study_name', {
+
+        'study_exp' => $study_exp,
+
+        'update_study_name_url' => uri_for('/update_study_name'),
+    };
+};
+
+get '/delete_study' => sub {
+
+    $dbh = get_schema();
+    if(my $std_id = param('study_to_delete')) {
+     my $std_del_sth = $dbh->prepare("CALL delStd(?)");
+     $std_del_sth->execute($std_id); 
+    }
+    my $exp_sth = $dbh->prepare("SELECT * FROM delStdView");
+    $exp_sth->execute;
+    my $study_ids = $exp_sth->fetchall_arrayref;
+    unshift @{ $study_ids }, [ 'NullOption' ];
+
+    template 'delete_study', {
+ 
+    'study_ids' => $study_ids,
+    
+    'delete_study_url'     => uri_for('/delete_study'),
+    };
 };
 
 get '/delete_experiment' => sub {
@@ -875,29 +960,29 @@ get '/add_a_new_allele' => sub {
     my ( $allele_name, $gene_name, $snp_id ) =
       ( param('allele_name'), param('gene_name'), param('snp_id') );
 
-    if ( $allele_name ) {
+    if ($allele_name) {
         $allele_name = trim($allele_name);
-        if( $gene_name ) {
-          $gene_name = trim($gene_name);
+        if ($gene_name) {
+            $gene_name = trim($gene_name);
         }
-        if( $snp_id ) {
-          $snp_id = trim($snp_id) if($snp_id);
+        if ($snp_id) {
+            $snp_id = trim($snp_id) if ($snp_id);
         }
         my $new_allele_sth =
           $dbh->prepare("CALL add_a_new_allele(?,?,?, \@allele_id)");
         $new_allele_sth->execute( $allele_name, $gene_name, $snp_id );
-       ($last_allele_id) = $dbh->selectrow_array("SELECT \@allele_id");
+        ($last_allele_id) = $dbh->selectrow_array("SELECT \@allele_id");
     }
 
     my $allele_sth = $dbh->prepare("SELECT * FROM alleleView LIMIT 10");
     $allele_sth->execute;
-    my $col_names  = $allele_sth->{'NAME'};
-    my $alleles = $allele_sth->fetchall_arrayref();
+    my $col_names = $allele_sth->{'NAME'};
+    my $alleles   = $allele_sth->fetchall_arrayref();
     unshift @{$alleles}, $col_names;
 
     template 'new_allele', {
-        'alleles'         => $alleles,
-        'last_allele_id'  => $last_allele_id,
+        'alleles'        => $alleles,
+        'last_allele_id' => $last_allele_id,
 
         'add_a_new_allele_url' => uri_for('/add_a_new_allele'),
     };
@@ -1169,10 +1254,13 @@ post '/get_sequencing_report' => sub {
                                     $sequence_plate->{"$index_tag_id"}
                                     ->{'AlleleGenotype'} )
                                 {
-                                    my ( $allele, $genotype, $gene, $samp_comment ) =
-                                      split '::', $alle_genotype;
+                                    my (
+                                        $allele, $genotype,
+                                        $gene,   $samp_comment
+                                    ) = split '::', $alle_genotype;
 
-                                    $samp_comment = $samp_comment ? $samp_comment : '';
+                                    $samp_comment =
+                                      $samp_comment ? $samp_comment : '';
                                     $gene = $gene ? $gene : '';
                                     $alle_geno{$genotype}
                                       {"$gene allele $allele"} = $samp_comment;
@@ -1187,11 +1275,15 @@ post '/get_sequencing_report' => sub {
                                         sort keys %{ $alle_geno{$geno} } )
                                     {
                                         $description .= $gene_allele;
-                                        if($alle_geno{$geno}->{$gene_allele}=~/[[:alpha:]]+/xms) {
-                                          $description .=  ' (' . $alle_geno{$geno}->{$gene_allele} . '), ';
+                                        if ( $alle_geno{$geno}->{$gene_allele}
+                                            =~ /[[:alpha:]]+/xms )
+                                        {
+                                            $description .= ' ('
+                                              . $alle_geno{$geno}
+                                              ->{$gene_allele} . '), ';
                                         }
                                         else {
-                                         $description .=  ', ';
+                                            $description .= ', ';
                                         }
                                     }
                                 }
@@ -1317,10 +1409,10 @@ post '/combine_plate_data' => sub {
     my $index_hash =
       make_grid()->[1];    ## for merging the experiment(s) onto a single plate
     my $tag_seqs = $tag_seqs_sth->fetchall_arrayref;
-    
+
     ## $tag_offset_num is the tag_seq_id from which to start (default = 1)
     my $tag_offset_num = param('tag_offset');
-    splice @{$tag_seqs}, 0, ($tag_offset_num - 1);
+    splice @{$tag_seqs}, 0, ( $tag_offset_num - 1 );
 
     ## try and get the spacing between experiments correct
     my $wells_per_exp_sth = $dbh->prepare("SELECT * FROM SelectedExpNumView");
@@ -1391,15 +1483,18 @@ post '/combine_plate_data' => sub {
 
                     $exp_color{$hex}{'std_name'} = $sample->[4];
                     $exp_ids{ $sample->[2] }++;    ## experiment_ids
-                 
+
                     my $tag_seq;
-                    if( ! @{ $tag_seqs } ) { ## we have run out of tag seqs - delete exps from db and throw error
-        	     roll_back(\%exp_ids);
-                     die("tag off_set position ( $tag_offset_num ) is too large.\n" . 
-                     " ** All associated experiments have been deleted from the database **\n$?");
+                    if ( !@{$tag_seqs} )
+                    { ## we have run out of tag seqs - delete exps from db and throw error
+                        roll_back( \%exp_ids );
+                        die(
+"tag off_set position ( $tag_offset_num ) is too large.\n"
+                              . " ** All associated experiments have been deleted from the database **\n$?"
+                        );
                     }
                     else {
-                     $tag_seq = shift @{$tag_seqs};
+                        $tag_seq = shift @{$tag_seqs};
                     }
 
                     $index_tag_set{ $tag_seq->[0] } = $tag_seq->[1];
@@ -1442,14 +1537,15 @@ post '/combine_plate_data' => sub {
           $combined_plate{$rna_plate_id}{'seq_plate_well_name'};
         my $rna_plate_well_name =
           $combined_plate{$rna_plate_id}{'rna_plate_well_name'};
-        my $index_tag_id = $combined_plate{$rna_plate_id}{'index_tag_id'};
+        my $index_tag_id  = $combined_plate{$rna_plate_id}{'index_tag_id'};
         my $sample_volume = $combined_plate{$rna_plate_id}{'rec_rna_vol'};
         my $water_volume  = $combined_plate{$rna_plate_id}{'water_vol'};
         my $sample_amount = $combined_plate{$rna_plate_id}{'rec_rna_amt'};
         my $sample_name = join "_", $combined_plate{$rna_plate_id}{'exp_name'},
           $rna_plate_well_name;
         my ($tag_num) = $index_tag_set{$index_tag_id} =~ m/\.([[:digit:]]+)/xms;
-        my $sample_public_name = join "_", $combined_plate{$rna_plate_id}{'exp_name'}, $seq_plate_well_name;
+        my $sample_public_name = join "_",
+          $combined_plate{$rna_plate_id}{'exp_name'}, $seq_plate_well_name;
         my $hex_color = $combined_plate{$rna_plate_id}{'color'};
         $spd_sth->execute(
             $seq_plate_name,     $seq_plate_well_name, $sample_name,
@@ -1529,13 +1625,13 @@ get '/get_new_experiment' => sub {
         last_library_tube_id               => $last_exp->[22],
         last_exp_desc                      => $last_exp->[23],
 
-        spike_ids                          => SPIKE_IDS,
-        genref_names                       => $genref_names,
-        table_schema                       => $table_schema,
-        dev_stages                         => $dev_stages,
-        visibility                         => VISIBILITY,
-        collection_description             => COLLECTION_DESCRIPTION,
-        study_names                        => $std_names,
+        spike_ids              => SPIKE_IDS,
+        genref_names           => $genref_names,
+        table_schema           => $table_schema,
+        dev_stages             => $dev_stages,
+        visibility             => VISIBILITY,
+        collection_description => COLLECTION_DESCRIPTION,
+        study_names            => $std_names,
 
         add_experiment_data_url => uri_for('/add_experiment_data'),
     };
@@ -1562,6 +1658,10 @@ post '/add_experiment_data' => sub {
         param('Developmental_stage'),
         param('Experiment_description')
     ];
+
+    foreach my $data_value ( @{$vals} ) {
+        $data_value = trim($data_value);
+    }
 
     ## check to see if new study and experiment names already exist
     my ( %std_exp_names, %allele_dups );
@@ -1632,10 +1732,22 @@ post '/add_experiment_data' => sub {
     my ($rna_ext_id) = $dbh->selectrow_array("SELECT \@rna_ext_id");
     ## add a new experiment
     my $exp_sth = $dbh->prepare(
-"CALL add_experiment_data(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, \@exp_id)"
+        "CALL add_experiment_data(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, \@exp_id)"
     );
+
+    print Dumper $vals;
     $exp_sth->execute( $rna_ext_id, $image, @{$vals} );
     my ($exp_id) = $dbh->selectrow_array("SELECT \@exp_id");
+
+    ## no experiment was added - something went wrong
+    if ( !$exp_id ) {
+        if ($rna_ext_id) {
+            my $delrna_sth = $dbh->prepare("CALL del_rna_data(?)");
+            $delrna_sth->execute($rna_ext_id);
+        }
+        croak 'Experiment was not entered - check your data '
+          . $exp_sth->errstr;
+    }
 
     template 'get_genotypes_and_rna', {
         names_info => get_study_and_exp_names($exp_id),
@@ -1852,184 +1964,197 @@ post '/populate_rna_dilution_plate' => sub {
 
 };
 
-### Handlers for ontology data 
+### Handlers for ontology data
 
 get '/get_ontology_for_allele' => sub {
- 
- $dbh = get_schema();
 
- my $allele_name = param('allele_name');
- my $mod_allele = param('mod_allele');
- $allele_name = trim($allele_name);
- my ($allele_info, $all_allele_sth);
- if($mod_allele && $mod_allele == 1) { ## add an entry
-  $all_allele_sth = $dbh->prepare(
-   "SELECT av.*, 'stage', 'entity1', 'entity2', 'quality', 'tag' FROM alleleView av WHERE av.allele_name = ?");
- }
- elsif($mod_allele && ($mod_allele == 2 || $mod_allele == 3)) { ## delete or view an entry
-  $all_allele_sth = $dbh->prepare("SELECT * FROM alleleOntologyView WHERE allele_name = ?");
- }
- if($all_allele_sth) {
-  $all_allele_sth->execute($allele_name);
-  my $col_names = $all_allele_sth->{'NAME'};
-  $allele_info = $all_allele_sth->fetchall_arrayref;
-  if(@{ $allele_info }) {
-   unshift @{ $allele_info }, $col_names;
-  }
-  else {
-   die "no allele with name \"$allele_name\" found in database\n$?";
-  }
- }
+    $dbh = get_schema();
 
- template 'get_ontology_for_allele',
-  {
-    'allele_info'        => $allele_info, 
-    'mod_allele'         => $mod_allele,
+    my $allele_name = param('allele_name');
+    my $mod_allele  = param('mod_allele');
+    $allele_name = trim($allele_name);
+    my ( $allele_info, $all_allele_sth );
+    if ( $mod_allele && $mod_allele == 1 ) {    ## add an entry
+        $all_allele_sth = $dbh->prepare(
+"SELECT av.*, 'stage', 'entity1', 'entity2', 'quality', 'tag' FROM alleleView av WHERE av.allele_name = ?"
+        );
+    }
+    elsif ( $mod_allele && ( $mod_allele == 2 || $mod_allele == 3 ) )
+    {                                           ## delete or view an entry
+        $all_allele_sth = $dbh->prepare(
+            "SELECT * FROM alleleOntologyView WHERE allele_name = ?");
+    }
+    if ($all_allele_sth) {
+        $all_allele_sth->execute($allele_name);
+        my $col_names = $all_allele_sth->{'NAME'};
+        $allele_info = $all_allele_sth->fetchall_arrayref;
+        if ( @{$allele_info} ) {
+            unshift @{$allele_info}, $col_names;
+        }
+        else {
+            die "no allele with name \"$allele_name\" found in database\n$?";
+        }
+    }
 
-    'get_ontology_for_allele_url'  => uri_for('/get_ontology_for_allele'),
-    'add_ontology_eq_terms_url'    => uri_for('/add_ontology_eq_terms'),
-    'delete_ontology_eq_terms_url' => uri_for('delete_ontology_eq_terms'),
-  };
+    template 'get_ontology_for_allele', {
+        'allele_info' => $allele_info,
+        'mod_allele'  => $mod_allele,
+
+        'get_ontology_for_allele_url'  => uri_for('/get_ontology_for_allele'),
+        'add_ontology_eq_terms_url'    => uri_for('/add_ontology_eq_terms'),
+        'delete_ontology_eq_terms_url' => uri_for('delete_ontology_eq_terms'),
+    };
 
 };
 
 get '/delete_ontology_eq_terms' => sub {
 
- $dbh = get_schema();
- 
- my $zap_alleles = $dbh->prepare("SELECT zap_id FROM alleleOntologyView WHERE zap_id");
- $zap_alleles->execute;
- foreach my $zap_id(@{ $zap_alleles->fetchall_arrayref }) {
-  my $zap_id_to_delete = 'radio::' . $zap_id->[0];
-  if(param($zap_id_to_delete)) {
-   my $zap2del_sth = $dbh->prepare("CALL delete_zap(?)");
-   $zap2del_sth->execute($zap_id->[0]);
-  }
- }
+    $dbh = get_schema();
 
- template 'get_ontology_for_allele',
-  {
-    'get_ontology_for_allele_url'  => uri_for('/get_ontology_for_allele'),
-  };
+    my $zap_alleles =
+      $dbh->prepare("SELECT zap_id FROM alleleOntologyView WHERE zap_id");
+    $zap_alleles->execute;
+    foreach my $zap_id ( @{ $zap_alleles->fetchall_arrayref } ) {
+        my $zap_id_to_delete = 'radio::' . $zap_id->[0];
+        if ( param($zap_id_to_delete) ) {
+            my $zap2del_sth = $dbh->prepare("CALL delete_zap(?)");
+            $zap2del_sth->execute( $zap_id->[0] );
+        }
+    }
+
+    template 'get_ontology_for_allele',
+      { 'get_ontology_for_allele_url' => uri_for('/get_ontology_for_allele'), };
 };
 
 get '/choose_a_tc_experiment' => sub {
 
- $dbh = get_schema();
+    $dbh = get_schema();
 
- my (@zap_info,%exp_ids,%no_zap_info);
+    my ( @zap_info, %exp_ids, %no_zap_info );
 
- my $exp_id = param('');
- 
- my $tc_exp_sth = $dbh->prepare("SELECT *, 'ontology_terms' FROM ExpStdNameView");
- $tc_exp_sth->execute;
- my $col_names = $tc_exp_sth->{'NAME'};
- my $tc_exp_std = $tc_exp_sth->fetchall_arrayref;
+    my $exp_id = param('');
 
- my $exp_exists_sth = $dbh->prepare("SELECT 1 FROM DUAL WHERE NOT EXISTS(SELECT exp_id FROM ontologyTermsView WHERE exp_id = ?)");
+    my $tc_exp_sth =
+      $dbh->prepare("SELECT *, 'ontology_terms' FROM ExpStdNameView");
+    $tc_exp_sth->execute;
+    my $col_names  = $tc_exp_sth->{'NAME'};
+    my $tc_exp_std = $tc_exp_sth->fetchall_arrayref;
 
- foreach my $exp_std(@{ $tc_exp_std }) {
-  @{ $exp_std }[0,2] = @{ $exp_std }[2,0]; 
-  $exp_ids{ $exp_std->[0] }++;
-  $exp_exists_sth->execute($exp_std->[0]);
-  if( @{ $exp_exists_sth->fetchall_arrayref }[0] ) {
-   $no_zap_info{ $exp_std->[0] }++;
-   @{ $exp_std }[3] = 'No'; 
-  }
-  else {
-   @{ $exp_std }[3] = 'Yes';
-  }
- }
- unshift @{ $tc_exp_std }, [ @{ $col_names }[2,1,0,3] ]; # have to reorder the col names
+    my $exp_exists_sth = $dbh->prepare(
+"SELECT 1 FROM DUAL WHERE NOT EXISTS(SELECT exp_id FROM ontologyTermsView WHERE exp_id = ?)"
+    );
 
- my $zap_col_names;
- my $zap_sth = $dbh->prepare("SELECT * FROM ontologyTermsView WHERE exp_id = ?");
- foreach my $exp_id(sort {$b <=> $a} keys %exp_ids) {
-  my $pkey = 'radio::' . $exp_id;
-  if(param("$pkey")){
-   $zap_sth->execute($exp_id);    
-   if(! $zap_col_names) {
-    $zap_col_names = $zap_sth->{'NAME'};
-   }
-   push@zap_info, @{ $zap_sth->fetchall_arrayref };
-  }
- }
- if($zap_col_names) {
-  unshift@zap_info, $zap_col_names;
- }
- 
- template 'choose_a_tc_experiment',
-  {
-    'std_exp' => $tc_exp_std,
-    'zap_info' => \@zap_info,
-    'no_zap_info' => \%no_zap_info,
-    'choose_a_tc_experiment_url'    => uri_for('/choose_a_tc_experiment'), 
-  };
+    foreach my $exp_std ( @{$tc_exp_std} ) {
+        @{$exp_std}[ 0, 2 ] = @{$exp_std}[ 2, 0 ];
+        $exp_ids{ $exp_std->[0] }++;
+        $exp_exists_sth->execute( $exp_std->[0] );
+        if ( @{ $exp_exists_sth->fetchall_arrayref }[0] ) {
+            $no_zap_info{ $exp_std->[0] }++;
+            @{$exp_std}[3] = 'No';
+        }
+        else {
+            @{$exp_std}[3] = 'Yes';
+        }
+    }
+    unshift @{$tc_exp_std},
+      [ @{$col_names}[ 2, 1, 0, 3 ] ];    # have to reorder the col names
+
+    my $zap_col_names;
+    my $zap_sth =
+      $dbh->prepare("SELECT * FROM ontologyTermsView WHERE exp_id = ?");
+    foreach my $exp_id ( sort { $b <=> $a } keys %exp_ids ) {
+        my $pkey = 'radio::' . $exp_id;
+        if ( param("$pkey") ) {
+            $zap_sth->execute($exp_id);
+            if ( !$zap_col_names ) {
+                $zap_col_names = $zap_sth->{'NAME'};
+            }
+            push @zap_info, @{ $zap_sth->fetchall_arrayref };
+        }
+    }
+    if ($zap_col_names) {
+        unshift @zap_info, $zap_col_names;
+    }
+
+    template 'choose_a_tc_experiment',
+      {
+        'std_exp'                    => $tc_exp_std,
+        'zap_info'                   => \@zap_info,
+        'no_zap_info'                => \%no_zap_info,
+        'choose_a_tc_experiment_url' => uri_for('/choose_a_tc_experiment'),
+      };
 };
 
 get '/add_ontology_eq_terms' => sub {
 
- $dbh = get_schema();
+    $dbh = get_schema();
 
- my (@vals, @mod_vals, %K);
- foreach my $ont_key(sort {$a <=> $b} keys %{ +ONT }){
-  my $ont_val = trim( ${ +ONT }{$ont_key} ); 
-  my $in_val = param("$ont_val"); # can be an array - if more than 1 db entry for a given allele name
-  if($in_val) {
-   push @vals, $in_val;
-  }
-  else {
-   push @vals, undef;
-  }
- }
- 
- if(ref($vals[0]) eq 'ARRAY') {
-  for(my$i=0;$i<@{ $vals[0] };$i++) {
-   my $temp_arr;
-   for(my$j=0;$j<@vals;$j++) {
-    my $in_val = $vals[$j]->[$i] eq '' ? undef : $vals[$j]->[$i];
-    push@{ $temp_arr }, $in_val;
-   }
-   push@mod_vals, $temp_arr;
-  }
- }
- else {
-  push@mod_vals, [ @vals ];
- }
+    my ( @vals, @mod_vals, %K );
+    foreach my $ont_key ( sort { $a <=> $b } keys %{ +ONT } ) {
+        my $ont_val = trim( ${ +ONT }{$ont_key} );
+        my $in_val  = param("$ont_val")
+          ;  # can be an array - if more than 1 db entry for a given allele name
+        if ($in_val) {
+            push @vals, $in_val;
+        }
+        else {
+            push @vals, undef;
+        }
+    }
 
- for(my$i=0;$i<@mod_vals;$i++) {
-  for(my$j=0;$j<@{ $mod_vals[$i] };$j++) {
-   $K{$i} += $mod_vals[$i]->[$j] ? 0 : 1;
-  }
- }
+    if ( ref( $vals[0] ) eq 'ARRAY' ) {
+        for ( my $i = 0 ; $i < @{ $vals[0] } ; $i++ ) {
+            my $temp_arr;
+            for ( my $j = 0 ; $j < @vals ; $j++ ) {
+                my $in_val = $vals[$j]->[$i] eq '' ? undef : $vals[$j]->[$i];
+                push @{$temp_arr}, $in_val;
+            }
+            push @mod_vals, $temp_arr;
+        }
+    }
+    else {
+        push @mod_vals, [@vals];
+    }
 
- my @failed_inserts;
- for(my$i=0;$i<@mod_vals;$i++) {
-  if( $K{$i} < ADD_ONT_TERMS ) { ## something to add
-   my $gen_ref_sth = $dbh->prepare("SELECT Genome_ref_id FROM SpView WHERE Genome_ref_name = ?");
-   my $gen_ref_name = ( split":",$mod_vals[$i]->[0] )[0];
-   $gen_ref_sth->execute($gen_ref_name);
-   unshift @{ $mod_vals[$i] }, @{ $gen_ref_sth->fetchrow_arrayref }[0];
-   my $zmp_alle_sth = $dbh->prepare("CALL insert_zmp_allele_phenotype_eq(?,?,?,?,?,?,?,?, \@insert_id)");
-   $zmp_alle_sth->execute( @{ $mod_vals[$i] } );
-   my ($insert_id) = $dbh->selectrow_array("SELECT \@insert_id");
-   if(! $insert_id) {
-    my $allele_name_sth = $dbh->prepare("SELECT allele_name FROM alleleView WHERE allele_id = ?");
-    $allele_name_sth->execute($mod_vals[$i]->[2]);
-    push @failed_inserts, @{ $allele_name_sth->fetchall_arrayref }[0]->[0];
-   }
-  }
- }
+    for ( my $i = 0 ; $i < @mod_vals ; $i++ ) {
+        for ( my $j = 0 ; $j < @{ $mod_vals[$i] } ; $j++ ) {
+            $K{$i} += $mod_vals[$i]->[$j] ? 0 : 1;
+        }
+    }
 
- if(scalar(@failed_inserts)) {
-  my $names = join(', ', @failed_inserts);
-  die("insertion into table zmp_allele_phenotype_eq failed for alleles: $names\n\n",$?);
- }
+    my @failed_inserts;
+    for ( my $i = 0 ; $i < @mod_vals ; $i++ ) {
+        if ( $K{$i} < ADD_ONT_TERMS ) {    ## something to add
+            my $gen_ref_sth = $dbh->prepare(
+                "SELECT Genome_ref_id FROM SpView WHERE Genome_ref_name = ?");
+            my $gen_ref_name = ( split ":", $mod_vals[$i]->[0] )[0];
+            $gen_ref_sth->execute($gen_ref_name);
+            unshift @{ $mod_vals[$i] }, @{ $gen_ref_sth->fetchrow_arrayref }[0];
+            my $zmp_alle_sth = $dbh->prepare(
+"CALL insert_zmp_allele_phenotype_eq(?,?,?,?,?,?,?,?, \@insert_id)"
+            );
+            $zmp_alle_sth->execute( @{ $mod_vals[$i] } );
+            my ($insert_id) = $dbh->selectrow_array("SELECT \@insert_id");
+            if ( !$insert_id ) {
+                my $allele_name_sth = $dbh->prepare(
+                    "SELECT allele_name FROM alleleView WHERE allele_id = ?");
+                $allele_name_sth->execute( $mod_vals[$i]->[2] );
+                push @failed_inserts,
+                  @{ $allele_name_sth->fetchall_arrayref }[0]->[0];
+            }
+        }
+    }
 
- template 'get_ontology_for_allele',
-  {
-    'get_ontology_for_allele_url'  => uri_for('/get_ontology_for_allele'),
-  };
+    if ( scalar(@failed_inserts) ) {
+        my $names = join( ', ', @failed_inserts );
+        die(
+"insertion into table zmp_allele_phenotype_eq failed for alleles: $names\n\n",
+            $?
+        );
+    }
+
+    template 'get_ontology_for_allele',
+      { 'get_ontology_for_allele_url' => uri_for('/get_ontology_for_allele'), };
 };
 
 sub overwrite_file {
@@ -2206,27 +2331,27 @@ sub color_plate {
     return [ $template, \%exp_legend, \%num2geno, param('plate_name') ];
 }
 
-sub roll_back { # delete experiment(s) from the database 
- my $exp_ids = shift;
- my $dbh = get_schema();
- my $del_sth = $dbh->prepare("CALL delete_exp(?)");
- foreach my $exp_id(keys %{ $exp_ids }){
-  $del_sth->execute($exp_id);
- } 
+sub roll_back {    # delete experiment(s) from the database
+    my $exp_ids = shift;
+    my $dbh     = get_schema();
+    my $del_sth = $dbh->prepare("CALL delete_exp(?)");
+    foreach my $exp_id ( keys %{$exp_ids} ) {
+        $del_sth->execute($exp_id);
+    }
 }
 
-sub get_schema { ## export $ENV{...} values in your .bashrc
-  my($host, $port)=($ENV{'TC_HOST'}, $ENV{'TC_PORT'});
-  return DBI->connect( "DBI:mysql:$db_name;host=$host;port=$port",
-      $ENV{'TC_USER'}, $ENV{'TC_PASS'} )
-    or die "Cannot connect to database $db_name\n$?";
+sub get_schema {    ## export $ENV{...} values in your .bashrc
+    my ( $host, $port ) = ( $ENV{'TC_HOST'}, $ENV{'TC_PORT'} );
+    return DBI->connect( "DBI:mysql:$db_name;host=$host;port=$port",
+        $ENV{'TC_USER'}, $ENV{'TC_PASS'} )
+      or die "Cannot connect to database $db_name\n$?";
 }
 
 sub get_wh_schema {
- my($host,$port,$user,$db_name) = ($ENV{'WH_HOST'}, $ENV{'WH_PORT'}, $ENV{'WH_USER'}, $ENV{'WH_DBNAME'});
- return DBI->connect( "DBI:mysql:$db_name;host=$host;port=$port",$user) 
-  or die "Cannot connect to database $db_name\n$?";
+    my ( $host, $port, $user, $db_name ) =
+      ( $ENV{'WH_HOST'}, $ENV{'WH_PORT'}, $ENV{'WH_USER'}, $ENV{'WH_DBNAME'} );
+    return DBI->connect( "DBI:mysql:$db_name;host=$host;port=$port", $user )
+      or die "Cannot connect to database $db_name\n$?";
 }
-  
 
 1;
