@@ -204,7 +204,7 @@ my @EXCEL_FIELDS =
 
 our $VERSION = '0.1';
 
-my $db_name          = "zfish_sf5_tc1_test";
+my $db_name          = $ENV{'TC_DBNAME'};
 my $exel_file_dir    = "./public/zmp_exel_files";
 my $rna_dilution_dir = "./public/RNA_dilution_files";
 my $image_dir        = "./public/images";
